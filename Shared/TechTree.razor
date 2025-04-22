@@ -1,0 +1,120 @@
+﻿@* TechTree.razor (исправленная версия) *@
+@using WTExpCalc.Models
+@using WTExpCalc.Services
+@inject IExperienceApi Api
+
+<div class="table-responsive">
+    @if (AllNodes.Count == 0)
+    {
+        <p>Нет данных для отображения</p>
+    }
+    else
+    {
+        <table class="tree" rules="rows">
+            <tbody>
+                <tr>
+                    <th></th>
+                    <th colspan="@MaxStandardColumns">Researchable vehicles</th>
+                    <th colspan="@MaxPremiumColumns">Premium vehicles</th>
+                </tr>
+
+                @foreach (var rank in Ranks.OrderBy(r => r))
+                {
+                    <tr class="wt-tree_rank">
+                        <th>
+                            <div class="rank-label">@($"Rank {rank}")</div>
+                        </th>
+
+                        @* Стандартные ноды *@
+                        @for (int col = 0; col < MaxStandardColumns; col++)
+                        {
+                            var nodes = AllNodes
+                            .Where(n => n.Rank == rank &&
+                            n.TechCategory == "standard" &&
+                            n.ColumnIndex == col)
+                            .OrderBy(n => n.RowIndex)
+                            .ToList();
+
+                            <td class="wt-tree_rank-cell">
+                                @foreach (var node in nodes)
+                                {
+                                    <TreeNode Node="node"
+                                              LoadChildren="LoadChildren"
+                                              HasChildren="@NodeHasChildren(node)" />
+                                }
+                            </td>
+                        }
+
+                        @* Премиум ноды *@
+                        @for (int col = 0; col < MaxPremiumColumns; col++)
+                        {
+                            var nodes = AllNodes
+                            .Where(n => n.Rank == rank &&
+                            n.TechCategory == "premium" &&
+                            n.ColumnIndex == col)
+                            .OrderBy(n => n.RowIndex)
+                            .ToList();
+
+                            <td class="wt-tree_rank-cell premium-cell">
+                                @foreach (var node in nodes)
+                                {
+                                    <TreeNode Node="node"
+                                              LoadChildren="LoadChildren"
+                                              HasChildren="@NodeHasChildren(node)" />
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    [Parameter] public int NationId { get; set; }
+    [Parameter] public int TypeId { get; set; }
+
+    private List<Node> AllNodes = new();
+    private List<int> Ranks = new();
+    private int MaxStandardColumns = 5;
+    private int MaxPremiumColumns = 2;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTechTree();
+        CalculateColumns();
+    }
+
+    private async Task LoadTechTree()
+    {
+        var roots = await Api.GetRootNodesAsync(NationId, TypeId);
+        AllNodes = new List<Node>(roots);
+        Ranks = AllNodes.Select(n => n.Rank).Distinct().OrderBy(r => r).ToList();
+    }
+
+    private void CalculateColumns()
+    {
+        var standardNodes = AllNodes.Where(n => n.TechCategory == "standard");
+        var premiumNodes = AllNodes.Where(n => n.TechCategory == "premium");
+
+        MaxStandardColumns = standardNodes.Any()
+            ? standardNodes.Max(n => n.ColumnIndex ?? 0) + 1
+            : 5;
+
+        MaxPremiumColumns = premiumNodes.Any()
+            ? premiumNodes.Max(n => n.ColumnIndex ?? 0) + 1
+            : 2;
+    }
+
+    private async Task<List<Node>> LoadChildren(int parentId)
+    {
+        var children = await Api.GetChildNodesAsync(parentId);
+        AllNodes.AddRange(children);
+        CalculateColumns();
+        StateHasChanged();
+        return children;
+    }
+
+    private bool NodeHasChildren(Node node) => AllNodes.Any(n => n.ParentId == node.Id);
+}

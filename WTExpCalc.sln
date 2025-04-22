@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35931.197
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WTExpCalc", "WTExpCalc.csproj", "{8DF4D651-A4BC-477C-ADF1-3958AF5972DE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8DF4D651-A4BC-477C-ADF1-3958AF5972DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8DF4D651-A4BC-477C-ADF1-3958AF5972DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8DF4D651-A4BC-477C-ADF1-3958AF5972DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8DF4D651-A4BC-477C-ADF1-3958AF5972DE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8E037246-D421-46A3-B46A-7CF41D5BBF30}
+	EndGlobalSection
+EndGlobal

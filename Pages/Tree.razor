@@ -1,0 +1,50 @@
+﻿@* Tree.razor (без изменений маршрутизации) *@
+@page "/tree/{NationId:int}"
+@using WTExpCalc.Models
+@using WTExpCalc.Services
+@using WTExpCalc.Shared
+@inject IExperienceApi Api
+
+<h3>Ветка прокачки для нации @NationId</h3>
+
+@if (vehicleTypes == null)
+{
+    <p><em>Загрузка типов…</em></p>
+}
+else
+{
+    <ul class="nav nav-tabs">
+        @foreach (var vt in vehicleTypes)
+        {
+            <li class="nav-item">
+                <a class="nav-link @(vt.Id == activeTypeId ? "active" : "")"
+                   href="#"
+                   @onclick="() => SelectType(vt.Id)">
+                    @vt.Name
+                </a>
+            </li>
+        }
+    </ul>
+
+    <div class="tab-content mt-3">
+        @if (activeTypeId != null)
+        {
+            <TechTree NationId="NationId" TypeId="activeTypeId.Value" />
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public int NationId { get; set; }
+    private List<VehicleType>? vehicleTypes;
+    private int? activeTypeId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        vehicleTypes = await Api.GetVehicleTypesAsync();
+        if (vehicleTypes.Any())
+            activeTypeId = vehicleTypes.First().Id;
+    }
+
+    void SelectType(int id) => activeTypeId = id;
+}
