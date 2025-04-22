@@ -1,31 +1,24 @@
-﻿@using WTExpCalc.Models
+﻿ @using WTExpCalc.Models
 
 <div class="tree-node @Node.Type">
     @if (Node.Type == "folder")
     {
-        <div class="folder-header" @onclick="ToggleFolder">
-            <div class="node-icon"
-                 style="background-image:url('@Node.ImageUrl')"></div>
+        <div class="folder-header">
+            <div class="node-icon" style="background-image:url('@Node.ImageUrl')"></div>
             <div class="node-name">@Node.Name</div>
         </div>
 
-        @if (IsExpanded)
-        {
-            <div class="folder-children">
-                @foreach (var child in Children)
-                {
-                    <TreeNode Node="child"
-                              LoadChildren="LoadChildren"
-                              HasChildren="@HasChildren" />
-                }
-            </div>
-        }
+        <div class="folder-children">
+            @foreach (var child in Node.Children)
+            {
+                <TreeNode Node="child" HasChildren="@(child.Children?.Any() ?? false)" />
+            }
+        </div>
     }
     else
     {
         <div class="vehicle-node">
-            <div class="node-icon"
-                 style="background-image:url('@Node.ImageUrl')"></div>
+            <div class="node-icon" style="background-image:url('@Node.ImageUrl')"></div>
             <div class="node-info">
                 <div class="node-name">@Node.Name</div>
                 <div class="node-exp">@Node.RequiredExp</div>
@@ -41,18 +34,5 @@
 
 @code {
     [Parameter] public Node Node { get; set; } = default!;
-    [Parameter] public Func<int, Task<List<Node>>> LoadChildren { get; set; } = default!;
-    [Parameter] public bool HasChildren { get; set; } // Теперь это boolean параметр
-
-    private bool IsExpanded;
-    private List<Node> Children = new();
-
-    private async Task ToggleFolder()
-    {
-        if (!IsExpanded)
-        {
-            Children = await LoadChildren(Node.Id);
-        }
-        IsExpanded = !IsExpanded;
-    }
-}
+    [Parameter] public bool HasChildren { get; set; }
+ }

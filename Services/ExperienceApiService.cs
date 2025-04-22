@@ -28,8 +28,10 @@ namespace WTExpCalc.Services
 
         public async Task<List<Node>> GetAllNodesAsync(int nationId, int vehicleTypeId)
         {
-            var url = $"nodes?nation_id={nationId}&vehicle_type_id={vehicleTypeId}";
-            var nodes = await _http.GetFromJsonAsync<List<Node>>(url, _jsonOptions) ?? new();
+            // Добавляем префиксы eq. перед значениями
+            var url = $"nodes?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}";
+            var nodes = await _http.GetFromJsonAsync<List<Node>>(url, _jsonOptions)
+                        ?? new List<Node>();
             return BuildTree(nodes);
         }
 
@@ -54,14 +56,25 @@ namespace WTExpCalc.Services
 
         public async Task<List<NodeDependency>> GetDependenciesAsync(int nodeId)
         {
-            var url = $"node_dependencies?node_id={nodeId}";
+            var url = $"node_dependencies?node_id=eq.{nodeId}";
             return await _http.GetFromJsonAsync<List<NodeDependency>>(url, _jsonOptions) ?? new();
         }
 
         public async Task<List<RankRequirement>> GetRankRequirementsAsync(int nationId, int vehicleTypeId)
         {
-            var url = $"rank_requirements?nation_id={nationId}&vehicle_type_id={vehicleTypeId}";
+            var url = $"rank_requirements?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}";
             return await _http.GetFromJsonAsync<List<RankRequirement>>(url, _jsonOptions) ?? new();
+        }
+        public async Task<List<Node>> GetRootNodesAsync(int nationId, int vehicleTypeId)
+        {
+            var url = $"nodes?nation_id={nationId}&vehicle_type_id=eq.{vehicleTypeId}&parent_id=is.null";
+            return await _http.GetFromJsonAsync<List<Node>>(url, _jsonOptions) ?? new();
+        }
+
+        public async Task<List<Node>> GetChildNodesAsync(int parentNodeId)
+        {
+            var url = $"nodes?parent_id=eq.{parentNodeId}";
+            return await _http.GetFromJsonAsync<List<Node>>(url, _jsonOptions) ?? new();
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿@* TechTree.razor (исправленная версия) *@
-@using WTExpCalc.Models
+﻿@using WTExpCalc.Models
 @using WTExpCalc.Services
 @inject IExperienceApi Api
 
@@ -18,50 +17,26 @@
                     <th colspan="@MaxPremiumColumns">Premium vehicles</th>
                 </tr>
 
-                @foreach (var rank in Ranks.OrderBy(r => r))
+                @foreach (var rank in Ranks)
                 {
                     <tr class="wt-tree_rank">
                         <th>
                             <div class="rank-label">@($"Rank {rank}")</div>
                         </th>
 
-                        @* Стандартные ноды *@
+                        @* Стандартные колонки *@
                         @for (int col = 0; col < MaxStandardColumns; col++)
                         {
-                            var nodes = AllNodes
-                            .Where(n => n.Rank == rank &&
-                            n.TechCategory == "standard" &&
-                            n.ColumnIndex == col)
-                            .OrderBy(n => n.RowIndex)
-                            .ToList();
-
                             <td class="wt-tree_rank-cell">
-                                @foreach (var node in nodes)
-                                {
-                                    <TreeNode Node="node"
-                                              LoadChildren="LoadChildren"
-                                              HasChildren="@NodeHasChildren(node)" />
-                                }
+                                @RenderCategoryCell("standard", rank, col)
                             </td>
                         }
 
-                        @* Премиум ноды *@
+                        @* Премиум колонки *@
                         @for (int col = 0; col < MaxPremiumColumns; col++)
                         {
-                            var nodes = AllNodes
-                            .Where(n => n.Rank == rank &&
-                            n.TechCategory == "premium" &&
-                            n.ColumnIndex == col)
-                            .OrderBy(n => n.RowIndex)
-                            .ToList();
-
                             <td class="wt-tree_rank-cell premium-cell">
-                                @foreach (var node in nodes)
-                                {
-                                    <TreeNode Node="node"
-                                              LoadChildren="LoadChildren"
-                                              HasChildren="@NodeHasChildren(node)" />
-                                }
+                                @RenderCategoryCell("premium", rank, col)
                             </td>
                         }
                     </tr>
@@ -77,44 +52,65 @@
 
     private List<Node> AllNodes = new();
     private List<int> Ranks = new();
-    private int MaxStandardColumns = 5;
-    private int MaxPremiumColumns = 2;
+    private int MaxStandardColumns = 0;
+    private int MaxPremiumColumns = 0;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadTechTree();
-        CalculateColumns();
+        // загружаем всё
+        var roots = await Api.GetAllNodesAsync(NationId, TypeId);
+        Flatten(roots);
+
+        Ranks = AllNodes.Select(n => n.Rank)
+                        .Distinct()
+                        .OrderBy(r => r)
+                        .ToList();
+
+        MaxStandardColumns = AllNodes
+            .Where(n => n.TechCategory == "standard")
+            .Select(n => n.ColumnIndex ?? 0)
+            .DefaultIfEmpty(0)
+            .Max() + 1;
+
+        MaxPremiumColumns = AllNodes
+            .Where(n => n.TechCategory == "premium")
+            .Select(n => n.ColumnIndex ?? 0)
+            .DefaultIfEmpty(0)
+            .Max() + 1;
     }
 
-    private async Task LoadTechTree()
+    void Flatten(IEnumerable<Node> nodes)
     {
-        var roots = await Api.GetRootNodesAsync(NationId, TypeId);
-        AllNodes = new List<Node>(roots);
-        Ranks = AllNodes.Select(n => n.Rank).Distinct().OrderBy(r => r).ToList();
+        foreach (var n in nodes)
+        {
+            AllNodes.Add(n);
+            if (n.Children != null)
+                Flatten(n.Children);
+        }
     }
 
-    private void CalculateColumns()
-    {
-        var standardNodes = AllNodes.Where(n => n.TechCategory == "standard");
-        var premiumNodes = AllNodes.Where(n => n.TechCategory == "premium");
+    /// <summary>
+    /// Отрисовать все ноды ранга `rank`, категории `techCat` и конкретного столбца `colIndex`.
+    /// </summary>
+    private RenderFragment RenderCategoryCell(string techCat, int rank, int colIndex)
+        => __builder =>
+        {
+            int seq = 0;
+            var nodes = AllNodes
+                .Where(n => n.TechCategory == techCat
+                         && n.Rank == rank
+                         && (n.ColumnIndex ?? 0) == colIndex)
+                .OrderBy(n => n.RowIndex);
 
-        MaxStandardColumns = standardNodes.Any()
-            ? standardNodes.Max(n => n.ColumnIndex ?? 0) + 1
-            : 5;
-
-        MaxPremiumColumns = premiumNodes.Any()
-            ? premiumNodes.Max(n => n.ColumnIndex ?? 0) + 1
-            : 2;
-    }
-
-    private async Task<List<Node>> LoadChildren(int parentId)
-    {
-        var children = await Api.GetChildNodesAsync(parentId);
-        AllNodes.AddRange(children);
-        CalculateColumns();
-        StateHasChanged();
-        return children;
-    }
-
-    private bool NodeHasChildren(Node node) => AllNodes.Any(n => n.ParentId == node.Id);
+            foreach (var node in nodes)
+            {
+                __builder.OpenComponent<TreeNode>(seq++);
+                __builder.AddAttribute(seq++, nameof(TreeNode.Node), node);
+                __builder.AddAttribute(seq++,
+                    nameof(TreeNode.HasChildren),
+                    AllNodes.Any(c => c.ParentId == node.Id)
+                );
+                __builder.CloseComponent();
+            }
+        };
 }
