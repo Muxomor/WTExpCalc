@@ -1,4 +1,5 @@
-﻿@using WTExpCalc.Models
+﻿@using Microsoft.AspNetCore.Components.Rendering
+@using WTExpCalc.Models
 @using WTExpCalc.Services
 @inject IExperienceApi Api
 
@@ -24,15 +25,12 @@
                             <div class="rank-label">@($"Rank {rank}")</div>
                         </th>
 
-                        @* Стандартные колонки *@
                         @for (int col = 0; col < MaxStandardColumns; col++)
                         {
                             <td class="wt-tree_rank-cell">
                                 @RenderCategoryCell("standard", rank, col)
                             </td>
                         }
-
-                        @* Премиум колонки *@
                         @for (int col = 0; col < MaxPremiumColumns; col++)
                         {
                             <td class="wt-tree_rank-cell premium-cell">
@@ -57,14 +55,14 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // загружаем всё
         var roots = await Api.GetAllNodesAsync(NationId, TypeId);
         Flatten(roots);
 
-        Ranks = AllNodes.Select(n => n.Rank)
-                        .Distinct()
-                        .OrderBy(r => r)
-                        .ToList();
+        Ranks = AllNodes
+            .Select(n => n.Rank)
+            .Distinct()
+            .OrderBy(r => r)
+            .ToList();
 
         MaxStandardColumns = AllNodes
             .Where(n => n.TechCategory == "standard")
@@ -84,33 +82,104 @@
         foreach (var n in nodes)
         {
             AllNodes.Add(n);
-            if (n.Children != null)
+            if (n.Children != null && n.Children.Any())
                 Flatten(n.Children);
         }
     }
 
-    /// <summary>
-    /// Отрисовать все ноды ранга `rank`, категории `techCat` и конкретного столбца `colIndex`.
-    /// </summary>
     private RenderFragment RenderCategoryCell(string techCat, int rank, int colIndex)
         => __builder =>
         {
             int seq = 0;
-            var nodes = AllNodes
-                .Where(n => n.TechCategory == techCat
-                         && n.Rank == rank
-                         && (n.ColumnIndex ?? 0) == colIndex)
-                .OrderBy(n => n.RowIndex);
 
-            foreach (var node in nodes)
+            var rootsInCell = AllNodes
+                .Where(n =>
+                    n.ParentId == null &&
+                    n.TechCategory == techCat &&
+                    n.Rank == rank &&
+                    (n.ColumnIndex ?? 0) == colIndex)
+                .OrderBy(n => n.OrderInFolder ?? 0)
+                .ThenBy(n => n.RowIndex);
+
+            foreach (var node in rootsInCell)
             {
-                __builder.OpenComponent<TreeNode>(seq++);
-                __builder.AddAttribute(seq++, nameof(TreeNode.Node), node);
-                __builder.AddAttribute(seq++,
-                    nameof(TreeNode.HasChildren),
-                    AllNodes.Any(c => c.ParentId == node.Id)
-                );
-                __builder.CloseComponent();
+                RenderNodeRecursive(__builder, ref seq, node);
             }
         };
+
+    void RenderNodeRecursive(RenderTreeBuilder b, ref int seq, Node node)
+    {
+        if (node.Type == "folder")
+        {
+            b.OpenElement(seq++, "div");
+            b.AddAttribute(seq++, "class", "tree-node folder");
+
+            b.OpenElement(seq++, "div");
+            b.AddAttribute(seq++, "class", "folder-header");
+            b.AddMarkupContent(seq++, $@"
+                <div class=""node-icon"" style=""background-image:url('{node.ImageUrl}')""></div>
+                <div class=""node-name"">{node.Name}</div>");
+            b.CloseElement(); // folder-header
+
+            b.OpenElement(seq++, "div");
+            b.AddAttribute(seq++, "class", "folder-children");
+            foreach (var child in node.Children
+                .OrderBy(c => c.OrderInFolder ?? 0)
+                .ThenBy(c => c.RowIndex))
+            {
+                RenderNodeRecursive(b, ref seq, child);
+            }
+            b.CloseElement(); // folder-children
+
+            b.CloseElement(); // tree-node folder
+        }
+        else
+        {
+            b.OpenElement(seq++, "div");
+            b.AddAttribute(seq++, "class", "tree-node vehicle");
+            b.AddMarkupContent(seq++, $@"
+                <div class=""vehicle-node"">
+                    <div class=""node-icon"" style=""background-image:url('{node.ImageUrl}')""></div>
+                    <div class=""node-info"">
+                        <div class=""node-name"">{node.Name}</div>
+                        <div class=""node-exp"">{node.RequiredExp}</div>
+                    </div>
+                </div>");
+            b.CloseElement(); // vehicle
+
+            if (node.Children?.Any() ?? false)
+            {
+                b.OpenElement(seq++, "div");
+                b.AddAttribute(seq++, "class", "node-arrow");
+                b.CloseElement();
+
+                b.OpenElement(seq++, "div");
+                b.AddAttribute(seq++, "style", "position:relative;");
+
+                b.OpenElement(seq++, "div");
+                b.AddAttribute(seq++, "class", "tree-group-collapse");
+                b.AddAttribute(seq++, "style", "position:absolute;display:none;");
+                foreach (var child in node.Children
+                    .OrderBy(c => c.OrderInFolder ?? 0)
+                    .ThenBy(c => c.RowIndex))
+                {
+                    RenderNodeRecursive(b, ref seq, child);
+                }
+                b.CloseElement(); // tree-group-collapse
+
+                b.OpenElement(seq++, "div");
+                b.AddAttribute(seq++, "class", "tree-group");
+                b.AddMarkupContent(seq++, $@"
+                    <div class=""tree-group-text"">{node.Name}</div>
+                    <div class=""tree-group-img""><img src=""{node.ImageUrl}"" /></div>");
+                b.CloseElement(); // tree-group
+
+                b.CloseElement(); // wrapper
+
+                b.OpenElement(seq++, "div");
+                b.AddAttribute(seq++, "class", "node-arrow");
+                b.CloseElement();
+            }
+        }
+    }
 }
