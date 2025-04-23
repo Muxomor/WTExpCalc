@@ -1,46 +1,74 @@
-﻿@using Microsoft.AspNetCore.Components.Rendering
-@using WTExpCalc.Models
+﻿@using WTExpCalc.Models
 @using WTExpCalc.Services
 @inject IExperienceApi Api
+@inject IJSRuntime JSRuntime // Для взаимодействия с JS (понадобится для SVG)
 
-<div class="table-responsive">
-    @if (AllNodes.Count == 0)
+<div class="tech-tree-container @LoadingState">
+    @if (GridNodes.Any()) // Изменено: используем GridNodes
     {
-        <p>Нет данных для отображения</p>
-    }
-    else
-    {
-        <table class="tree" rules="rows">
-            <tbody>
-                <tr>
-                    <th></th>
-                    <th colspan="@MaxStandardColumns">Researchable vehicles</th>
-                    <th colspan="@MaxPremiumColumns">Premium vehicles</th>
-                </tr>
+        <div class="tree-grid" style="@GridStyles">
+            @* ... Заголовки колонок и рангов остаются как есть ... *@
 
-                @foreach (var rank in Ranks)
+            @foreach (var rank in Enumerable.Range(1, MaxRank))
+            {
+                <div class="rank-label" style="grid-row: @(rank + 1); grid-column: 1;">
+                    Rank @rank
+                </div>
+            }
+
+            @foreach (var node in GridNodes) // Изменено: используем GridNodes
+            {
+                <div class="@GetNodeCssClass(node)"
+                     style="@GetNodeGridStyle(node)"
+                     id="node-container-@node.Id">
+                    @* Добавим -container для ясности, что это внешний div *@
+                    @if (node.Type == "folder")
+                    {
+                        @RenderFolderNode(node)
+                    }
+                    else // Это standalone техника
+                    {
+                        @RenderVehicleNode(node)
+                    }
+                </div>
+            }
+
+            @* ... SVG оверлей остается как есть ... *@
+            <svg class="tree-connections-overlay" width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0;">
+                @if (Dependencies != null)
                 {
-                    <tr class="wt-tree_rank">
-                        <th>
-                            <div class="rank-label">@($"Rank {rank}")</div>
-                        </th>
-
-                        @for (int col = 0; col < MaxStandardColumns; col++)
-                        {
-                            <td class="wt-tree_rank-cell">
-                                @RenderCategoryCell("standard", rank, col)
-                            </td>
-                        }
-                        @for (int col = 0; col < MaxPremiumColumns; col++)
-                        {
-                            <td class="wt-tree_rank-cell premium-cell">
-                                @RenderCategoryCell("premium", rank, col)
-                            </td>
-                        }
-                    </tr>
+                    @foreach (var dep in Dependencies)
+                    {
+                        // Линии будут отрисованы через JS или доп. логику в C# после рендеринга
+                        <line id="dep-@dep.NodeId-@dep.PrerequisiteNodeId"
+                              x1="0" y1="0" x2="0" y2="0"
+                              stroke="#cccccc" stroke-width="2"
+                              marker-end="url(#arrowhead)"
+                              visibility="hidden" /> @* Скрыты по умолчанию *@
+                    }
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                                refX="10" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#cccccc" />
+                        </marker>
+                    </defs>
                 }
-            </tbody>
-        </table>
+            </svg>
+        </div>
+    }
+    else if (LoadingState != "loading")
+    {
+        <p>Нет данных для отображения для NationId=@NationId, TypeId=@TypeId.</p>
+    }
+    @if (LoadingState == "loading")
+    {
+        <p>Загрузка...</p>
+        // Индикатор загрузки
+    }
+    @if (LoadingState == "error")
+    {
+        <p style="color: red;">Ошибка загрузки данных!</p>
+        // Сообщение об ошибке
     }
 </div>
 
@@ -48,138 +76,539 @@
     [Parameter] public int NationId { get; set; }
     [Parameter] public int TypeId { get; set; }
 
-    private List<Node> AllNodes = new();
-    private List<int> Ranks = new();
-    private int MaxStandardColumns = 0;
-    private int MaxPremiumColumns = 0;
+    private List<Node> AllNodesFlat = new();
+    private Dictionary<int, Node> NodeLookup = new();
+    private List<Node> GridNodes = new(); // Узлы для размещения в основной сетке
+    private List<NodeDependency> Dependencies = new();
+    private HashSet<int> ExpandedFolderIds = new();
+    private string LoadingState = "loading";
 
-    protected override async Task OnInitializedAsync()
+    private int MaxRank = 0;
+    private int MaxStandardCol = 0;
+    private int MaxPremiumCol = 0;
+    private string GridStyles = "";
+
+    // Кэш для техники, принадлежащей папкам (Rank, Column) -> List<Node>
+    // Ключ теперь включает и TechCategory папки!
+    private Dictionary<(int Rank, int Col, string Category), List<Node>> _vehiclesInFoldersCache = new();
+    // Храним макс. RowIndex для каждого ранга
+    private Dictionary<int, int> MaxRowIndexPerRank = new();
+    // Общее количество строк данных в сетке (не считая заголовка)
+    private int TotalDataGridRows = 0;
+
+    protected override async Task OnParametersSetAsync()
     {
-        var roots = await Api.GetAllNodesAsync(NationId, TypeId);
-        Flatten(roots);
-
-        Ranks = AllNodes
-            .Select(n => n.Rank)
-            .Distinct()
-            .OrderBy(r => r)
-            .ToList();
-
-        MaxStandardColumns = AllNodes
-            .Where(n => n.TechCategory == "standard")
-            .Select(n => n.ColumnIndex ?? 0)
-            .DefaultIfEmpty(0)
-            .Max() + 1;
-
-        MaxPremiumColumns = AllNodes
-            .Where(n => n.TechCategory == "premium")
-            .Select(n => n.ColumnIndex ?? 0)
-            .DefaultIfEmpty(0)
-            .Max() + 1;
+        await LoadData();
     }
 
-    void Flatten(IEnumerable<Node> nodes)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        foreach (var n in nodes)
+        if (LoadingState == "loaded" && Dependencies.Any())
         {
-            AllNodes.Add(n);
-            if (n.Children != null && n.Children.Any())
-                Flatten(n.Children);
+            // Небольшая задержка перед отрисовкой линий, чтобы DOM успел обновиться
+            await Task.Delay(50);
+            await DrawConnectionLines();
         }
     }
 
-    private RenderFragment RenderCategoryCell(string techCat, int rank, int colIndex)
-        => __builder =>
-        {
-            int seq = 0;
-
-            var rootsInCell = AllNodes
-                .Where(n =>
-                    n.ParentId == null &&
-                    n.TechCategory == techCat &&
-                    n.Rank == rank &&
-                    (n.ColumnIndex ?? 0) == colIndex)
-                .OrderBy(n => n.OrderInFolder ?? 0)
-                .ThenBy(n => n.RowIndex);
-
-            foreach (var node in rootsInCell)
-            {
-                RenderNodeRecursive(__builder, ref seq, node);
-            }
-        };
-
-    void RenderNodeRecursive(RenderTreeBuilder b, ref int seq, Node node)
+    private async Task LoadData()
     {
-        if (node.Type == "folder")
+        try
         {
-            b.OpenElement(seq++, "div");
-            b.AddAttribute(seq++, "class", "tree-node folder");
+            LoadingState = "loading";
+            // ... (Очистка коллекций) ...
+            MaxRowIndexPerRank.Clear();
+            _vehiclesInFoldersCache.Clear();
+            GridNodes.Clear();
+            Dependencies.Clear(); // Очищаем зависимости тоже
+            StateHasChanged();
 
-            b.OpenElement(seq++, "div");
-            b.AddAttribute(seq++, "class", "folder-header");
-            b.AddMarkupContent(seq++, $@"
-                <div class=""node-icon"" style=""background-image:url('{node.ImageUrl}')""></div>
-                <div class=""node-name"">{node.Name}</div>");
-            b.CloseElement(); // folder-header
-
-            b.OpenElement(seq++, "div");
-            b.AddAttribute(seq++, "class", "folder-children");
-            foreach (var child in node.Children
-                .OrderBy(c => c.OrderInFolder ?? 0)
-                .ThenBy(c => c.RowIndex))
+            AllNodesFlat = await Api.GetAllNodesFlatAsync(NationId, TypeId);
+            if (AllNodesFlat == null || !AllNodesFlat.Any())
             {
-                RenderNodeRecursive(b, ref seq, child);
+                // ... (Обработка случая без данных) ...
+                MaxRank = 0;
+                MaxStandardCol = -1;
+                MaxPremiumCol = -1;
+                TotalDataGridRows = 0;
+                GridStyles = "";
+                LoadingState = "loaded";
+                StateHasChanged();
+                return;
             }
-            b.CloseElement(); // folder-children
 
-            b.CloseElement(); // tree-node folder
+            NodeLookup = AllNodesFlat.ToDictionary(n => n.Id);
+
+            BuildHierarchy();
+
+            // Определяем узлы для сетки, кэш папок И считаем строки
+            PrepareGridNodesAndCalculateRows(); // Переименовали для ясности
+
+            // Загружаем зависимости
+            Dependencies = await Api.GetAllDependenciesAsync(NationId, TypeId);
+
+            CalculateGridDimensions(); // Размеры сетки на основе новых данных о строках
+
+            LoadingState = "loaded";
+        }
+        catch (Exception ex)
+        {
+            LoadingState = "error";
+            Console.WriteLine($"Error loading tech tree data: {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
+        }
+        StateHasChanged();
+    }
+    private RenderFragment RenderNodeRecursive(Node node) => __builder =>
+    {
+    // Determine if this node should be rendered inside its parent
+    // (It's NOT a grid node itself, meaning parent is a folder and coords match)
+    bool isRenderedInsideParent = !GridNodes.Contains(node); // Check if it wasn't placed on main grid
+
+    // Decide which specific render method to call based on type
+    if (node.Type == "folder")
+    {
+        // We need a way to render the folder visuals + its nested children recursively
+        __builder.AddContent(0, RenderFolderNodeInternal(node, isRenderedInsideParent));
+    }
+    else // vehicle
+    {
+        // Render vehicle visuals
+        __builder.AddContent(1, RenderVehicleNode(node)); // RenderVehicleNode only does visuals now
+    }
+    };
+    private void BuildHierarchy()
+    {
+        Console.WriteLine("Building hierarchy...");
+        // Ensure NodeLookup is populated before calling this
+        if (NodeLookup == null || !NodeLookup.Any())
+        {
+            Console.WriteLine("NodeLookup is empty, cannot build hierarchy.");
+            return;
+        }
+
+        foreach (var node in AllNodesFlat)
+        {
+            node.Children.Clear(); // Reset children list
+            node.ParentNode = null; // Reset parent reference
+            if (node.ParentId.HasValue && NodeLookup.TryGetValue(node.ParentId.Value, out var parent))
+            {
+                node.ParentNode = parent;
+                parent.Children.Add(node);
+                //Console.WriteLine($"Node {node.Name}({node.Id}) linked to Parent {parent.Name}({parent.Id})");
+            }
+            // else {
+            //     Console.WriteLine($"Node {node.Name}({node.Id}) is a root or parent not found.");
+            // }
+        }
+
+        // Optional: Sort children after linking (might simplify folder rendering)
+        // foreach(var node in AllNodesFlat.Where(n => n.Children.Any()))
+        // {
+        //     node.Children = node.Children
+        //         .OrderBy(c => c.OrderInFolder ?? int.MaxValue)
+        //         .ThenBy(c => c.RowIndex ?? 0)
+        //         .ToList();
+        // }
+        Console.WriteLine("Hierarchy build complete.");
+    }
+   //  private RenderFragment RenderFolderNode(Node node) => __builder =>
+   //   {
+   //   // This is called for folders placed on the main grid.
+   //   // It just calls the internal renderer.
+   //   __builder.AddContent(0, RenderFolderNodeInternal(node, false));
+   //   };
+   //  private RenderFragment RenderFolderNodeInternal(Node node, bool isNested) => __builder =>
+   // {
+   //     bool isExpanded = ExpandedFolderIds.Contains(node.Id);
+   //     // Add classes based on whether it's nested or on main grid if needed
+   //     string containerClass = isNested ? "folder-visual-container-nested" : "folder-visual-container";
+   //     string folderNodeClasses = "node-content folder-node";
+   //     folderNodeClasses += isExpanded ? " folder-expanded" : " folder-collapsed";
+
+
+   //     __builder.OpenElement(0, "div");
+   //     __builder.AddAttribute(1, "class", containerClass);
+   //     // Maybe remove ID from this outer container if ID must be unique and on the node-content?
+   //     //__builder.AddAttribute(2, "id", $"node-container-{node.Id}");
+
+   //     // Div for the folder representation itself
+   //     __builder.OpenElement(3, "div");
+   //     __builder.AddAttribute(4, "class", folderNodeClasses);
+   //     __builder.AddAttribute(5, "id", $"node-{node.Id}"); // ID for JS connections here
+   //     __builder.AddAttribute(6, "onclick", EventCallback.Factory.Create(this, () => HandleNodeClick(node)));
+
+   //     // Icon, Name, Toggle Icon - Render as before
+   //     __builder.OpenElement(7, "div");
+   //     __builder.AddAttribute(8, "class", "node-icon");
+   //     __builder.AddAttribute(9, "style", $"background-image:url('{node.ImageUrl}')");
+   //     __builder.CloseElement(); // node-icon
+
+   //     __builder.OpenElement(10, "div");
+   //     __builder.AddAttribute(11, "class", "node-name");
+   //     __builder.AddContent(12, node.Name);
+   //     __builder.CloseElement(); // node-name
+
+   //     __builder.OpenElement(13, "div");
+   //     __builder.AddAttribute(14, "class", "folder-toggle-icon");
+   //     __builder.AddContent(15, isExpanded ? "-" : "+");
+   //     __builder.CloseElement(); // folder-toggle-icon
+
+   //     __builder.CloseElement(); // node-content folder-node
+
+   //     // If expanded, render children that belong inside THIS folder visually
+   //     if (isExpanded)
+   //     {
+   //     // Find children whose parent is this node AND are NOT grid nodes (coords match)
+   //     var childrenToRenderInside = node.Children
+   //      .Where(child => !GridNodes.Contains(child)) // Must not be a standalone grid node
+   //      .OrderBy(c => c.OrderInFolder ?? int.MaxValue)
+   //      .ThenBy(c => c.RowIndex ?? 0) // Secondary sort just in case
+   //      .ToList();
+
+   //     if (childrenToRenderInside.Any())
+   //     {
+   //         __builder.OpenElement(16, "div");
+   //         __builder.AddAttribute(17, "class", "folder-items-container"); // Container for children
+
+   //         foreach (var child in childrenToRenderInside)
+   //         {
+   //             // Recursively render the child node
+   //             __builder.AddContent(18, RenderNodeRecursive(child));
+   //         }
+
+   //         __builder.CloseElement(); // folder-items-container
+   //     }
+   //     }
+
+   //     __builder.CloseElement(); // containerClass
+   // };
+
+    private void PrepareGridNodesAndCalculateRows()
+    {
+        GridNodes.Clear();
+        MaxRowIndexPerRank.Clear();
+        TotalDataGridRows = 0;
+
+        if (AllNodesFlat == null || !AllNodesFlat.Any()) return;
+
+        // Calculate Max RowIndex per Rank (same as before)
+        foreach (var node in AllNodesFlat)
+        {
+            int currentMax = MaxRowIndexPerRank.TryGetValue(node.Rank, out var max) ? max : -1;
+            if ((node.RowIndex ?? 0) > currentMax) MaxRowIndexPerRank[node.Rank] = node.RowIndex ?? 0;
+            else if (!MaxRowIndexPerRank.ContainsKey(node.Rank)) MaxRowIndexPerRank[node.Rank] = node.RowIndex ?? 0;
+        }
+        TotalDataGridRows = MaxRowIndexPerRank.Sum(kvp => kvp.Value + 1);
+        Console.WriteLine($"MaxRowIndexPerRank: {System.Text.Json.JsonSerializer.Serialize(MaxRowIndexPerRank)}");
+        Console.WriteLine($"TotalDataGridRows: {TotalDataGridRows}");
+
+        // Identify GridNodes based on Parent relationship AND coordinates
+        foreach (var node in AllNodesFlat)
+        {
+            bool isGridNode = false;
+            if (node.ParentNode == null)
+            {
+                isGridNode = true; // Root node
+            }
+            else
+            {
+                // Is a grid node if parent isn't a folder OR coordinates mismatch parent folder
+                if (node.ParentNode.Type != "folder")
+                {
+                    isGridNode = true;
+                }
+                else
+                {
+                    // Parent IS a folder, check coordinates
+                    if (node.Rank != node.ParentNode.Rank ||
+                        (node.ColumnIndex ?? 0) != (node.ParentNode.ColumnIndex ?? 0) ||
+                        (node.RowIndex ?? 0) != (node.ParentNode.RowIndex ?? 0))
+                    {
+                        isGridNode = true; // Belongs in a different grid cell than parent folder
+                    }
+                    // Else: Parent is folder AND coords match -> NOT a grid node, rendered inside folder
+                }
+            }
+
+            if (isGridNode)
+            {
+                GridNodes.Add(node);
+            }
+        }
+        Console.WriteLine($"Total GridNodes identified: {GridNodes.Count}");
+    }
+
+
+
+    private void CalculateGridDimensions()
+    {
+        // Расчет MaxRank, MaxStandardCol, MaxPremiumCol - без изменений
+        MaxRank = AllNodesFlat.Any() ? AllNodesFlat.Max(n => n.Rank) : 0;
+        var standardNodes = AllNodesFlat.Where(n => n.TechCategory == "standard");
+        MaxStandardCol = standardNodes.Any() ? standardNodes.Max(n => n.ColumnIndex ?? 0) : -1;
+        var premiumNodes = AllNodesFlat.Where(n => n.TechCategory != "standard");
+        MaxPremiumCol = premiumNodes.Any() ? premiumNodes.Max(n => n.ColumnIndex ?? 0) : -1;
+
+        int standardColCount = MaxStandardCol + 1;
+        int premiumColCount = MaxPremiumCol + 1;
+        if (standardColCount < 0) standardColCount = 0;
+        if (premiumColCount < 0) premiumColCount = 0;
+
+
+        // Генерируем строки сетки на основе TotalDataGridRows
+        string gridRowsStyle = "auto"; // Заголовок
+        if (TotalDataGridRows > 0)
+        {
+            gridRowsStyle += $" repeat({TotalDataGridRows}, minmax(80px, auto))";
+        }
+        else if (MaxRank > 0)
+        {
+            // Фоллбэк, если расчет TotalDataGridRows дал 0, но ранги есть (маловероятно)
+            gridRowsStyle += $" repeat({MaxRank}, minmax(80px, auto))";
+        }
+
+        GridStyles =
+            $"display: grid; " +
+            $"grid-template-rows: {gridRowsStyle}; " + // Используем рассчитанное кол-во строк
+            $"grid-template-columns: auto " +
+            $"{(standardColCount > 0 ? $"repeat({standardColCount}, minmax(100px, auto)) " : "")}" +
+            $"{(premiumColCount > 0 ? $"repeat({premiumColCount}, minmax(100px, auto))" : "")}; " +
+            $"gap: 15px 25px; " +
+            $"position: relative;";
+
+        Console.WriteLine($"Grid Dimensions: MaxRank={MaxRank}, MaxStdCol={MaxStandardCol}, MaxPremCol={MaxPremiumCol}, TotalDataRows={TotalDataGridRows}");
+        Console.WriteLine($"Grid Styles: {GridStyles}");
+    }
+
+
+
+    // Определяет стиль для размещения узла в ОСНОВНОЙ сетке
+    private string GetNodeGridStyle(Node node)
+    {
+        int col;
+        // Расчет колонки - без изменений
+        if (node.TechCategory == "standard")
+        {
+            col = 1 + (node.ColumnIndex ?? 0) + 1;
         }
         else
         {
-            b.OpenElement(seq++, "div");
-            b.AddAttribute(seq++, "class", "tree-node vehicle");
-            b.AddMarkupContent(seq++, $@"
-                <div class=""vehicle-node"">
-                    <div class=""node-icon"" style=""background-image:url('{node.ImageUrl}')""></div>
-                    <div class=""node-info"">
-                        <div class=""node-name"">{node.Name}</div>
-                        <div class=""node-exp"">{node.RequiredExp}</div>
-                    </div>
-                </div>");
-            b.CloseElement(); // vehicle
+            col = 1 + (MaxStandardCol + 1) + (node.ColumnIndex ?? 0) + 1;
+        }
 
-            if (node.Children?.Any() ?? false)
-            {
-                b.OpenElement(seq++, "div");
-                b.AddAttribute(seq++, "class", "node-arrow");
-                b.CloseElement();
+        // Расчет строки с учетом Rank и RowIndex
+        int calculatedRow = 1; // Начинаем после строки заголовка (индекс 1)
+        // Суммируем количество строк во всех предыдущих рангах
+        for (int r = 1; r < node.Rank; r++)
+        {
+            // Добавляем кол-во строк в ранге r (MaxRowIndex + 1)
+            calculatedRow += (MaxRowIndexPerRank.TryGetValue(r, out var rowsInPrevRank) ? rowsInPrevRank : 0) + 1;
+        }
+        // Добавляем смещение внутри текущего ранга на основе RowIndex
+        calculatedRow += (node.RowIndex ?? 0);
 
-                b.OpenElement(seq++, "div");
-                b.AddAttribute(seq++, "style", "position:relative;");
+        // calculatedRow теперь - это 1-based индекс строки в сетке данных
+        // Возвращаем 1-based индекс строки для grid-row (т.к. строка 1 - заголовок)
+        return $"grid-column: {col}; grid-row: {calculatedRow + 1}; z-index: 1; position: relative;";
+    }
 
-                b.OpenElement(seq++, "div");
-                b.AddAttribute(seq++, "class", "tree-group-collapse");
-                b.AddAttribute(seq++, "style", "position:absolute;display:none;");
-                foreach (var child in node.Children
-                    .OrderBy(c => c.OrderInFolder ?? 0)
-                    .ThenBy(c => c.RowIndex))
-                {
-                    RenderNodeRecursive(b, ref seq, child);
-                }
-                b.CloseElement(); // tree-group-collapse
 
-                b.OpenElement(seq++, "div");
-                b.AddAttribute(seq++, "class", "tree-group");
-                b.AddMarkupContent(seq++, $@"
-                    <div class=""tree-group-text"">{node.Name}</div>
-                    <div class=""tree-group-img""><img src=""{node.ImageUrl}"" /></div>");
-                b.CloseElement(); // tree-group
+    // Определяет CSS классы узла
+    private string GetNodeCssClass(Node node) // Убрали isVisible
+    {
+        var classes = $"tree-grid-item node-type-{node.Type} tech-cat-{node.TechCategory}";
+        // Классы для папки теперь лучше добавлять внутри RenderFolderNode
+        // if (node.Type == "folder") { ... }
+        return classes;
+    }
 
-                b.CloseElement(); // wrapper
+    // Обработка клика по узлу (только для папок)
+    private void HandleNodeClick(Node node)
+    {
+        if (node.Type == "folder")
+        {
+            if (ExpandedFolderIds.Contains(node.Id))
+                ExpandedFolderIds.Remove(node.Id);
+            else
+                ExpandedFolderIds.Add(node.Id);
 
-                b.OpenElement(seq++, "div");
-                b.AddAttribute(seq++, "class", "node-arrow");
-                b.CloseElement();
-            }
+            StateHasChanged(); // Перерисовать компонент для обновления содержимого папки
+            // Задержка перед перерисовкой линий после изменения DOM
+            Task.Delay(50).ContinueWith(async _ => await DrawConnectionLines());
+        }
+    }
+
+    // --- Шаблоны для рендеринга узлов ---
+
+    private RenderFragment RenderFolderNode(Node node) => __builder =>
+     {
+     // This is called for folders placed on the main grid.
+     // It just calls the internal renderer.
+     __builder.AddContent(0, RenderFolderNodeInternal(node, false));
+     };
+
+    private RenderFragment RenderFolderNodeInternal(Node node, bool isNested) => __builder =>
+   {
+       bool isExpanded = ExpandedFolderIds.Contains(node.Id);
+       // Add classes based on whether it's nested or on main grid if needed
+       string containerClass = isNested ? "folder-visual-container-nested" : "folder-visual-container";
+       string folderNodeClasses = "node-content folder-node";
+       folderNodeClasses += isExpanded ? " folder-expanded" : " folder-collapsed";
+
+
+       __builder.OpenElement(0, "div");
+       __builder.AddAttribute(1, "class", containerClass);
+       // Maybe remove ID from this outer container if ID must be unique and on the node-content?
+       //__builder.AddAttribute(2, "id", $"node-container-{node.Id}");
+
+       // Div for the folder representation itself
+       __builder.OpenElement(3, "div");
+       __builder.AddAttribute(4, "class", folderNodeClasses);
+       __builder.AddAttribute(5, "id", $"node-{node.Id}"); // ID for JS connections here
+       __builder.AddAttribute(6, "onclick", EventCallback.Factory.Create(this, () => HandleNodeClick(node)));
+
+       // Icon, Name, Toggle Icon - Render as before
+       __builder.OpenElement(7, "div");
+       __builder.AddAttribute(8, "class", "node-icon");
+       __builder.AddAttribute(9, "style", $"background-image:url('{node.ImageUrl}')");
+       __builder.CloseElement(); // node-icon
+
+       __builder.OpenElement(10, "div");
+       __builder.AddAttribute(11, "class", "node-name");
+       __builder.AddContent(12, node.Name);
+       __builder.CloseElement(); // node-name
+
+       __builder.OpenElement(13, "div");
+       __builder.AddAttribute(14, "class", "folder-toggle-icon");
+       __builder.AddContent(15, isExpanded ? "-" : "+");
+       __builder.CloseElement(); // folder-toggle-icon
+
+       __builder.CloseElement(); // node-content folder-node
+
+       // If expanded, render children that belong inside THIS folder visually
+       if (isExpanded)
+       {
+       // Find children whose parent is this node AND are NOT grid nodes (coords match)
+       var childrenToRenderInside = node.Children
+        .Where(child => !GridNodes.Contains(child)) // Must not be a standalone grid node
+        .OrderBy(c => c.OrderInFolder ?? int.MaxValue)
+        .ThenBy(c => c.RowIndex ?? 0) // Secondary sort just in case
+        .ToList();
+
+       if (childrenToRenderInside.Any())
+       {
+           __builder.OpenElement(16, "div");
+           __builder.AddAttribute(17, "class", "folder-items-container"); // Container for children
+
+           foreach (var child in childrenToRenderInside)
+           {
+               // Recursively render the child node
+               __builder.AddContent(18, RenderNodeRecursive(child));
+           }
+
+           __builder.CloseElement(); // folder-items-container
+       }
+       }
+
+       __builder.CloseElement(); // containerClass
+   };
+    private RenderFragment RenderVehicleNode(Node node) => __builder =>
+    {
+    // This renders the content for a vehicle node
+    __builder.OpenElement(0, "div");
+    __builder.AddAttribute(1, "id", $"node-{node.Id}"); // ID for JS
+    __builder.AddAttribute(2, "class", "node-content vehicle-node");
+
+    // Icon
+    __builder.OpenElement(3, "div");
+    __builder.AddAttribute(4, "class", "node-icon");
+    __builder.AddAttribute(5, "style", $"background-image:url('{node.ImageUrl}')");
+    __builder.CloseElement(); // node-icon
+
+    // Info (Name, Details)
+    __builder.OpenElement(6, "div");
+    __builder.AddAttribute(7, "class", "node-info");
+    // Name
+    __builder.OpenElement(8, "div");
+    __builder.AddAttribute(9, "class", "node-name");
+    __builder.AddContent(10, node.Name);
+    __builder.CloseElement(); // node-name
+    // Details (BR, RP, SL)
+    __builder.OpenElement(11, "div");
+    __builder.AddAttribute(12, "class", "node-details");
+    if (node.Br.HasValue) { /* ... span ... */ }
+    if (node.RequiredExp.HasValue && node.RequiredExp > 0) { /* ... span ... */ }
+    if (node.SilverCost.HasValue && node.SilverCost > 0) { /* ... span ... */ }
+    // Re-add content rendering for BR, RP, SL (omitted for brevity)
+    if (node.Br.HasValue)
+    {
+        __builder.OpenElement(13, "span");
+        __builder.AddAttribute(14, "class", "node-br");
+        __builder.AddContent(15, $"BR: {node.Br}");
+        __builder.CloseElement(); // node-br
+    }
+    if (node.RequiredExp.HasValue && node.RequiredExp > 0)
+    {
+        __builder.OpenElement(16, "span");
+        __builder.AddAttribute(17, "class", "node-exp");
+        __builder.AddContent(18, $"RP: {node.RequiredExp:N0}"); // Formatting
+        __builder.CloseElement(); // node-exp
+    }
+    if (node.SilverCost.HasValue && node.SilverCost > 0)
+    {
+        __builder.OpenElement(19, "span");
+        __builder.AddAttribute(20, "class", "node-cost");
+        __builder.AddContent(21, $"SL: {node.SilverCost:N0}"); // Formatting
+        __builder.CloseElement(); // node-cost
+    }
+    __builder.CloseElement(); // node-details
+    __builder.CloseElement(); // node-info
+
+    __builder.CloseElement(); // node-content vehicle-node
+    };
+
+
+    // --- Логика для отрисовки SVG линий ---
+    private async Task DrawConnectionLines()
+    {
+        if (JSRuntime == null || Dependencies == null || !Dependencies.Any())
+        {
+            Console.WriteLine("DrawConnectionLines skipped: JSRuntime or Dependencies not ready.");
+            return; // Проверка на null
+        }
+
+        try
+        {
+            // Формируем список зависимостей с ID элементов источника и цели
+            var connectionData = Dependencies
+               .Select(dep => new
+               {
+                   lineId = $"dep-{dep.NodeId}-{dep.PrerequisiteNodeId}",
+                   sourceElementId = $"node-{dep.PrerequisiteNodeId}", // ID элемента-источника
+                   targetElementId = $"node-{dep.NodeId}"  // ID элемента-цели
+               })
+               .ToList();
+
+            // Передаем ID элементов и ID линии в JS
+            await JSRuntime.InvokeVoidAsync("techTreeFunctions.drawConnections", connectionData);
+            Console.WriteLine($"JS drawConnections called for {connectionData.Count} dependencies.");
+        }
+        catch (JSDisconnectedException ex)
+        {
+            Console.WriteLine($"JS interop error (disconnected): {ex.Message}");
+            // Ошибка, если компонент был удален во время вызова JS
+        }
+        catch (JSException ex)
+        {
+            Console.WriteLine($"JS interop error in DrawConnectionLines: {ex.Message}");
+            // Выводим детали ошибки JS, если возможно
+            Console.WriteLine($"JS StackTrace (if available): {ex.StackTrace}");
+        }
+        catch (Exception ex) // Перехватываем другие возможные ошибки
+        {
+            Console.WriteLine($"Error in DrawConnectionLines: {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
         }
     }
 }

@@ -28,6 +28,9 @@ namespace WTExpCalc.Models
         [JsonPropertyName("parent_id")]
         public int? ParentId { get; set; }
 
+        [JsonIgnore]
+        public Node? ParentNode { get; set; } // вот это добавили
+
         [JsonPropertyName("rank")]
         public int Rank { get; set; }
 
@@ -42,6 +45,10 @@ namespace WTExpCalc.Models
 
         [JsonPropertyName("br")]
         public decimal? BattleRating { get; set; }
+
+        // Для удобства в Razor привяжем короткое имя
+        [JsonIgnore]
+        public decimal? Br => BattleRating;
 
         [JsonPropertyName("column_index")]
         public int? ColumnIndex { get; set; }

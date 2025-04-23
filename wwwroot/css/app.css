@@ -109,3 +109,247 @@ code {
     .nation-card:hover {
         border-color: #007bff;
     }
+.tech-tree-container {
+    overflow: auto;
+}
+
+    .tech-tree-container.loading::after {
+        content: 'Загрузка...';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1.5em;
+    }
+
+    .tech-tree-container.error::after {
+        content: 'Ошибка загрузки данных!';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1.5em;
+        color: red;
+    }
+
+
+.tree-grid {
+    display: grid;
+    gap: 10px 20px;
+    grid-auto-rows: min-content; /* allow as many rows as needed */
+    grid-auto-flow: column dense; /* fill down each column before moving on */
+    /* your grid-template-columns:  auto repeat(...) etc. */
+}
+.tree-grid-item {
+    border: 1px solid #555;
+    background-color: #333;
+    color: #eee;
+    min-height: 60px;
+    padding: 5px;
+    border-radius: 4px;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.grid-header {
+    background: #444;
+    color: #fff;
+    font-weight: bold;
+    text-align: center;
+    padding: 5px;
+}
+
+/* метки рангов */
+.rank-label {
+    background: #555;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+.node-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+
+.node-content {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.node-icon {
+    width: 50px;
+    height: 50px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.node-info {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.9em;
+}
+
+.node-name {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.node-details span {
+    margin-right: 10px;
+    font-size: 0.8em;
+    color: #ccc;
+}
+
+.folder-node {
+    cursor: pointer;
+}
+
+.folder-toggle-icon {
+    margin-left: auto; /* Прижать иконку +/- к правому краю */
+    padding: 0 10px;
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+/* Стили для премиум/ивентов */
+.tech-cat-premium, .tech-cat-event {
+    border-left: 5px solid gold; /* Пример выделения */
+}
+
+.tree-connections-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Чтобы не мешало кликам */
+    z-index: 0; /* Под узлами, но над фоном */
+}
+.tree-grid {
+    display: grid;
+    /* grid-auto-flow: dense; */ /* УБРАТЬ или закомментировать */
+    /* gap, grid-template-rows, grid-template-columns задаются динамически из C# */
+    padding: 10px; /* Немного отступов вокруг сетки */
+    background-color: #222; /* Темный фон для дерева */
+}
+
+.tree-grid-item {
+    border: 1px solid #555;
+    background-color: #3a3a3a; /* Чуть светлее фона */
+    color: #eee;
+    /* min-height НЕ здесь, а в grid-template-rows */
+    padding: 5px;
+    border-radius: 4px;
+    position: relative; /* Для z-index и позиционирования внутренних элементов */
+    display: flex; /* Чтобы внутренние блоки нормально располагались */
+    flex-direction: column; /* Папка + её дети будут идти друг под другом */
+}
+
+/* Стили для контейнера внутри папки */
+.folder-items-container {
+    margin-top: 10px; /* Отступ от элемента папки */
+    padding-left: 15px; /* Небольшой отступ слева для вложенности */
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* Расстояние между элементами внутри папки */
+    border-left: 2px solid #666; /* Визуальная линия вложенности */
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+    /* Стили для элемента техники внутри папки */
+    .folder-items-container .vehicle-node {
+        background-color: #444; /* Немного другой фон для вложенных */
+        border: 1px dashed #777; /* Другая рамка */
+        /* Можно убрать внешний отступ, если он задан через gap в контейнере */
+    }
+
+
+.node-content {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 50px; /* Минимальная высота для контента узла */
+}
+
+/* Стили для папки */
+.folder-node {
+    cursor: pointer;
+    /* Можно добавить стили для hover */
+}
+
+    .folder-node:hover {
+        background-color: #4f4f4f;
+    }
+
+
+.node-icon {
+    width: 48px; /* Немного меньше */
+    height: 48px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.node-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Выравнивание по центру вертикали */
+    font-size: 0.85em; /* Чуть меньше шрифт */
+    flex-grow: 1; /* Занять оставшееся место */
+}
+
+.node-name {
+    font-weight: bold;
+    margin-bottom: 3px;
+    color: #fff; /* Белый цвет имени */
+}
+
+.node-details span {
+    margin-right: 8px;
+    font-size: 0.9em; /* Относительно .node-info */
+    color: #bbb; /* Светло-серый */
+    white-space: nowrap; /* Чтобы не переносились */
+}
+
+.folder-toggle-icon {
+    margin-left: auto; /* Прижать иконку +/- к правому краю */
+    padding: 0 8px;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #ccc;
+    align-self: center; /* Выровнять по центру иконку */
+}
+
+/* Стили для премиум/ивентов (оставляем как есть) */
+.tech-cat-premium, .tech-cat-event {
+    border-left: 5px solid gold;
+}
+
+.tree-connections-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Чтобы не мешало кликам */
+    z-index: 0; /* Под узлами, но над фоном */
+    overflow: visible; /* Важно, чтобы линии не обрезались */
+}
+
+/* ... остальные стили ... */
+
+/* Доп. стили для индикаторов загрузки/ошибки */
+.tech-tree-container.loading p,
+.tech-tree-container.error p {
+    text-align: center;
+    font-size: 1.2em;
+    padding: 20px;
+}
