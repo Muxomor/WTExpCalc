@@ -140,7 +140,7 @@ code {
     grid-auto-flow: column dense; /* fill down each column before moving on */
     /* your grid-template-columns:  auto repeat(...) etc. */
 }
-.tree-grid-item {
+/*.tree-grid-item {
     border: 1px solid #555;
     background-color: #333;
     color: #eee;
@@ -148,7 +148,7 @@ code {
     padding: 5px;
     border-radius: 4px;
     transition: opacity 0.3s ease, transform 0.3s ease;
-}
+}*/
 .grid-header {
     background: #444;
     color: #fff;
@@ -249,6 +249,9 @@ code {
     display: flex; /* Чтобы внутренние блоки нормально располагались */
     flex-direction: column; /* Папка + её дети будут идти друг под другом */
 }
+    .tree-grid-item.node-type-folder {
+        cursor: pointer;
+    }
 
 /* Стили для контейнера внутри папки */
 .folder-items-container {
@@ -382,3 +385,30 @@ code {
     border-right: 1px solid #444;
 }
 */
+/* Родитель должен быть position: relative, чтобы абсолютные дети «привязывались» к нему */
+.folder-visual-container {
+    position: relative;
+    display: inline-block; /* или block, как вам удобнее */
+}
+
+/* Вложенный контейнер «выпадает» из ячейки и рисуется поверх остальных */
+.folder-items-container {
+    position: absolute;
+    top: 100%; /* сразу под заголовком папки */
+    left: 0;
+    z-index: 5; /* выше чем z-index:1 у tree-grid-item */
+    background: #3a3a3a; /* совпадает с фоном grid-узла */
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    min-width: 150px; /* при необходимости */
+}
+
+/* Гарантируем, что внутри grid-ячейки не будет скрываться overflow */
+.tree-grid-item {
+    overflow: visible;
+}

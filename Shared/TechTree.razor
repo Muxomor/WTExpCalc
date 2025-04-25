@@ -111,6 +111,7 @@
     {
         if (LoadingState == "loaded" && Dependencies.Any())
         {
+            // небольшая задержка, чтобы DOM успел обновиться
             await Task.Delay(50);
             await DrawConnectionLines();
         }
@@ -243,64 +244,83 @@
     private void HandleNodeClick(Node node)
     {
         if (node.Type != "folder") return;
-        if (ExpandedFolderIds.Contains(node.Id)) ExpandedFolderIds.Remove(node.Id);
-        else ExpandedFolderIds.Add(node.Id);
+        if (ExpandedFolderIds.Contains(node.Id))
+            ExpandedFolderIds.Remove(node.Id);
+        else
+            ExpandedFolderIds.Add(node.Id);
         StateHasChanged();
-        Task.Delay(50).ContinueWith(async _ => await DrawConnectionLines());
+        //Task.Delay(50).ContinueWith(async _ => await DrawConnectionLines());
+        Console.WriteLine($"[TechTree] Toggle folder {node.Id}, wasExpanded: {ExpandedFolderIds.Contains(node.Id)}");
     }
 
-    private RenderFragment RenderFolderNode(Node node) => __builder =>
+    private RenderFragment RenderFolderNode(Node node) => builder =>
     {
-        bool isExpanded = ExpandedFolderIds.Contains(node.Id);
-        string containerClass = "folder-visual-container";
-        string folderNodeClasses = $"node-content folder-node {(isExpanded ? "folder-expanded" : "folder-collapsed")}";
+    bool isExpanded = ExpandedFolderIds.Contains(node.Id);
+    var children = GetVisualNodesInFolderSequence(node)
+                       .Where(c => c.Type == "vehicle")
+                       .ToList();
 
-        __builder.OpenElement(0, "div");
-        __builder.AddAttribute(1, "class", containerClass);
-        __builder.OpenElement(2, "div");
-        __builder.AddAttribute(3, "class", folderNodeClasses);
-        __builder.AddAttribute(4, "id", $"node-{node.Id}");
-        __builder.AddAttribute(5, "onclick", EventCallback.Factory.Create(this, () => HandleNodeClick(node)));
-        __builder.OpenElement(6, "div"); __builder.AddAttribute(7, "class", "node-icon"); __builder.AddAttribute(8, "style", $"background-image:url('{node.ImageUrl}')"); __builder.CloseElement();
-        __builder.OpenElement(9, "div"); __builder.AddAttribute(10, "class", "node-name"); __builder.AddContent(11, node.Name); __builder.CloseElement();
-        __builder.OpenElement(12, "div"); __builder.AddAttribute(13, "class", "folder-toggle-icon"); __builder.AddContent(14, isExpanded ? "-" : "+"); __builder.CloseElement();
-        __builder.CloseElement();
+    int seq = 0;
 
-        if (isExpanded)
+    // Внешний контейнер
+    builder.OpenElement(seq++, "div");
+    builder.AddAttribute(seq++, "class", "folder-visual-container");
+
+    // Сам «заголовок» папки, по которому кликаем
+    builder.OpenElement(seq++, "div");
+    builder.AddAttribute(seq++, "class", $"node-content folder-node {(isExpanded ? "folder-expanded" : "folder-collapsed")}");
+    builder.AddAttribute(seq++, "id", $"node-{node.Id}");
+    builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => HandleNodeClick(node)));
+
+    // Иконка
+    builder.OpenElement(seq++, "div");
+    builder.AddAttribute(seq++, "class", "node-icon");
+    builder.AddAttribute(seq++, "style", $"background-image:url('{node.ImageUrl}')");
+    builder.CloseElement();
+
+    // Название
+    builder.OpenElement(seq++, "div");
+    builder.AddAttribute(seq++, "class", "node-name");
+    builder.AddContent(seq++, node.Name);
+    builder.CloseElement();
+
+    // Плюс/минус
+    builder.OpenElement(seq++, "div");
+    builder.AddAttribute(seq++, "class", "folder-toggle-icon");
+    builder.AddContent(seq++, isExpanded ? "−" : "+");
+    builder.CloseElement();
+
+    builder.CloseElement(); // закрыли заголовок папки
+
+    // Только если раскрыто и есть дети — рисуем контейнер с ними
+    if (isExpanded && children.Any())
+    {
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "folder-items-container");
+
+        foreach (var child in children)
         {
-            var children = GetVisualNodesInFolderSequence(node);
-            if (children.Any())
-            {
-                __builder.OpenElement(15, "div"); __builder.AddAttribute(16, "class", "folder-items-container");
-                foreach (var child in children)
-                {
-                    if (child.Type == "vehicle") __builder.AddContent(17, RenderVehicleNode(child));
-                }
-                __builder.CloseElement();
-            }
+            builder.AddContent(seq++, RenderVehicleNode(child));
         }
-        __builder.CloseElement();
+
+        builder.CloseElement();
+    }
+
+    builder.CloseElement(); // закрыли folder-visual-container
     };
 
     private List<Node> GetVisualNodesInFolderSequence(Node folderNode)
     {
-        var results = new List<Node>();
-        var queue = new Queue<Node>(folderNode.Children
-            .Where(c => c.Rank == folderNode.Rank && (c.ColumnIndex ?? 0) == (folderNode.ColumnIndex ?? 0) && (c.RowIndex ?? 0) == (folderNode.RowIndex ?? 0))
-            .OrderBy(c => c.OrderInFolder ?? int.MaxValue));
-        var visited = new HashSet<int> { folderNode.Id };
-        while (queue.Any())
-        {
-            var current = queue.Dequeue();
-            if (!visited.Add(current.Id)) continue;
-            if (current.Rank == folderNode.Rank && (current.ColumnIndex ?? 0) == (folderNode.ColumnIndex ?? 0) && (current.RowIndex ?? 0) == (folderNode.RowIndex ?? 0))
-            {
-                results.Add(current);
-                foreach (var child in current.Children.OrderBy(c => c.OrderInFolder ?? int.MaxValue).ThenBy(c => c.RowIndex ?? 0))
-                    if (!visited.Contains(child.Id)) queue.Enqueue(child);
-            }
-        }
-        return results.OrderBy(n => n.OrderInFolder ?? int.MaxValue).ThenBy(n => n.RowIndex ?? 0).ToList();
+        // Берём из полного списка все узлы, у которых указан order_in_folder
+        // и которые лежат в той же «ячейке» (rank, column, row)
+        return AllNodesFlat
+            .Where(n =>
+                n.Rank == folderNode.Rank
+                && n.ColumnIndex == folderNode.ColumnIndex
+                && n.RowIndex == folderNode.RowIndex
+                && n.OrderInFolder.HasValue)
+            .OrderBy(n => n.OrderInFolder!.Value)
+            .ToList();
     }
 
     private RenderFragment RenderVehicleNode(Node node) => __builder =>
