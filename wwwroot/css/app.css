@@ -353,3 +353,32 @@ code {
     font-size: 1.2em;
     padding: 20px;
 }
+/* В app.css */
+.rank-label {
+    background: #555;
+    color: #fff;
+    display: flex; /* !! Обязательно для выравнивания !! */
+    align-items: center; /* Выровнять по вертикали */
+    justify-content: center; /* Выровнять по горизонтали */
+    font-weight: bold;
+    writing-mode: vertical-rl; /* Повернуть текст вертикально */
+    transform: rotate(180deg); /* Развернуть, если текст вверх ногами */
+    text-align: center;
+    padding: 5px; /* Небольшой отступ */
+    border-right: 1px solid #444; /* Разделитель */
+    overflow: hidden; /* Скрыть текст, если не помещается */
+}
+/* Если текст не нужно поворачивать, уберите writing-mode и transform */
+/*
+.rank-label {
+    background: #555;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    text-align: center;
+    padding: 5px;
+    border-right: 1px solid #444;
+}
+*/
