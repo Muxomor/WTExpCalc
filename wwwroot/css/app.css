@@ -117,6 +117,29 @@ main {
     /* grid-template-columns, grid-template-rows, grid-auto-rows задаются из C# */
 }
 
+.rank-divider-h {
+    /* Горизонтальная линия между рангами */
+    grid-column: 2 / -1; /* Растягиваем от второй до последней колонки */
+    height: 3px; /* Толщина линии */
+    background-color: #555; /* Цвет линии (можно использовать border-top) */
+    align-self: start; /* Размещаем линию в начале строки grid */
+    position: relative; /* Для z-index */
+    z-index: 0; /* Под узлами, но над фоном grid */
+    margin: -8px 0; /* Компенсируем половину grid-gap по вертикали (gap: 15px -> -7.5px) */
+    /* Подберите значение, чтобы линия была посередине gap */
+}
+
+.premium-divider-v {
+    /* Вертикальная линия между стандартной и премиум техникой */
+    width: 3px; /* Толщина линии */
+    background-color: #555; /* Цвет линии (можно использовать border-left) */
+    justify-self: start; /* Размещаем линию в начале колонки grid */
+    position: relative; /* Для z-index */
+    z-index: 0; /* Под узлами, но над фоном grid */
+    margin: 0 -13px; /* Компенсируем половину grid-gap по горизонтали (gap: 25px -> -12.5px) */
+    /* Подберите значение, чтобы линия была посередине gap */
+}
+
 .tree-grid-item {
     border: 1px solid #555;
     background-color: #3a3a3a;

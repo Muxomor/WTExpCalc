@@ -5,8 +5,7 @@
 @using WTExpCalc.Shared
 @inject IExperienceApi Api
 
-<h3>Ветка прокачки для нации @NationId</h3>
-
+<h3>Ветка прокачки для нации @FormatNationName(currentNation?.Name)</h3>
 @if (vehicleTypes == null)
 {
     <p><em>Загрузка типов…</em></p>

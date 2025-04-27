@@ -68,6 +68,39 @@
                     </defs>
                 }
             </svg>
+            @{
+                // Вычисляем последнюю колонку стандартной техники
+                var standardNodes = AllNodesFlat.Where(n => n.TechCategory == "standard");
+                int maxStdColIndex = standardNodes.Any() ? standardNodes.Max(n => n.ColumnIndex ?? 0) : -1;
+                int standardColumnCount = Math.Max(0, maxStdColIndex + 1);
+                int premiumDividerColumn = 2 + standardColumnCount; // +1 за RankLabel, +1 за сам индекс -> +1 за следующую колонку
+
+                // Вычисляем последнюю строку сетки данных
+                int lastDataRow = 1 + TotalDataGridRows; // +1, т.к. строки начинаются с 1 в CSS Grid
+
+                // --- Вертикальный разделитель (Премиум) ---
+                // Проверяем, есть ли вообще премиум техника
+                var premiumNodesExist = AllNodesFlat.Any(n => n.TechCategory != "standard");
+                if (premiumNodesExist && standardColumnCount > 0) // Рисуем, только если есть и стандартные, и премиум
+                {
+                    string premiumDividerStyle = $"grid-column: {premiumDividerColumn}; grid-row: 2 / {lastDataRow + 1};"; // Начинаем со 2-й строки до конца
+                    <div class="premium-divider-v" style="@premiumDividerStyle"></div>
+                }
+
+                // --- Горизонтальные разделители (Ранги) ---
+                for (int rank = 1; rank < MaxRank; rank++) // До предпоследнего ранга
+                {
+                    // Находим последнюю строку текущего ранга
+                    int rowsInThisRank = (MaxRowIndexPerRank.TryGetValue(rank, out var maxRowIdx) ? maxRowIdx : 0) + 1;
+                    int startGridRowCurrentRank = 2 + (cumulativeRowsBefore.TryGetValue(rank, out var cumRows) ? cumRows : 0);
+                    int endGridRowCurrentRank = startGridRowCurrentRank + rowsInThisRank - 1;
+
+                    // Стиль для разделителя ПОД текущим рангом
+                    string rankDividerStyle = $"grid-column: 2 / -1; grid-row: {endGridRowCurrentRank + 1};"; // +1 чтобы линия была ПОД последней строкой ранга
+                    <div class="rank-divider-h" style="@rankDividerStyle"></div>
+                }
+            }
+
         </div>
     }
     else if (LoadingState != "loading")
@@ -338,10 +371,10 @@
         {
             __builder.OpenElement(16, "span"); __builder.AddAttribute(17, "class", "node-exp"); __builder.AddContent(18, $"RP: {node.RequiredExp:N0}"); __builder.CloseElement();
         }
-        if (node.SilverCost.HasValue && node.SilverCost > 0)
-        {
-            __builder.OpenElement(19, "span"); __builder.AddAttribute(20, "class", "node-cost"); __builder.AddContent(21, $"SL: {node.SilverCost:N0}"); __builder.CloseElement();
-        }
+        // if (node.SilverCost.HasValue && node.SilverCost > 0)
+        // {
+        //     __builder.OpenElement(19, "span"); __builder.AddAttribute(20, "class", "node-cost"); __builder.AddContent(21, $"SL: {node.SilverCost:N0}"); __builder.CloseElement();
+        // }
         __builder.CloseElement(); __builder.CloseElement(); __builder.CloseElement();
     };
 
