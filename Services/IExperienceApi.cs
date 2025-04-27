@@ -6,6 +6,7 @@ namespace WTExpCalc.Services
     public interface IExperienceApi
     {
         Task<List<Nation>> GetNationsAsync();
+        Task<Nation?> GetNationByIdAsync(int id);
         Task<List<VehicleType>> GetVehicleTypesAsync();
 
         /// <summary>

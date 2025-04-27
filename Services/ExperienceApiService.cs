@@ -169,5 +169,20 @@ namespace WTExpCalc.Services
             var url = $"nodes?parent_id=eq.{parentNodeId}&select=*";
             return await _http.GetFromJsonAsync<List<Node>>(url, _jsonOptions) ?? new();
         }
+        public async Task<Nation?> GetNationByIdAsync(int id)
+        {
+            try
+            {
+                var url = $"nations?id=eq.{id}&select=*&limit=1";
+                var nationsList = await _http.GetFromJsonAsync<List<Nation>>(url, _jsonOptions);
+
+                return nationsList?.FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching nation by ID {id}: {ex.Message}");
+                return null; 
+            }
+        }
     }
 }

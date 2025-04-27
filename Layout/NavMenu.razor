@@ -1,39 +1,49 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">WTExpCalc</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-    </div>
-</div>
+﻿@using WTExpCalc.Models
+@using WTExpCalc.Services
+@inject IExperienceApi Api
+@inject NavigationManager Nav
 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+@* <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu"> *@
     <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
+
+        @if (nations == null)
+        {
+            <div class="nav-item px-1 py-2 text-center">
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            </div>
+        }
+        else
+        {
+            @foreach (var nation in nations)
+            {
+                <div class="nav-item">
+                    <NavLink class="nav-link py-2 px-0 d-flex justify-content-center align-items-center"
+                             href="@($"/tree/{nation.Id}")"
+                             Match="NavLinkMatch.Prefix"
+                             title="@nation.Name">
+                        <img src="@nation.ImageUrl"
+                             alt="@nation.Name"
+                             class="nation-flag-icon" />
+                    </NavLink>
+                </div>
+            }
+        }
     </nav>
-</div>
+@* </div> *@
 
 @code {
-    private bool collapseNavMenu = true;
+    // private bool collapseNavMenu = true;
+    //private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    private List<Nation>? nations;
 
-    private void ToggleNavMenu()
+    protected override async Task OnInitializedAsync()
     {
-        collapseNavMenu = !collapseNavMenu;
+        nations = await Api.GetNationsAsync();
     }
+
+    // private void ToggleNavMenu()
+    // {
+    //     collapseNavMenu = !collapseNavMenu;
+    // }
 }

@@ -19,7 +19,8 @@ else
             <li class="nav-item">
                 <a class="nav-link @(vt.Id == activeTypeId ? "active" : "")"
                    href="#"
-                   @onclick="() => SelectType(vt.Id)">
+                   @onclick="() => SelectType(vt.Id)"
+                @onclick:preventDefault>
                     @vt.Name
                 </a>
             </li>
@@ -38,13 +39,39 @@ else
     [Parameter] public int NationId { get; set; }
     private List<VehicleType>? vehicleTypes;
     private int? activeTypeId;
+    private Nation? currentNation; // Переменная для хранения данных о нации
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync() // Используем OnParametersSetAsync, чтобы реагировать на изменение NationId
     {
+        // Сбрасываем состояние при смене параметра
+        vehicleTypes = null;
+        currentNation = null;
+        activeTypeId = null;
+        StateHasChanged(); // Показать индикатор загрузки
+
         vehicleTypes = await Api.GetVehicleTypesAsync();
-        if (vehicleTypes.Any())
-            activeTypeId = vehicleTypes.First().Id;
+        currentNation = await Api.GetNationByIdAsync(NationId); // Загружаем данные о нации
+
+        if (vehicleTypes != null && vehicleTypes.Any())
+        {
+            activeTypeId = vehicleTypes.First().Id; // Устанавливаем первую вкладку активной
+        }
+        StateHasChanged(); // Обновить UI с загруженными данными
     }
 
-    void SelectType(int id) => activeTypeId = id;
+    void SelectType(int id)
+    {
+        activeTypeId = id;
+        // StateHasChanged() здесь обычно не нужен, Blazor сам отследит изменение
+    }
+
+    // Вспомогательный метод для форматирования имени нации
+    private string FormatNationName(string? name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return $"ID: {NationId}"; // Возвращаем ID, если имя не загрузилось
+        if (name.Length == 1)
+            return name.ToUpper();
+        return char.ToUpper(name[0]) + name.Substring(1);
+    }
 }
