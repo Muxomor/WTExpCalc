@@ -256,7 +256,51 @@ main {
     color: #bbb;
     white-space: nowrap;
 }
+.node-detail-item.node-exp {
+    display: flex;
+    align-items: center;
+    color: #bbb; /* Цвет метки "RP:" */
+}
 
+/* Стиль для поля ввода RP - МИНИМАЛИСТИЧНЫЙ */
+.rp-input {
+    background-color: transparent; /* Убираем фон */
+    color: inherit; /* Наследуем цвет текста (#bbb) */
+    border: none; /* Убираем рамку по умолчанию */
+    border-bottom: 1px dotted #777; /* Тонкое пунктирное подчеркивание как подсказка */
+    border-radius: 0; /* Убираем скругление для вида "текста" */
+    padding: 1px 2px; /* Минимальные отступы */
+    margin-left: 4px;
+    width: 80px; /* Оставляем ширину для предсказуемости */
+    font-size: inherit;
+    text-align: left; /* Выравнивание текста в поле */
+    -moz-appearance: textfield;
+    outline: none; /* Убираем стандартный контур фокуса */
+    transition: border-color 0.1s ease-in-out, background-color 0.1s ease-in-out; /* Плавные переходы */
+}
+
+    /* Убрать стрелки (оставляем как было) */
+    .rp-input::-webkit-outer-spin-button,
+    .rp-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    /* Стиль при НАВЕДЕНИИ */
+    .rp-input:hover {
+        border-bottom-color: #aaa; /* Делаем подчеркивание чуть заметнее */
+        background-color: rgba(255, 255, 255, 0.05); /* Очень легкий фон */
+    }
+
+    /* Стиль при ФОКУСЕ (когда пользователь кликнул в поле) */
+    .rp-input:focus {
+        color: #eee; /* Можно сделать текст чуть ярче при редактировании */
+        background-color: rgba(0, 0, 0, 0.2); /* Возвращаем темный фон для ясности */
+        border: 1px solid #007bff; /* Добавляем синюю рамку */
+        border-radius: 3px; /* Возвращаем небольшое скругление при фокусе */
+        /* Можно вернуть тень, если нужно */
+        /* box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25); */
+    }
 /* Иконка +/- для папок */
 .folder-toggle-icon {
     margin-left: auto;

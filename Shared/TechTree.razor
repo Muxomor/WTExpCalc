@@ -394,20 +394,76 @@
 
     private RenderFragment RenderVehicleNode(Node node) => __builder =>
     {
-        __builder.OpenElement(0, "div"); __builder.AddAttribute(1, "id", $"node-{node.Id}"); __builder.AddAttribute(2, "class", "node-content vehicle-node");
-        __builder.OpenElement(3, "div"); __builder.AddAttribute(4, "class", "node-icon"); __builder.AddAttribute(5, "style", $"background-image:url('{node.ImageUrl}')"); __builder.CloseElement();
-        __builder.OpenElement(6, "div"); __builder.AddAttribute(7, "class", "node-info");
-        __builder.OpenElement(8, "div"); __builder.AddAttribute(9, "class", "node-name"); __builder.AddContent(10, node.Name); __builder.CloseElement();
-        __builder.OpenElement(11, "div"); __builder.AddAttribute(12, "class", "node-details");
+        int seq = 0;
+        __builder.OpenElement(seq++, "div");
+        __builder.AddAttribute(seq++, "id", $"node-{node.Id}");
+        // Добавляем класс, если RP редактируемый, для возможной стилизации
+        __builder.AddAttribute(seq++, "class", $"node-content vehicle-node {(node.RequiredExp.HasValue ? "rp-editable" : "")}");
+
+        // Иконка (как было)
+        __builder.OpenElement(seq++, "div");
+        __builder.AddAttribute(seq++, "class", "node-icon");
+        __builder.AddAttribute(seq++, "style", $"background-image:url('{node.ImageUrl}')");
+        __builder.CloseElement(); // Закрыли node-icon
+
+        // Информация (Название и детали)
+        __builder.OpenElement(seq++, "div");
+        __builder.AddAttribute(seq++, "class", "node-info");
+
+        // Название (как было)
+        __builder.OpenElement(seq++, "div");
+        __builder.AddAttribute(seq++, "class", "node-name");
+        __builder.AddContent(seq++, node.Name);
+        __builder.CloseElement(); // Закрыли node-name
+
+        // --- ИЗМЕНЕНИЯ ЗДЕСЬ ---
+        // Детали (BR и RP теперь в отдельных блоках)
+        __builder.OpenElement(seq++, "div");
+        __builder.AddAttribute(seq++, "class", "node-details"); // Этот div теперь будет flex-column через CSS
+
+        // Отображение BR (в своем блоке/строке)
         if (node.Br.HasValue)
         {
-            __builder.OpenElement(13, "span"); __builder.AddAttribute(14, "class", "node-br"); __builder.AddContent(15, $"BR: {node.Br}"); __builder.CloseElement();
+            __builder.OpenElement(seq++, "div"); // Используем div для блочного отображения
+            __builder.AddAttribute(seq++, "class", "node-detail-item node-br");
+            __builder.AddContent(seq++, $"BR: {node.Br}");
+            __builder.CloseElement(); // Закрыли div для BR
         }
-        if (node.RequiredExp.HasValue && node.RequiredExp > 0)
+
+        // Отображение RP (текст или поле ввода)
+        __builder.OpenElement(seq++, "div"); // Используем div для блочного отображения
+        __builder.AddAttribute(seq++, "class", "node-detail-item node-exp");
+        if (node.RequiredExp.HasValue) // Если есть значение RP
         {
-            __builder.OpenElement(16, "span"); __builder.AddAttribute(17, "class", "node-exp"); __builder.AddContent(18, $"RP: {node.RequiredExp:N0}"); __builder.CloseElement();
+            // Рендерим ПОЛЕ ВВОДА
+            __builder.AddContent(seq++, "RP: "); // Текстовая метка
+            __builder.OpenElement(seq++, "input");
+            __builder.AddAttribute(seq++, "type", "number");
+            __builder.AddAttribute(seq++, "class", "rp-input"); // Класс для стилизации
+            __builder.AddAttribute(seq++, "min", "0"); // Нельзя ввести отрицательное значение
+            // Связываем значение поля с RequiredExp. Используем long? напрямую.
+            // `@bind` по умолчанию использует событие 'onchange' (сработает после потери фокуса)
+            // Если нужно обновление "на лету", используйте @bind:event="oninput"
+            __builder.AddAttribute(seq++, "value", BindConverter.FormatValue(node.RequiredExp.Value));
+            __builder.AddAttribute(seq++, "onchange", EventCallback.Factory.CreateBinder<int?>(this,
+        v => { node.RequiredExp = v; }, node.RequiredExp));
+            __builder.AddElementReferenceCapture(seq++, capturedRef => { /* можно использовать для фокуса и т.д. */ });
+            __builder.CloseElement(); // Закрыли input
         }
-        __builder.CloseElement(); __builder.CloseElement(); __builder.CloseElement();
+        // Если RequiredExp == null, ничего не рендерим для RP (или можно вывести прочерк)
+        // else { __builder.AddContent(seq++, "RP: -"); }
+
+        __builder.CloseElement(); // Закрыли div для RP
+
+        // Отображение SL (в своем блоке/строке)
+        // Закомментировано в вашем коде, оставляем так же
+        // if (node.SilverCost.HasValue && node.SilverCost > 0) { ... }
+
+        __builder.CloseElement(); // Закрыли node-details
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+        __builder.CloseElement(); // Закрыли node-info
+        __builder.CloseElement(); // Закрыли node-content vehicle-node
     };
 
     private async Task DrawConnectionLines()
