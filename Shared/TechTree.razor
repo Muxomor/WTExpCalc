@@ -3,7 +3,7 @@
 @inject IExperienceApi Api
 @inject IJSRuntime JSRuntime
 
-<div class="tech-tree-container @LoadingState">
+<div class="tech-tree-container @LoadingState" id="tech-tree-container-id">
     @if (GridNodes.Any())
     {
         <div class="tree-grid" style="@GridStyles">
@@ -102,6 +102,28 @@
             }
 
         </div>
+        @if (currentlyExpandedFolder != null)
+        {
+            // Используем @key, чтобы Blazor пересоздавал попап при смене папки
+            <div class="folder-popup" id="folder-popup-@currentlyExpandedFolder.Id" style="position:absolute; visibility: hidden;" @key="currentlyExpandedFolder.Id">
+                @* Здесь можно добавить стрелку, если нужно *@
+                @* <div class="folder-popup-arrow"></div> *@
+                <div class="folder-popup-content">
+                    @foreach (var child in GetVisualNodesInFolderSequence(currentlyExpandedFolder))
+                    {
+                        // Важно: рендерим только дочерние машины, а не другие папки
+                        if (child.Type == "vehicle")
+                        {
+                            // Используем тот же рендерер, что и в сетке
+                            // Оборачиваем в div, чтобы применить стили, если нужно
+                            <div class="folder-popup-item">
+                                @RenderVehicleNode(child)
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        }
     }
     else if (LoadingState != "loading")
     {
@@ -126,12 +148,13 @@
     private Dictionary<int, Node> NodeLookup = new();
     private List<Node> GridNodes = new();
     private List<NodeDependency> Dependencies = new();
-    private HashSet<int> ExpandedFolderIds = new();
+    // private HashSet<int> ExpandedFolderIds = new(); // <-- ЗАМЕНИТЬ
+    private Node? currentlyExpandedFolder; // <-- НА ЭТО (хранит ссылку на узел или null)
     private string LoadingState = "loading";
 
     private int MaxRank = 0;
     private string GridStyles = "";
-    private Dictionary<(int Rank, int Col, string Category), List<Node>> _vehiclesInFoldersCache = new();
+    // private Dictionary<(int Rank, int Col, string Category), List<Node>> _vehiclesInFoldersCache = new(); // Эта логика может измениться
     private Dictionary<int, int> MaxRowIndexPerRank = new();
     private int TotalDataGridRows = 0;
 
@@ -156,7 +179,7 @@
         {
             LoadingState = "loading";
             MaxRowIndexPerRank.Clear();
-            _vehiclesInFoldersCache.Clear();
+            //_vehiclesInFoldersCache.Clear();
             GridNodes.Clear();
             Dependencies.Clear();
             StateHasChanged();
@@ -273,92 +296,87 @@
 
     private string GetNodeCssClass(Node node)
     {
-        // Оставляем только базовые классы
-        var cssClasses = $"tree-grid-item node-type-{node.Type} tech-cat-{node.TechCategory}";
-        // УБИРАЕМ отсюда логику с folder-open
-        return cssClasses;
+        // Убираем добавление класса folder-open отсюда
+        return $"tree-grid-item node-type-{node.Type} tech-cat-{node.TechCategory}";
     }
 
-    private void HandleNodeClick(Node node)
+    private async Task HandleNodeClick(Node node) // Делаем async для вызова JS
     {
         if (node.Type != "folder") return;
 
-        int clickedId = node.Id;
-        bool wasAlreadyExpanded = ExpandedFolderIds.Contains(clickedId);
-
-        // Если кликнутая папка УЖЕ была открыта, просто закрываем ее
-        if (wasAlreadyExpanded)
+        // Если кликнули по уже открытой папке - закрываем
+        if (currentlyExpandedFolder?.Id == node.Id)
         {
-            ExpandedFolderIds.Remove(clickedId);
+            currentlyExpandedFolder = null;
         }
-        else // Иначе (если кликнутая папка была закрыта)
+        else // Иначе - открываем новую (старая закроется автоматически)
         {
-            // Сначала закрываем ВСЕ ранее открытые папки
-            ExpandedFolderIds.Clear();
-            // Затем открываем ту, по которой кликнули
-            ExpandedFolderIds.Add(clickedId);
+            currentlyExpandedFolder = node;
         }
 
-        StateHasChanged();
-        Console.WriteLine($"[TechTree] Toggle folder {node.Id}, wasExpanded: {ExpandedFolderIds.Contains(node.Id)}");
+        StateHasChanged(); // Обновляем DOM (попап появится/исчезнет)
+
+        // Если папка открыта, позиционируем попап через JS
+        if (currentlyExpandedFolder != null)
+        {
+            // Небольшая задержка, чтобы Blazor успел отрендерить попап в DOM
+            await Task.Delay(10);
+            try
+            {
+                // Вызываем JS для установки top/left
+                await JSRuntime.InvokeVoidAsync("techTreeFunctions.positionFolderPopup",
+                    $"folder-popup-{currentlyExpandedFolder.Id}", // ID попапа
+                    $"node-{currentlyExpandedFolder.Id}",         // ID заголовка папки (цель)
+                    "tech-tree-container-id"                     // ID контейнера дерева (для расчета смещения)
+                );
+            }
+            catch (Exception ex) { Console.WriteLine($"JS interop error: {ex.Message}"); }
+        }
+        // Перерисовка линий теперь может быть не нужна сразу после клика, т.к. структура не меняется
+        // await DrawConnectionLines();
     }
 
     private RenderFragment RenderFolderNode(Node node) => builder =>
-    {
-        bool isExpanded = ExpandedFolderIds.Contains(node.Id);
-        var children = GetVisualNodesInFolderSequence(node)
-                    .Where(c => c.Type == "vehicle")
-                    .ToList();
-        int seq = 0;
+     {
+         bool isCurrentlyExpanded = currentlyExpandedFolder?.Id == node.Id; // Проверяем, эта ли папка открыта
 
-        // Внешний контейнер - ДОБАВЛЯЕМ КЛАСС СЮДА
-        builder.OpenElement(seq++, "div");
-        // Добавляем класс folder-open сюда, если isExpanded == true
-        builder.AddAttribute(seq++, "class", $"folder-visual-container {(isExpanded ? "folder-open" : "")}");
+         int seq = 0;
 
-        // Сам «заголовок» папки, по которому кликаем
-        builder.OpenElement(seq++, "div");
-        // Убрали добавление folder-expanded/folder-collapsed отсюда, если оно было
-        builder.AddAttribute(seq++, "class", $"node-content folder-node");
-        builder.AddAttribute(seq++, "id", $"node-{node.Id}");
-        builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => HandleNodeClick(node)));
+         // Внешний контейнер больше не нужен, т.к. позиционирование переехало
+         // builder.OpenElement(seq++, "div");
+         // builder.AddAttribute(seq++, "class", "folder-visual-container"); // <-- УБИРАЕМ
 
-        // Иконка
-        builder.OpenElement(seq++, "div");
-        builder.AddAttribute(seq++, "class", "node-icon");
-        builder.AddAttribute(seq++, "style", $"background-image:url('{node.ImageUrl}')");
-        builder.CloseElement();
+         // Сам «заголовок» папки, по которому кликаем
+         builder.OpenElement(seq++, "div");
+         // Добавляем класс 'folder-active' к заголовку открытой папки для стилизации
+         builder.AddAttribute(seq++, "class", $"node-content folder-node {(isCurrentlyExpanded ? "folder-active" : "")}");
+         builder.AddAttribute(seq++, "id", $"node-{node.Id}"); // Оставляем ID для JS
+         builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => HandleNodeClick(node)));
 
-        // Название
-        builder.OpenElement(seq++, "div");
-        builder.AddAttribute(seq++, "class", "node-name");
-        builder.AddContent(seq++, node.Name);
-        builder.CloseElement();
+         // Иконка
+         builder.OpenElement(seq++, "div");
+         builder.AddAttribute(seq++, "class", "node-icon");
+         builder.AddAttribute(seq++, "style", $"background-image:url('{node.ImageUrl}')");
+         builder.CloseElement();
 
-        // Плюс/минус
-        builder.OpenElement(seq++, "div");
-        builder.AddAttribute(seq++, "class", "folder-toggle-icon");
-        builder.AddContent(seq++, isExpanded ? "−" : "+");
-        builder.CloseElement();
+         // Название
+         builder.OpenElement(seq++, "div");
+         builder.AddAttribute(seq++, "class", "node-name");
+         builder.AddContent(seq++, node.Name);
+         builder.CloseElement();
 
-        builder.CloseElement(); // закрыли заголовок папки
+         // Плюс/минус - меняем иконку в зависимости от currentlyExpandedFolder
+         builder.OpenElement(seq++, "div");
+         builder.AddAttribute(seq++, "class", "folder-toggle-icon");
+         builder.AddContent(seq++, isCurrentlyExpanded ? "−" : "+");
+         builder.CloseElement();
 
-        // Только если раскрыто и есть дети — рисуем контейнер с ними
-        if (isExpanded && children.Any())
-        {
-            builder.OpenElement(seq++, "div");
-            builder.AddAttribute(seq++, "class", "folder-items-container");
+         builder.CloseElement(); // закрыли заголовок папки
 
-            foreach (var child in children)
-            {
-                builder.AddContent(seq++, RenderVehicleNode(child));
-            }
+         // КОНТЕЙНЕР С ДЕТЬМИ ЗДЕСЬ БОЛЬШЕ НЕ РЕНДЕРИТСЯ
 
-            builder.CloseElement();
-        }
-
-        builder.CloseElement(); // закрыли folder-visual-container
-    };
+         // builder.CloseElement(); // закрыли folder-visual-container // <-- УБИРАЕМ
+     };
 
     private List<Node> GetVisualNodesInFolderSequence(Node folderNode)
     {

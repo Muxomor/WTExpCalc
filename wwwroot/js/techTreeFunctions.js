@@ -1,4 +1,33 @@
 ﻿window.techTreeFunctions = {
+    positionFolderPopup: function (popupId, targetNodeId, containerId) {
+        requestAnimationFrame(() => { // Даем DOM время обновиться
+            const popupElement = document.getElementById(popupId);
+            const targetNodeElement = document.getElementById(targetNodeId); // Заголовок папки
+            const containerElement = document.getElementById(containerId); // Контейнер дерева
+
+            if (!popupElement || !targetNodeElement || !containerElement) {
+                console.error("Popup positioning error: Elements not found.",
+                    { popupId, targetNodeId, containerId, popupElement, targetNodeElement, containerElement });
+                if (popupElement) popupElement.style.visibility = 'hidden';
+                return;
+            }
+
+            const targetRect = targetNodeElement.getBoundingClientRect();
+            const containerRect = containerElement.getBoundingClientRect();
+
+            // Вычисляем позицию относительно контейнера
+            // Попап появится под заголовком папки, выровненный по левому краю
+            const top = targetRect.bottom - containerRect.top + (containerElement.scrollTop || 0) + 5; // +5px отступ снизу
+            const left = targetRect.left - containerRect.left + (containerElement.scrollLeft || 0);
+
+            // Устанавливаем стили и делаем видимым
+            popupElement.style.left = `${left}px`;
+            popupElement.style.top = `${top}px`;
+            popupElement.style.visibility = 'visible';
+            console.log(`Positioned popup ${popupId} at top: ${top}, left: ${left}`);
+        });
+    },
+
     drawConnections: function (connectionData) {
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {

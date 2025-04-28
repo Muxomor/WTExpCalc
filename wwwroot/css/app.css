@@ -182,7 +182,46 @@ main {
     width: 100%;
     min-height: 50px; /* Минимальная высота контента узла */
 }
+.folder-popup {
+    position: absolute; /* Позиционируется относительно tech-tree-container */
+    visibility: hidden; /* Скрыт, пока JS не установит координаты */
+    z-index: 100 !important; /* Гарантированно поверх всего */
+    background-color: #3a3a3a;
+    border: 1px solid #555;
+    border-radius: 4px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.6);
+    min-width: 180px; /* Или другая ширина */
+    max-width: 250px; /* Ограничение ширины */
+    transition: opacity 0.1s ease-in-out; /* Плавное появление (опционально) */
+    opacity: 1; /* Начальная непрозрачность */
+}
+.folder-popup-content {
+    padding: 8px;
+    max-height: 400px; /* Ограничение высоты с прокруткой */
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* Расстояние между элементами */
+}
 
+/* Стиль для элементов внутри попапа (можно переиспользовать стили .vehicle-node) */
+.folder-popup-item .vehicle-node {
+    background-color: #444;
+    border: 1px dashed #777;
+    /* Стили из .folder-items-container .vehicle-node можно перенести сюда */
+}
+.tree-grid-item .folder-node.folder-active {
+    background-color: #4f4f4f; /* Подсветка активной папки */
+}
+.folder-popup-item .node-content {
+    /* Стили из .node-content, если нужно переопределить */
+    min-height: 45px; /* Чуть меньше для попапа */
+}
+
+.folder-popup-item .node-icon {
+    width: 40px; /* Чуть меньше */
+    height: 40px;
+}
 .node-icon {
     width: 48px;
     height: 48px;
