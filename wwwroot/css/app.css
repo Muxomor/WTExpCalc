@@ -151,8 +151,29 @@ main {
     flex-direction: column;
     overflow: visible; /* Важно для выпадающих папок и линий */
     z-index: 1; /* Базовый z-index */
+    transition: background-color 0.2s ease-in-out, outline 0.2s ease-in-out; /* Плавность для выделения */
+}
+.node-content.vehicle-node {
+    cursor: pointer; /* Показываем, что на технику можно кликнуть */
 }
 
+    .node-content.vehicle-node:hover {
+        background-color: #4f4f4f; /* Легкая подсветка при наведении */
+    }
+
+/* Стиль для выделенного узла техники */
+.vehicle-node.node-selected {
+    outline: 2px solid #0dcaf0; /* Яркая рамка */
+    outline-offset: -2px; /* Рамка внутрь */
+    background-color: #505f70; /* Другой фон для выделения */
+}
+
+.node-content.folder-node.folder-contains-selected {
+    /* Применяем стиль прямо к элементу заголовка папки */
+    border: 1px dashed #0dcaf0 !important; /* Пунктирная рамка (добавим !important на всякий случай) */
+    background-color: rgba(13, 202, 240, 0.15) !important; /* Легкий голубоватый фон для наглядности */
+    border-radius: 4px; /* Сохраняем скругление */
+}
     .tree-grid-item.node-type-folder {
         cursor: pointer;
     }
@@ -357,6 +378,10 @@ main {
     font-weight: bold;
     text-align: center;
     padding: 5px;
+    flex-direction: column;
+    writing-mode: unset;
+    transform: none;
+    line-height: 1.2;
     border-right: 1px solid #444; /* Разделитель справа */
     /* Если нужна вертикальная ориентация */
     /* writing-mode: vertical-rl; */
@@ -368,6 +393,21 @@ main {
     left: 0; /* К левому краю */
     z-index: 2; /* Поверх обычных узлов, но под выпадающими папками */
 }
+.rank-requirement-counter {
+    font-size: 0.8em; /* Меньший шрифт для счетчика */
+    margin-top: 4px; /* Отступ от "Rank N" */
+    color: #ccc; /* Цвет по умолчанию */
+}
+
+    .rank-requirement-counter.req-met {
+        color: #4CAF50; /* Зеленый, если требование выполнено */
+        font-weight: bold;
+    }
+
+    .rank-requirement-counter.req-not-met {
+        color: #ffcc80; /* Оранжевый/желтый, если не выполнено */
+    }
+
 
 /* Холст для рисования линий связей */
 .tree-connections-overlay {

@@ -27,10 +27,21 @@
                         int rowsInThisRank = (MaxRowIndexPerRank.TryGetValue(rank, out var maxRowIndex) ? maxRowIndex : 0) + 1;
                         int startGridRow = 2 + (cumulativeRowsBefore.TryGetValue(rank, out var cumRows) ? cumRows : 0);
                         string rankLabelStyle = $"grid-column: 1; grid-row: {startGridRow} / span {rowsInThisRank};";
+    var requirement = rankRequirements.FirstOrDefault(r => r.PreviousRank == rank);
+    int requiredCount = requirement?.RequiredUnits ?? 0; // Получаем Y
+    // Считаем количество ВЫДЕЛЕННОЙ техники НА ЭТОМ ранге
+    int selectedCount = AllNodesFlat.Count(n => n.Rank == rank && n.Type == "vehicle" && selectedNodeIds.Contains(n.Id)); // Получаем X
 
-                        <div class="rank-label" style="@rankLabelStyle">
-                            <span>Rank @rank</span>
-                        </div>
+    <div class="rank-label" style="@rankLabelStyle">
+        <span>Rank @rank</span>
+        @* Отображаем счетчик, если требование найдено *@
+        @if (requirement != null)
+        {
+            <span class="rank-requirement-counter @(selectedCount >= requiredCount ? "req-met" : "req-not-met")">
+                @selectedCount / @requiredCount
+            </span>
+        }
+    </div>
                     }
                 }
             }
@@ -97,6 +108,7 @@
 
                     // Стиль для разделителя ПОД текущим рангом
                     string rankDividerStyle = $"grid-column: 2 / -1; grid-row: {endGridRowCurrentRank + 1};"; // +1 чтобы линия была ПОД последней строкой ранга
+
                     <div class="rank-divider-h" style="@rankDividerStyle"></div>
                 }
             }
@@ -151,7 +163,8 @@
     // private HashSet<int> ExpandedFolderIds = new(); // <-- ЗАМЕНИТЬ
     private Node? currentlyExpandedFolder; // <-- НА ЭТО (хранит ссылку на узел или null)
     private string LoadingState = "loading";
-
+    private List<RankRequirement> rankRequirements = new(); // Для хранения требований по рангам
+    private HashSet<int> selectedNodeIds = new();
     private int MaxRank = 0;
     private string GridStyles = "";
     // private Dictionary<(int Rank, int Col, string Category), List<Node>> _vehiclesInFoldersCache = new(); // Эта логика может измениться
@@ -178,15 +191,21 @@
         try
         {
             LoadingState = "loading";
+            // Очищаем все перед загрузкой
             MaxRowIndexPerRank.Clear();
-            //_vehiclesInFoldersCache.Clear();
+            // _vehiclesInFoldersCache.Clear(); // Если используется, раскомментировать
             GridNodes.Clear();
             Dependencies.Clear();
-            StateHasChanged();
+            rankRequirements.Clear(); // Очищаем требования
+            selectedNodeIds.Clear();  // Очищаем выделение
+            currentlyExpandedFolder = null; // Закрываем папку
+            StateHasChanged(); // Обновляем UI (показываем загрузку)
 
+            // Загружаем основные данные
             AllNodesFlat = await Api.GetAllNodesFlatAsync(NationId, TypeId);
             if (AllNodesFlat == null || !AllNodesFlat.Any())
             {
+                // Обработка случая без данных (как было)
                 MaxRank = 0;
                 GridStyles = "";
                 LoadingState = "loaded";
@@ -194,6 +213,10 @@
                 return;
             }
 
+            // Загружаем требования по рангам
+            rankRequirements = await Api.GetRankRequirementsAsync(NationId, TypeId);
+
+            // Остальная логика загрузки и подготовки (как было)
             NodeLookup = AllNodesFlat.ToDictionary(n => n.Id);
             BuildHierarchy();
             PrepareGridNodesAndCalculateRows();
@@ -206,7 +229,7 @@
             LoadingState = "error";
             Console.WriteLine($"Error loading tech tree data: {ex.Message}");
         }
-        StateHasChanged();
+        StateHasChanged(); // Финальное обновление UI
     }
 
     private void BuildHierarchy()
@@ -336,47 +359,81 @@
         // await DrawConnectionLines();
     }
 
+    private void ToggleNodeSelection(Node node)
+    {
+        if (node.Type != "vehicle") return; // Выделяем только технику
+
+        bool isSelected = selectedNodeIds.Contains(node.Id);
+
+        if (isSelected)
+        {
+            selectedNodeIds.Remove(node.Id);
+        }
+        else
+        {
+            selectedNodeIds.Add(node.Id);
+        }
+
+        // Вывод в консоль для отладки (опционально)
+        Console.WriteLine($"Toggled selection for Node ID: {node.Id}. Currently selected count: {selectedNodeIds.Count}");
+
+        StateHasChanged(); // Обновляем UI (перерисуется счетчик и стили)
+    }
+
+    private bool IsFolderSelected(Node folderNode)
+    {
+        // Папка считается "выделенной", если хотя бы один дочерний узел техники выделен
+        // Используем NodeLookup для быстрого поиска детей по ID, если иерархия построена
+        // или GetVisualNodesInFolderSequence, если он возвращает всех нужных детей
+
+        // Вариант 1: Если у Node есть Children
+        // return folderNode.Children.Any(child => child.Type == "vehicle" && selectedNodeIds.Contains(child.Id));
+
+        // Вариант 2: Используем GetVisualNodesInFolderSequence (если он надежно возвращает всех детей)
+        var children = GetVisualNodesInFolderSequence(folderNode);
+        return children.Any(child => child.Type == "vehicle" && selectedNodeIds.Contains(child.Id));
+
+        // Вариант 3: Ищем по ParentId (если иерархия не всегда полная в Children)
+        // return AllNodesFlat.Any(n => n.ParentId == folderNode.Id && n.Type == "vehicle" && selectedNodeIds.Contains(n.Id));
+    }
+
     private RenderFragment RenderFolderNode(Node node) => builder =>
-     {
-         bool isCurrentlyExpanded = currentlyExpandedFolder?.Id == node.Id; // Проверяем, эта ли папка открыта
+      {
+      bool isCurrentlyExpanded = currentlyExpandedFolder?.Id == node.Id;
+      bool containsSelected = IsFolderSelected(node); // Проверяем наличие выделенных детей
+      int seq = 0;
 
-         int seq = 0;
+      // Внешний контейнер .folder-visual-container БОЛЬШЕ НЕ НУЖЕН И НЕ РЕНДЕРИТСЯ
 
-         // Внешний контейнер больше не нужен, т.к. позиционирование переехало
-         // builder.OpenElement(seq++, "div");
-         // builder.AddAttribute(seq++, "class", "folder-visual-container"); // <-- УБИРАЕМ
+      // Рендерим ТОЛЬКО сам «заголовок» папки
+      builder.OpenElement(seq++, "div"); // Открываем div заголовка
 
-         // Сам «заголовок» папки, по которому кликаем
-         builder.OpenElement(seq++, "div");
-         // Добавляем класс 'folder-active' к заголовку открытой папки для стилизации
-         builder.AddAttribute(seq++, "class", $"node-content folder-node {(isCurrentlyExpanded ? "folder-active" : "")}");
-         builder.AddAttribute(seq++, "id", $"node-{node.Id}"); // Оставляем ID для JS
-         builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => HandleNodeClick(node)));
+      // Добавляем нужные классы ПРЯМО СЮДА
+      builder.AddAttribute(seq++, "class",
+          $"node-content folder-node {(isCurrentlyExpanded ? "folder-active" : "")} {(containsSelected ? "folder-contains-selected" : "")}");
+      builder.AddAttribute(seq++, "id", $"node-{node.Id}"); // ID для JS и стилей
+      builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => HandleNodeClick(node))); // Обработчик клика
 
-         // Иконка
-         builder.OpenElement(seq++, "div");
-         builder.AddAttribute(seq++, "class", "node-icon");
-         builder.AddAttribute(seq++, "style", $"background-image:url('{node.ImageUrl}')");
-         builder.CloseElement();
+      // Иконка
+      builder.OpenElement(seq++, "div");
+      builder.AddAttribute(seq++, "class", "node-icon");
+      builder.AddAttribute(seq++, "style", $"background-image:url('{node.ImageUrl}')");
+      builder.CloseElement(); // Закрыли иконку
 
-         // Название
-         builder.OpenElement(seq++, "div");
-         builder.AddAttribute(seq++, "class", "node-name");
-         builder.AddContent(seq++, node.Name);
-         builder.CloseElement();
+      // Название
+      builder.OpenElement(seq++, "div");
+      builder.AddAttribute(seq++, "class", "node-name");
+      builder.AddContent(seq++, node.Name);
+      builder.CloseElement(); // Закрыли название
 
-         // Плюс/минус - меняем иконку в зависимости от currentlyExpandedFolder
-         builder.OpenElement(seq++, "div");
-         builder.AddAttribute(seq++, "class", "folder-toggle-icon");
-         builder.AddContent(seq++, isCurrentlyExpanded ? "−" : "+");
-         builder.CloseElement();
+      // Плюс/минус
+      builder.OpenElement(seq++, "div");
+      builder.AddAttribute(seq++, "class", "folder-toggle-icon");
+      builder.AddContent(seq++, isCurrentlyExpanded ? "−" : "+");
+      builder.CloseElement(); // Закрыли плюс/минус
 
-         builder.CloseElement(); // закрыли заголовок папки
-
-         // КОНТЕЙНЕР С ДЕТЬМИ ЗДЕСЬ БОЛЬШЕ НЕ РЕНДЕРИТСЯ
-
-         // builder.CloseElement(); // закрыли folder-visual-container // <-- УБИРАЕМ
-     };
+      builder.CloseElement(); // Закрыли div заголовка ("node-content folder-node")
+      };
 
     private List<Node> GetVisualNodesInFolderSequence(Node folderNode)
     {
@@ -393,78 +450,74 @@
     }
 
     private RenderFragment RenderVehicleNode(Node node) => __builder =>
-    {
-        int seq = 0;
-        __builder.OpenElement(seq++, "div");
-        __builder.AddAttribute(seq++, "id", $"node-{node.Id}");
-        // Добавляем класс, если RP редактируемый, для возможной стилизации
-        __builder.AddAttribute(seq++, "class", $"node-content vehicle-node {(node.RequiredExp.HasValue ? "rp-editable" : "")}");
+     {
+     bool isSelected = selectedNodeIds.Contains(node.Id);
+     int seq = 0;
 
-        // Иконка (как было)
-        __builder.OpenElement(seq++, "div");
-        __builder.AddAttribute(seq++, "class", "node-icon");
-        __builder.AddAttribute(seq++, "style", $"background-image:url('{node.ImageUrl}')");
-        __builder.CloseElement(); // Закрыли node-icon
+     // --- Open the MAIN vehicle node element ---
+     __builder.OpenElement(seq++, "div");
+     __builder.AddAttribute(seq++, "id", $"node-{node.Id}"); // ID for targeting
 
-        // Информация (Название и детали)
-        __builder.OpenElement(seq++, "div");
-        __builder.AddAttribute(seq++, "class", "node-info");
+     // Add ALL classes and the onclick handler HERE
+     __builder.AddAttribute(seq++, "class",
+         $"node-content vehicle-node {(node.RequiredExp.HasValue ? "rp-editable" : "")} {(isSelected ? "node-selected" : "")}");
+     __builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => ToggleNodeSelection(node)));
 
-        // Название (как было)
-        __builder.OpenElement(seq++, "div");
-        __builder.AddAttribute(seq++, "class", "node-name");
-        __builder.AddContent(seq++, node.Name);
-        __builder.CloseElement(); // Закрыли node-name
+     // --- Icon ---
+     __builder.OpenElement(seq++, "div");
+     __builder.AddAttribute(seq++, "class", "node-icon");
+     __builder.AddAttribute(seq++, "style", $"background-image:url('{node.ImageUrl}')");
+     __builder.CloseElement(); // Close Icon
 
-        // --- ИЗМЕНЕНИЯ ЗДЕСЬ ---
-        // Детали (BR и RP теперь в отдельных блоках)
-        __builder.OpenElement(seq++, "div");
-        __builder.AddAttribute(seq++, "class", "node-details"); // Этот div теперь будет flex-column через CSS
+     // --- Info ---
+     __builder.OpenElement(seq++, "div");
+     __builder.AddAttribute(seq++, "class", "node-info");
 
-        // Отображение BR (в своем блоке/строке)
-        if (node.Br.HasValue)
-        {
-            __builder.OpenElement(seq++, "div"); // Используем div для блочного отображения
-            __builder.AddAttribute(seq++, "class", "node-detail-item node-br");
-            __builder.AddContent(seq++, $"BR: {node.Br}");
-            __builder.CloseElement(); // Закрыли div для BR
-        }
+     // --- Name ---
+     __builder.OpenElement(seq++, "div");
+     __builder.AddAttribute(seq++, "class", "node-name");
+     __builder.AddContent(seq++, node.Name);
+     __builder.CloseElement(); // Close Name
 
-        // Отображение RP (текст или поле ввода)
-        __builder.OpenElement(seq++, "div"); // Используем div для блочного отображения
-        __builder.AddAttribute(seq++, "class", "node-detail-item node-exp");
-        if (node.RequiredExp.HasValue) // Если есть значение RP
-        {
-            // Рендерим ПОЛЕ ВВОДА
-            __builder.AddContent(seq++, "RP: "); // Текстовая метка
-            __builder.OpenElement(seq++, "input");
-            __builder.AddAttribute(seq++, "type", "number");
-            __builder.AddAttribute(seq++, "class", "rp-input"); // Класс для стилизации
-            __builder.AddAttribute(seq++, "min", "0"); // Нельзя ввести отрицательное значение
-            // Связываем значение поля с RequiredExp. Используем long? напрямую.
-            // `@bind` по умолчанию использует событие 'onchange' (сработает после потери фокуса)
-            // Если нужно обновление "на лету", используйте @bind:event="oninput"
-            __builder.AddAttribute(seq++, "value", BindConverter.FormatValue(node.RequiredExp.Value));
-            __builder.AddAttribute(seq++, "onchange", EventCallback.Factory.CreateBinder<int?>(this,
-        v => { node.RequiredExp = v; }, node.RequiredExp));
-            __builder.AddElementReferenceCapture(seq++, capturedRef => { /* можно использовать для фокуса и т.д. */ });
-            __builder.CloseElement(); // Закрыли input
-        }
-        // Если RequiredExp == null, ничего не рендерим для RP (или можно вывести прочерк)
-        // else { __builder.AddContent(seq++, "RP: -"); }
+     // --- Details ---
+     __builder.OpenElement(seq++, "div");
+     __builder.AddAttribute(seq++, "class", "node-details");
 
-        __builder.CloseElement(); // Закрыли div для RP
+     // BR
+     if (node.Br.HasValue)
+     {
+         __builder.OpenElement(seq++, "div");
+         __builder.AddAttribute(seq++, "class", "node-detail-item node-br");
+         __builder.AddContent(seq++, $"BR: {node.Br}");
+         __builder.CloseElement(); // Close BR Div
+     }
 
-        // Отображение SL (в своем блоке/строке)
-        // Закомментировано в вашем коде, оставляем так же
-        // if (node.SilverCost.HasValue && node.SilverCost > 0) { ... }
+     // RP
+     __builder.OpenElement(seq++, "div");
+     __builder.AddAttribute(seq++, "class", "node-detail-item node-exp");
+     if (node.RequiredExp.HasValue)
+     {
+         __builder.AddContent(seq++, "RP: ");
+         __builder.OpenElement(seq++, "input");
+         __builder.AddAttribute(seq++, "type", "number");
+         __builder.AddAttribute(seq++, "class", "rp-input");
+         __builder.AddAttribute(seq++, "min", "0");
+         // --- TYPE CHECK --- Make sure the binder type matches node.RequiredExp's type (int? or long?)
+         __builder.AddAttribute(seq++, "value", BindConverter.FormatValue(node.RequiredExp)); // Use nullable directly
+         __builder.AddAttribute(seq++, "onchange", EventCallback.Factory.CreateBinder<int?>(this, // <-- CHANGE int? to long? if needed
+             v => { node.RequiredExp = v; StateHasChanged(); /* Optional: Add StateHasChanged if needed */ }, node.RequiredExp));
+         __builder.AddElementReferenceCapture(seq++, capturedRef => { /* ... */ });
+         __builder.CloseElement(); // Close Input
+     }
+     __builder.CloseElement(); // Close RP Div
 
-        __builder.CloseElement(); // Закрыли node-details
-        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+     __builder.CloseElement(); // Close Details
 
-        __builder.CloseElement(); // Закрыли node-info
-        __builder.CloseElement(); // Закрыли node-content vehicle-node
-    };
+     __builder.CloseElement(); // Close Info
+
+     // --- Close the MAIN vehicle node element ---
+     __builder.CloseElement();
+     };
 
     private async Task DrawConnectionLines()
     {
