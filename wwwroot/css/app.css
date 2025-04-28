@@ -160,12 +160,21 @@ main {
         .tree-grid-item.node-type-folder:hover {
             background-color: #4f4f4f;
         }
-
+    /*.tree-grid-item.folder-open {
+        z-index: 3;*/ /* Должен быть выше, чем у rank-label (z-index: 2) */
+        /* и выше, чем у обычных tree-grid-item (z-index: 1) */
+    /*}*/
 /* Стили для премиум/ивентов */
 .tech-cat-premium, .tech-cat-event {
     border-left: 5px solid gold;
 }
-
+.folder-visual-container.folder-open {
+    /* Этот div уже имеет position: relative */
+    z-index: 3; /* Попробуем поднять его над соседями и метками рангов */
+    position: relative;
+    transform: translateZ(0);
+    background-color: red !important;
+}
 /* Контент внутри узла */
 .node-content {
     display: flex;
@@ -231,7 +240,7 @@ main {
     position: absolute; /* Вырываем из потока */
     top: calc(100% + 5px); /* Под родительским элементом с небольшим отступом */
     left: 0; /* Выравниваем по левому краю родителя */
-    z-index: 5; /* Поверх других узлов */
+    z-index: 500; /* Поверх других узлов */
     background: #3a3a3a;
     border: 1px solid #555;
     border-radius: 4px;
@@ -246,6 +255,7 @@ main {
     .folder-items-container .vehicle-node {
         background-color: #444;
         border: 1px dashed #777;
+        z-index: 50;
         padding: 5px; /* Внутренние отступы для элементов в папке */
     }
 /* Скрыть контейнер, когда папка ЗАКРЫТА */

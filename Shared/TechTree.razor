@@ -272,74 +272,92 @@
     }
 
     private string GetNodeCssClass(Node node)
-        => $"tree-grid-item node-type-{node.Type} tech-cat-{node.TechCategory}";
+    {
+        // Оставляем только базовые классы
+        var cssClasses = $"tree-grid-item node-type-{node.Type} tech-cat-{node.TechCategory}";
+        // УБИРАЕМ отсюда логику с folder-open
+        return cssClasses;
+    }
 
     private void HandleNodeClick(Node node)
     {
         if (node.Type != "folder") return;
-        if (ExpandedFolderIds.Contains(node.Id))
-            ExpandedFolderIds.Remove(node.Id);
-        else
-            ExpandedFolderIds.Add(node.Id);
+
+        int clickedId = node.Id;
+        bool wasAlreadyExpanded = ExpandedFolderIds.Contains(clickedId);
+
+        // Если кликнутая папка УЖЕ была открыта, просто закрываем ее
+        if (wasAlreadyExpanded)
+        {
+            ExpandedFolderIds.Remove(clickedId);
+        }
+        else // Иначе (если кликнутая папка была закрыта)
+        {
+            // Сначала закрываем ВСЕ ранее открытые папки
+            ExpandedFolderIds.Clear();
+            // Затем открываем ту, по которой кликнули
+            ExpandedFolderIds.Add(clickedId);
+        }
+
         StateHasChanged();
-        //Task.Delay(50).ContinueWith(async _ => await DrawConnectionLines());
         Console.WriteLine($"[TechTree] Toggle folder {node.Id}, wasExpanded: {ExpandedFolderIds.Contains(node.Id)}");
     }
 
     private RenderFragment RenderFolderNode(Node node) => builder =>
     {
-    bool isExpanded = ExpandedFolderIds.Contains(node.Id);
-    var children = GetVisualNodesInFolderSequence(node)
-                       .Where(c => c.Type == "vehicle")
-                       .ToList();
+        bool isExpanded = ExpandedFolderIds.Contains(node.Id);
+        var children = GetVisualNodesInFolderSequence(node)
+                    .Where(c => c.Type == "vehicle")
+                    .ToList();
+        int seq = 0;
 
-    int seq = 0;
-
-    // Внешний контейнер
-    builder.OpenElement(seq++, "div");
-    builder.AddAttribute(seq++, "class", "folder-visual-container");
-
-    // Сам «заголовок» папки, по которому кликаем
-    builder.OpenElement(seq++, "div");
-    builder.AddAttribute(seq++, "class", $"node-content folder-node {(isExpanded ? "folder-expanded" : "folder-collapsed")}");
-    builder.AddAttribute(seq++, "id", $"node-{node.Id}");
-    builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => HandleNodeClick(node)));
-
-    // Иконка
-    builder.OpenElement(seq++, "div");
-    builder.AddAttribute(seq++, "class", "node-icon");
-    builder.AddAttribute(seq++, "style", $"background-image:url('{node.ImageUrl}')");
-    builder.CloseElement();
-
-    // Название
-    builder.OpenElement(seq++, "div");
-    builder.AddAttribute(seq++, "class", "node-name");
-    builder.AddContent(seq++, node.Name);
-    builder.CloseElement();
-
-    // Плюс/минус
-    builder.OpenElement(seq++, "div");
-    builder.AddAttribute(seq++, "class", "folder-toggle-icon");
-    builder.AddContent(seq++, isExpanded ? "−" : "+");
-    builder.CloseElement();
-
-    builder.CloseElement(); // закрыли заголовок папки
-
-    // Только если раскрыто и есть дети — рисуем контейнер с ними
-    if (isExpanded && children.Any())
-    {
+        // Внешний контейнер - ДОБАВЛЯЕМ КЛАСС СЮДА
         builder.OpenElement(seq++, "div");
-        builder.AddAttribute(seq++, "class", "folder-items-container");
+        // Добавляем класс folder-open сюда, если isExpanded == true
+        builder.AddAttribute(seq++, "class", $"folder-visual-container {(isExpanded ? "folder-open" : "")}");
 
-        foreach (var child in children)
+        // Сам «заголовок» папки, по которому кликаем
+        builder.OpenElement(seq++, "div");
+        // Убрали добавление folder-expanded/folder-collapsed отсюда, если оно было
+        builder.AddAttribute(seq++, "class", $"node-content folder-node");
+        builder.AddAttribute(seq++, "id", $"node-{node.Id}");
+        builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => HandleNodeClick(node)));
+
+        // Иконка
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "node-icon");
+        builder.AddAttribute(seq++, "style", $"background-image:url('{node.ImageUrl}')");
+        builder.CloseElement();
+
+        // Название
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "node-name");
+        builder.AddContent(seq++, node.Name);
+        builder.CloseElement();
+
+        // Плюс/минус
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "folder-toggle-icon");
+        builder.AddContent(seq++, isExpanded ? "−" : "+");
+        builder.CloseElement();
+
+        builder.CloseElement(); // закрыли заголовок папки
+
+        // Только если раскрыто и есть дети — рисуем контейнер с ними
+        if (isExpanded && children.Any())
         {
-            builder.AddContent(seq++, RenderVehicleNode(child));
+            builder.OpenElement(seq++, "div");
+            builder.AddAttribute(seq++, "class", "folder-items-container");
+
+            foreach (var child in children)
+            {
+                builder.AddContent(seq++, RenderVehicleNode(child));
+            }
+
+            builder.CloseElement();
         }
 
-        builder.CloseElement();
-    }
-
-    builder.CloseElement(); // закрыли folder-visual-container
+        builder.CloseElement(); // закрыли folder-visual-container
     };
 
     private List<Node> GetVisualNodesInFolderSequence(Node folderNode)
@@ -371,10 +389,6 @@
         {
             __builder.OpenElement(16, "span"); __builder.AddAttribute(17, "class", "node-exp"); __builder.AddContent(18, $"RP: {node.RequiredExp:N0}"); __builder.CloseElement();
         }
-        // if (node.SilverCost.HasValue && node.SilverCost > 0)
-        // {
-        //     __builder.OpenElement(19, "span"); __builder.AddAttribute(20, "class", "node-cost"); __builder.AddContent(21, $"SL: {node.SilverCost:N0}"); __builder.CloseElement();
-        // }
         __builder.CloseElement(); __builder.CloseElement(); __builder.CloseElement();
     };
 
