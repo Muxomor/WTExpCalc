@@ -1,7 +1,4 @@
-﻿#!/bin/sh
-# Файл: entrypoint.sh
-
-NGINX_ROOT=/usr/share/nginx/html
+﻿NGINX_ROOT=/usr/share/nginx/html
 PLACEHOLDER="__POSTGREST_URL__" # Плейсхолдер, который мы ищем
 
 # Ищем файл appsettings (может быть .json или .Production.json и т.д.)
