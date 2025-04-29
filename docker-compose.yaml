@@ -1,0 +1,14 @@
+﻿version: '3.8'
+
+services:
+  blazor-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platform: linux/arm64 
+    image: ${IMAGE_NAME:-my-blazor-app-default}:latest 
+    environment:
+      - POSTGREST_URL=${POSTGREST_SERVICE_URL:-http://default-postgrest:3000}
+    ports:
+      - "${APP_HOST_PORT:-8880}:80"
+    restart: unless-stopped
