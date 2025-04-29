@@ -28,10 +28,10 @@ namespace WTExpCalc.Services
         }
 
         public async Task<List<Nation>> GetNationsAsync()
-            => await _http.GetFromJsonAsync<List<Nation>>("nations", _jsonOptions) ?? new();
+            => await _http.GetFromJsonAsync<List<Nation>>("api/nations", _jsonOptions) ?? new();
 
         public async Task<List<VehicleType>> GetVehicleTypesAsync()
-            => await _http.GetFromJsonAsync<List<VehicleType>>("vehicle_types", _jsonOptions) ?? new();
+            => await _http.GetFromJsonAsync<List<VehicleType>>("api/vehicle_types", _jsonOptions) ?? new();
 
 
         /// <summary>
@@ -42,7 +42,7 @@ namespace WTExpCalc.Services
         {
             // URL для вашего API (PostgREST?). Загружаем все поля узла.
             // Возможно, стоит добавить select=*, если нужны все поля из Node класса.
-            var url = $"nodes?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}&select=*";
+            var url = $"api/nodes?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}&select=*";
 
             // Кэшируем результат для возможного использования в GetAllDependenciesAsync
             var nodes = await _http.GetFromJsonAsync<List<Node>>(url, _jsonOptions) ?? new List<Node>();
@@ -90,7 +90,7 @@ namespace WTExpCalc.Services
 
             // Формируем URL для PostgREST:
             // Ищем зависимости, где ЛИБО node_id из нашего списка, ЛИБО prerequisite_node_id из нашего списка
-            var url = $"node_dependencies?select=*&or=(node_id.in.({nodeIdFilter}),prerequisite_node_id.in.({nodeIdFilter}))";
+            var url = $"api/node_dependencies?select=*&or=(node_id.in.({nodeIdFilter}),prerequisite_node_id.in.({nodeIdFilter}))";
 
             Console.WriteLine($"Fetching dependencies with URL: {url}"); // Для отладки
 
@@ -108,7 +108,7 @@ namespace WTExpCalc.Services
 
         public async Task<List<Node>> GetAllNodesAsync(int nationId, int vehicleTypeId)
         {
-            var url = $"nodes?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}&select=*";
+            var url = $"api/nodes?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}&select=*";
             var nodes = await _http.GetFromJsonAsync<List<Node>>(url, _jsonOptions) ?? new List<Node>();
 
             // Возвращаем корневые узлы построенного дерева
@@ -148,32 +148,32 @@ namespace WTExpCalc.Services
 
         public async Task<List<NodeDependency>> GetDependenciesAsync(int nodeId)
         {
-            var url = $"node_dependencies?node_id=eq.{nodeId}";
+            var url = $"api/node_dependencies?node_id=eq.{nodeId}";
             return await _http.GetFromJsonAsync<List<NodeDependency>>(url, _jsonOptions) ?? new();
         }
 
         public async Task<List<RankRequirement>> GetRankRequirementsAsync(int nationId, int vehicleTypeId)
         {
-            var url = $"rank_requirements?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}";
+            var url = $"api/rank_requirements?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}";
             return await _http.GetFromJsonAsync<List<RankRequirement>>(url, _jsonOptions) ?? new();
         }
         public async Task<List<Node>> GetRootNodesAsync(int nationId, int vehicleTypeId)
         {
             // Этот метод может быть полезен, если вам нужны ТОЛЬКО корневые узлы
-            var url = $"nodes?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}&parent_id=is.null&select=*";
+            var url = $"api/nodes?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}&parent_id=is.null&select=*";
             return await _http.GetFromJsonAsync<List<Node>>(url, _jsonOptions) ?? new();
         }
 
         public async Task<List<Node>> GetChildNodesAsync(int parentNodeId)
         {
-            var url = $"nodes?parent_id=eq.{parentNodeId}&select=*";
+            var url = $"api/nodes?parent_id=eq.{parentNodeId}&select=*";
             return await _http.GetFromJsonAsync<List<Node>>(url, _jsonOptions) ?? new();
         }
         public async Task<Nation?> GetNationByIdAsync(int id)
         {
             try
             {
-                var url = $"nations?id=eq.{id}&select=*&limit=1";
+                var url = $"api/nations?id=eq.{id}&select=*&limit=1";
                 var nationsList = await _http.GetFromJsonAsync<List<Nation>>(url, _jsonOptions);
 
                 return nationsList?.FirstOrDefault();
