@@ -26,9 +26,9 @@ RUN rm -f index.html
 COPY --from=build /app/publish/wwwroot .
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY entrypoint.sh /entrypoint.sh
-RUN sed -i -e '1s/^\xEF\xBB\xBF//' -e 's/\r$//' /entrypoint.sh && \
-    chmod +x /entrypoint.sh
+RUN apk add --no-cache dos2unix
+RUN dos2unix /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 EXPOSE 80
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]
