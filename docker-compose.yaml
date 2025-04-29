@@ -24,11 +24,12 @@ services:
       - "8881:8880"
       - "8090:8080" 
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "./traefik.yml:/etc/traefik/traefik.yml:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"      
+      - "./traefik.yml:/etc/traefik/custom_traefik.yml:ro"
     networks:
       - proxy-net # Присоединяем Traefik к общей сети
-    # command: # Можно использовать command вместо файла traefik.yml
+    command: # Можно использовать command вместо файла traefik.yml
+      - "--configFile=/etc/traefik/custom_traefik.yml"
     #  - "--api.insecure=true"
     #  - "--providers.docker=true"
     #  - "--providers.docker.exposedbydefault=false"
