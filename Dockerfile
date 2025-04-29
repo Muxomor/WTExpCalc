@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 COPY WTExpCalc.sln .
-COPY WTExpCalc.csproj   
+COPY WTExpCalc.csproj .
 
 RUN dotnet restore WTExpCalc.sln
 
