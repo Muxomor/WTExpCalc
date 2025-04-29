@@ -30,7 +30,7 @@ COPY nginx.conf /etc/nginx/nginx.conf
 COPY entrypoint.sh /entrypoint.sh
 RUN apk add --no-cache dos2unix
 RUN dos2unix /entrypoint.sh
-#RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 80
 ENTRYPOINT ["/entrypoint.sh"]
