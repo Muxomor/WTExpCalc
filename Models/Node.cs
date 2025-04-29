@@ -46,7 +46,6 @@ namespace WTExpCalc.Models
         [JsonPropertyName("br")]
         public decimal? BattleRating { get; set; }
 
-        // Для удобства в Razor привяжем короткое имя
         [JsonIgnore]
         public decimal? Br => BattleRating;
 

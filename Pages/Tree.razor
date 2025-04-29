@@ -3,6 +3,7 @@
 @using WTExpCalc.Models
 @using WTExpCalc.Services
 @using WTExpCalc.Shared
+@using static WTExpCalc.Shared.TechTree
 @inject IExperienceApi Api
 
 <h3>Ветка прокачки для нации @FormatNationName(currentNation?.Name)</h3>
@@ -29,8 +30,20 @@ else
     <div class="tab-content mt-3">
         @if (activeTypeId != null)
         {
-            <TechTree NationId="NationId" TypeId="activeTypeId.Value" />
+            <TechTree NationId="NationId" TypeId="activeTypeId.Value" OnTotalsUpdated="HandleTotalsUpdate" />
         }
+    </div>
+    <div id="summary-panel">
+        <span class="summary-item">
+            <span>RP: </span>
+            @currentTotalRp.ToString("N0")
+        </span>
+        <span class="summary-item">
+            <span>SL: </span>
+            @currentTotalSl.ToString("N0")
+        </span>
+        @* Можно добавить кнопку сброса выделения *@
+        @* <button class="btn btn-sm btn-secondary" @onclick="ClearSelection">Сбросить</button> *@
     </div>
 }
 
@@ -38,7 +51,9 @@ else
     [Parameter] public int NationId { get; set; }
     private List<VehicleType>? vehicleTypes;
     private int? activeTypeId;
-    private Nation? currentNation; // Переменная для хранения данных о нации
+    private Nation? currentNation; // Переменная для хранения данных о нации 
+    private long currentTotalRp = 0;
+    private long currentTotalSl = 0;
 
     protected override async Task OnParametersSetAsync() // Используем OnParametersSetAsync, чтобы реагировать на изменение NationId
     {
@@ -57,7 +72,18 @@ else
         }
         StateHasChanged(); // Обновить UI с загруженными данными
     }
+    private void HandleTotalsUpdate(TotalsUpdateEventArgs args)
+    {
+        Console.WriteLine($"[DEBUG] HandleTotalsUpdate called in Tree.razor. Received RP: {args.TotalRp}, SL: {args.TotalSl}"); // <-- ДОБАВИТЬ
 
+        currentTotalRp = args.TotalRp;
+        currentTotalSl = args.TotalSl;
+
+        Console.WriteLine($"[DEBUG] Tree.razor state updated: currentTotalRp={currentTotalRp}, currentTotalSl={currentTotalSl}"); // <-- ДОБАВИТЬ
+
+       // StateHasChanged(); // Убедитесь, что этот вызов есть
+        Console.WriteLine("[DEBUG] StateHasChanged called in HandleTotalsUpdate."); // <-- ДОБАВИТЬ
+    }
     void SelectType(int id)
     {
         activeTypeId = id;

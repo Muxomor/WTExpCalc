@@ -177,7 +177,56 @@ main {
     .tree-grid-item.node-type-folder {
         cursor: pointer;
     }
+.tree-page-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 56px); /* Примерная высота за вычетом top-row, подберите значение */
+    /* Или используйте другие методы для управления высотой */
+}
+.tech-tree-container {
+    overflow: auto; /* Оставляем прокрутку */
+    position: relative;
+    min-height: 300px;
+    flex-grow: 1; /* Занимает доступное пространство по высоте */
+    /* ОТСТУП СНИЗУ под панель сумм */
+    padding-bottom: 80px; /* Высота панели (напр. 60px) + запас (20px) */
+}
 
+/* Стиль для фиксированной панели сумм */
+#summary-panel {
+    position: fixed; /* Фиксированное позиционирование */
+    bottom: 10px; /* Отступ от нижнего края */
+    left: 50%; /* Центрирование по горизонтали */
+    transform: translateX(-50%); /* Точное центрирование */
+    z-index: 100; /* Поверх всего */
+
+    background-color: rgba(40, 40, 40, 0.9); /* Полупрозрачный темный фон */
+    color: #eee;
+    border: 1px solid #666;
+    border-radius: 8px;
+    padding: 10px 20px;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 20px; /* Расстояние между элементами RP и SL */
+    backdrop-filter: blur(3px); /* Эффект размытия фона (опционально) */
+}
+
+    /* Стиль для каждого элемента в панели (RP, SL) */
+    #summary-panel .summary-item {
+        display: flex;
+        align-items: center;
+        font-size: 1.1em;
+        font-weight: bold;
+    }
+
+        /* Стиль для иконок RP и SL */
+        #summary-panel .summary-item img {
+            width: 24px; /* Размер иконки */
+            height: 24px;
+            margin-right: 8px; /* Отступ от числа */
+            vertical-align: middle;
+        }
         .tree-grid-item.node-type-folder:hover {
             background-color: #4f4f4f;
         }

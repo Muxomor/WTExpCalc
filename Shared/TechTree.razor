@@ -155,6 +155,7 @@
 @code {
     [Parameter] public int NationId { get; set; }
     [Parameter] public int TypeId { get; set; }
+    [Parameter] public EventCallback<TotalsUpdateEventArgs> OnTotalsUpdated { get; set; }
 
     private List<Node> AllNodesFlat = new();
     private Dictionary<int, Node> NodeLookup = new();
@@ -169,25 +170,44 @@
     private string GridStyles = "";
     // private Dictionary<(int Rank, int Col, string Category), List<Node>> _vehiclesInFoldersCache = new(); // Эта логика может измениться
     private Dictionary<int, int> MaxRowIndexPerRank = new();
-    private int TotalDataGridRows = 0;
+    private int TotalDataGridRows = 0; 
+    private long totalSelectedRp = 0;
+    private long totalSelectedSl = 0; private int _previousNationId = -1; // Инициализируем невалидным значением
+    private int _previousTypeId = -1;   // Инициализируем невалидным значением
+    private bool _isFirstLoad = true;
+
+    public class TotalsUpdateEventArgs : EventArgs
+    {
+        public long TotalRp { get; set; } 
+        public long TotalSl { get; set; }
+    }
+
+
 
     protected override async Task OnParametersSetAsync()
     {
-        await LoadData();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (LoadingState == "loaded" && Dependencies.Any())
+        // Вызываем LoadData только если параметры изменились ИЛИ это первая загрузка
+        if (_isFirstLoad || NationId != _previousNationId || TypeId != _previousTypeId)
         {
-            // небольшая задержка, чтобы DOM успел обновиться
-            await Task.Delay(50);
-            await DrawConnectionLines();
+            Console.WriteLine($"[DEBUG] OnParametersSetAsync: Parameters changed or first load. Loading data for NationId={NationId}, TypeId={TypeId}");
+
+            // Сохраняем текущие значения как "предыдущие" для следующей проверки
+            _previousNationId = NationId;
+            _previousTypeId = TypeId;
+            _isFirstLoad = false; // Сбрасываем флаг первой загрузки
+
+            await LoadData(); // <--- ВЫЗЫВАЕМ LoadData ЗДЕСЬ
+        }
+        else
+        {
+            Console.WriteLine($"[DEBUG] OnParametersSetAsync: Parameters NOT changed. Skipping LoadData.");
         }
     }
 
     private async Task LoadData()
     {
+        Console.WriteLine($"[DEBUG] LoadData START for NationId={NationId}, TypeId={TypeId}");
+
         try
         {
             LoadingState = "loading";
@@ -223,13 +243,60 @@
             Dependencies = await Api.GetAllDependenciesAsync(NationId, TypeId);
             CalculateGridDimensions();
             LoadingState = "loaded";
+            await CalculateAndUpdateTotals();
         }
         catch (Exception ex)
         {
-            LoadingState = "error";
-            Console.WriteLine($"Error loading tech tree data: {ex.Message}");
+            // ... (обработка ошибок) ...
+            // Сброс сумм при ошибке и вызов события
+            totalSelectedRp = 0;
+            totalSelectedSl = 0;
+            if (OnTotalsUpdated.HasDelegate)
+            {
+                await OnTotalsUpdated.InvokeAsync(new TotalsUpdateEventArgs { TotalRp = 0, TotalSl = 0 });
+            }
         }
-        StateHasChanged(); // Финальное обновление UI
+        StateHasChanged(); // Оставляем здесь на случай, если LoadData вызывается не только из OnParametersSetAsync
+        Console.WriteLine($"[DEBUG] LoadData END for NationId={NationId}, TypeId={TypeId}");
+
+    }
+
+    private async Task CalculateAndUpdateTotals()
+    {
+        Console.WriteLine($"[DEBUG] CalculateAndUpdateTotals called. Selected IDs count: {selectedNodeIds.Count}"); // <-- ДОБАВИТЬ
+
+        totalSelectedRp = 0;
+        totalSelectedSl = 0;
+
+        foreach (int nodeId in selectedNodeIds)
+        {
+            if (NodeLookup.TryGetValue(nodeId, out var node))
+            {
+                long rpValue = node.RequiredExp ?? 0; // Используем текущее значение RP
+                long slValue = node.SilverCost ?? 0; // Используем SL
+                totalSelectedRp += rpValue;
+                totalSelectedSl += slValue;
+                // Выводим, что суммируем (для отладки данных)
+                Console.WriteLine($"[DEBUG]   - Node ID: {nodeId}, RP: {rpValue}, SL: {slValue}. Current totals: RP={totalSelectedRp}, SL={totalSelectedSl}"); // <-- ДОБАВИТЬ
+            }
+            else
+            {
+                Console.WriteLine($"[DEBUG]   - Node ID: {nodeId} NOT FOUND in NodeLookup!"); // <-- ДОБАВИТЬ (на случай ошибки)
+            }
+        }
+        Console.WriteLine($"[DEBUG] Final calculated totals: RP={totalSelectedRp}, SL={totalSelectedSl}");
+
+        // Вызываем событие ТОЛЬКО если есть подписчик
+        if (OnTotalsUpdated.HasDelegate)
+        {
+            Console.WriteLine("[DEBUG] OnTotalsUpdated has delegate. Invoking...");
+            await OnTotalsUpdated.InvokeAsync(new TotalsUpdateEventArgs { TotalRp = totalSelectedRp, TotalSl = totalSelectedSl });
+            Console.WriteLine("[DEBUG] OnTotalsUpdated invoked successfully.");
+        }
+        else
+        {
+            Console.WriteLine("[DEBUG] WARNING: OnTotalsUpdated delegate is NOT set in CalculateAndUpdateTotals!"); // Изменили на Warning
+        }
     }
 
     private void BuildHierarchy()
@@ -359,25 +426,33 @@
         // await DrawConnectionLines();
     }
 
-    private void ToggleNodeSelection(Node node)
+    private async Task ToggleNodeSelection(Node node) // Убедимся, что он async, так как вызывает async метод
     {
-        if (node.Type != "vehicle") return; // Выделяем только технику
+        if (node.Type != "vehicle") return;
+
+        Console.WriteLine($"[DEBUG] ToggleNodeSelection called for Node ID: {node.Id}, Name: {node.Name}"); // <-- ДОБАВИТЬ
 
         bool isSelected = selectedNodeIds.Contains(node.Id);
+        int initialCount = selectedNodeIds.Count; // <-- ДОБАВИТЬ
 
         if (isSelected)
         {
             selectedNodeIds.Remove(node.Id);
+            Console.WriteLine($"[DEBUG] Node {node.Id} REMOVED from selection."); // <-- ДОБАВИТЬ
         }
         else
         {
             selectedNodeIds.Add(node.Id);
+            Console.WriteLine($"[DEBUG] Node {node.Id} ADDED to selection."); // <-- ДОБАВИТЬ
         }
 
-        // Вывод в консоль для отладки (опционально)
-        Console.WriteLine($"Toggled selection for Node ID: {node.Id}. Currently selected count: {selectedNodeIds.Count}");
+        Console.WriteLine($"[DEBUG] Selection count changed from {initialCount} to {selectedNodeIds.Count}."); // <-- ДОБАВИТЬ
 
-        StateHasChanged(); // Обновляем UI (перерисуется счетчик и стили)
+        // Пересчитываем суммы и вызываем событие
+        await CalculateAndUpdateTotals(); // Убедитесь, что этот вызов есть
+
+        StateHasChanged(); // Убедитесь, что этот вызов есть
+        Console.WriteLine($"[DEBUG] ToggleNodeSelection finished for Node ID: {node.Id}. StateHasChanged called."); // <-- ДОБАВИТЬ
     }
 
     private bool IsFolderSelected(Node folderNode)
