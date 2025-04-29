@@ -14,8 +14,6 @@ RUN dotnet restore WTExpCalc.sln
 # Копируем весь остальной код ПОСЛЕ restore
 COPY . .
 
-# Публикуем проект. Остаемся в /src, т.к. структура плоская.
-# WORKDIR /src/WTExpCalc  <-- УДАЛИТЕ ЭТУ СТРОКУ (или закомментируйте)
 RUN dotnet publish WTExpCalc.csproj -c Release -o /app/publish --no-restore # Эта команда выполнится в /src
 
 # --- Стадия выполнения ---
@@ -28,8 +26,8 @@ RUN rm -f index.html
 COPY --from=build /app/publish/wwwroot .
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY entrypoint.sh /entrypoint.sh
-RUN apk add --no-cache dos2unix
-RUN dos2unix /entrypoint.sh
+RUN sed -i -e '1s/^\xEF\xBB\xBF//' -e 's/\r$//' /entrypoint.sh && \
+    chmod +x /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 EXPOSE 80
