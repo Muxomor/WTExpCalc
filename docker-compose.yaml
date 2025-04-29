@@ -5,7 +5,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      platform: linux/arm64 
     image: ${IMAGE_NAME:-my-blazor-app-default}:latest 
     environment:
       - POSTGREST_URL=${POSTGREST_SERVICE_URL:-http://default-postgrest:3000}
