@@ -53,8 +53,10 @@
     }
 
     ::deep a.nav-link.active {
-        background-color: rgba(255,255,255,0.25) !important; /* Переопределяем стандартный active */
+        background-color: rgba(255,255,255,0.25) !important;
         color: white !important;
+        outline: 2px solid rgba(0, 0, 255, 0.6) !important; /* Белый полупрозрачный контур */
+        outline-offset: -2px; /* Рисуем контур внутрь элемента (не выходит за padding) */
     }
 
 /* Изображение флага */
