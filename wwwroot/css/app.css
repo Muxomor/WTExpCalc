@@ -264,7 +264,7 @@ main {
     font-size: 0.9em;
     text-align: left;
     /*width: 90%;*/ /* Ограничиваем ширину */
-    max-width:600px;
+    max-width: 600px;
     white-space: nowrap; /* Запрещаем перенос строк */
     overflow: hidden; /* Скрываем то, что не влезло */
     text-overflow: ellipsis; /* Добавляем троеточие */
@@ -274,7 +274,7 @@ main {
     flex-grow: 1;
     cursor: default;
     min-height: 1.2em;
-    min-width:0;
+    min-width: 0;
 }
 
 .copy-button {
@@ -289,7 +289,28 @@ main {
 
 #selected-names-panel span[title] {
     cursor: help; /* Подсказка при наведении на обрезанный текст */
-    max-width:600px;
+    max-width: 600px;
+}
+
+.folder-popup-overlay {
+    position: fixed; /* Позиционирование относительно окна браузера */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: transparent; /* Полностью прозрачный */
+    /* Или легкое затемнение: */
+    /* background-color: rgba(0, 0, 0, 0.1); */
+    z-index: 99; /* ДОЛЖЕН БЫТЬ НИЖЕ, чем z-index у .folder-popup (у нас 100) */
+    /* но ВЫШЕ, чем у остального контента (например, дерева с z-index 1) */
+}
+
+/* Попап папки (убедимся, что z-index выше overlay) */
+.folder-popup {
+    position: absolute;
+    visibility: hidden;
+    z-index: 100 !important; /* Поверх overlay */
+    /* ... остальные стили попапа ... */
 }
 
 #selected-names-container {
