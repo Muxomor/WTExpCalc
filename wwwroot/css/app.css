@@ -70,6 +70,7 @@ main {
     overflow: auto;
     position: relative; /* Для позиционирования overlay и сообщений */
     min-height: 300px; /* Минимальная высота на время загрузки/ошибки */
+    padding-bottom: 70px;
 }
 
     .tech-tree-container.loading::after,
@@ -136,7 +137,7 @@ main {
     justify-self: start; /* Размещаем линию в начале колонки grid */
     position: relative; /* Для z-index */
     z-index: 0; /* Под узлами, но над фоном grid */
-    margin: 0 -13px; /* Компенсируем половину grid-gap по горизонтали (gap: 25px -> -12.5px) */
+    margin: 0 -19px; /* Компенсируем половину grid-gap по горизонтали (gap: 25px -> -12.5px) */
     /* Подберите значение, чтобы линия была посередине gap */
 }
 
@@ -153,6 +154,7 @@ main {
     z-index: 1; /* Базовый z-index */
     transition: background-color 0.2s ease-in-out, outline 0.2s ease-in-out; /* Плавность для выделения */
 }
+
 .node-content.vehicle-node {
     cursor: pointer; /* Показываем, что на технику можно кликнуть */
 }
@@ -174,70 +176,139 @@ main {
     background-color: rgba(13, 202, 240, 0.15) !important; /* Легкий голубоватый фон для наглядности */
     border-radius: 4px; /* Сохраняем скругление */
 }
-    .tree-grid-item.node-type-folder {
-        cursor: pointer;
-    }
-.tree-page-container {
+
+.tree-grid-item.node-type-folder {
+    cursor: pointer;
+}
+/*.tree-page-container {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 56px); /* Примерная высота за вычетом top-row, подберите значение */
-    /* Или используйте другие методы для управления высотой */
+    height: calc(100vh - 56px);*/ /* Примерная высота за вычетом top-row, подберите значение */
+/* Или используйте другие методы для управления высотой */
+/*}*/
+.tab-content {
+    flex-grow: 1;
+    position: relative; /* Контекст для .tech-tree-container */
+    display: flex; /* Чтобы .tech-tree-container мог использовать flex-grow */
+    flex-direction: column;
 }
+
 .tech-tree-container {
     overflow: auto; /* Оставляем прокрутку */
     position: relative;
     min-height: 300px;
     flex-grow: 1; /* Занимает доступное пространство по высоте */
     /* ОТСТУП СНИЗУ под панель сумм */
-    padding-bottom: 80px; /* Высота панели (напр. 60px) + запас (20px) */
+    padding-bottom: 70px; /* Высота панели (напр. 60px) + запас (20px) */
 }
 
 /* Стиль для фиксированной панели сумм */
 #summary-panel {
-    position: fixed; /* Фиксированное позиционирование */
-    bottom: 10px; /* Отступ от нижнего края */
-    left: 50%; /* Центрирование по горизонтали */
-    transform: translateX(-50%); /* Точное центрирование */
-    z-index: 100; /* Поверх всего */
-
-    background-color: rgba(40, 40, 40, 0.9); /* Полупрозрачный темный фон */
-    color: #eee;
-    border: 1px solid #666;
-    border-radius: 8px;
     padding: 10px 20px;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
-    gap: 20px; /* Расстояние между элементами RP и SL */
-    backdrop-filter: blur(3px); /* Эффект размытия фона (опционально) */
+    gap: 25px; /* Расстояние между элементами RP и SL */
+    flex-shrink: 0;
+    padding: 5px 0;
+    width: auto;
+    color: #eee;
+    justify-content: center;
 }
 
-    /* Стиль для каждого элемента в панели (RP, SL) */
-    #summary-panel .summary-item {
-        display: flex;
-        align-items: center;
-        font-size: 1.1em;
-        font-weight: bold;
+#summary-container {
+    position: fixed;
+    bottom: 0; /* Прижимаем к низу */
+    left: 0; /* Растягиваем на всю ширину */
+    right: 0;
+    z-index: 100; /* Поверх всего */
+    background-color: rgba(40, 40, 40, 0.9); /* Фон общий */
+    backdrop-filter: blur(3px);
+    border-top: 1px solid #666;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
+    padding: 8px 20px; /* Небольшие вертикальные отступы */
+    display: flex; /* Располагаем панели рядом или друг под другом */
+    flex-direction: column; /* Имена под суммами */
+    align-items: center; /* Центрируем по горизонтали */
+    gap: 8px; /* Промежуток между панелями */
+}
+
+/* Стиль для каждого элемента в панели (RP, SL) */
+#summary-panel .summary-item {
+    display: flex;
+    align-items: center;
+    font-size: 1.1em;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+    /* Стиль для иконок RP и SL */
+    #summary-panel .summary-item img {
+        width: 24px; /* Размер иконки */
+        height: 24px;
+        margin-right: 8px; /* Отступ от числа */
+        vertical-align: middle;
     }
 
-        /* Стиль для иконок RP и SL */
-        #summary-panel .summary-item img {
-            width: 24px; /* Размер иконки */
-            height: 24px;
-            margin-right: 8px; /* Отступ от числа */
-            vertical-align: middle;
-        }
-        .tree-grid-item.node-type-folder:hover {
-            background-color: #4f4f4f;
-        }
-    /*.tree-grid-item.folder-open {
+.tree-grid-item.node-type-folder:hover {
+    background-color: #4f4f4f;
+}
+
+#summary-panel .summary-item span:first-child {
+    margin-right: 5px;
+    color: #bbb; /* Метку можно сделать тусклее */
+    font-weight: normal;
+}
+
+#selected-names-panel {
+    color: #ccc;
+    font-size: 0.9em;
+    text-align: left;
+    /*width: 90%;*/ /* Ограничиваем ширину */
+    max-width:600px;
+    white-space: nowrap; /* Запрещаем перенос строк */
+    overflow: hidden; /* Скрываем то, что не влезло */
+    text-overflow: ellipsis; /* Добавляем троеточие */
+    min-height: 1.2em; /* Минимальная высота, чтобы не прыгало при отсутствии текста */
+    padding-bottom: 5px;
+    flex-shrink: 0;
+    flex-grow: 1;
+    cursor: default;
+    min-height: 1.2em;
+    min-width:0;
+}
+
+.copy-button {
+    padding: 0.1rem 0.4rem; /* Меньший размер кнопки */
+    line-height: 1; /* Убрать лишнюю высоту */
+    flex-shrink: 0; /* Не сжиматься */
+}
+
+    .copy-button i {
+        vertical-align: middle; /* Выровнять иконку */
+    }
+
+#selected-names-panel span[title] {
+    cursor: help; /* Подсказка при наведении на обрезанный текст */
+    max-width:600px;
+}
+
+#selected-names-container {
+    display: flex;
+    align-items: center; /* Выравниваем текст и кнопку по вертикали */
+    /*justify-content: center;*/ /* Центрируем */
+    width: 90%; /* Ширина как у панели имен */
+    max-width: 600px;
+    gap: 10px; /* Промежуток между текстом и кнопкой */
+}
+/*.tree-grid-item.folder-open {
         z-index: 3;*/ /* Должен быть выше, чем у rank-label (z-index: 2) */
-        /* и выше, чем у обычных tree-grid-item (z-index: 1) */
-    /*}*/
+/* и выше, чем у обычных tree-grid-item (z-index: 1) */
+/*}*/
 /* Стили для премиум/ивентов */
 .tech-cat-premium, .tech-cat-event {
     border-left: 5px solid gold;
 }
+
 .folder-visual-container.folder-open {
     /* Этот div уже имеет position: relative */
     z-index: 3; /* Попробуем поднять его над соседями и метками рангов */
@@ -252,6 +323,7 @@ main {
     width: 100%;
     min-height: 50px; /* Минимальная высота контента узла */
 }
+
 .folder-popup {
     position: absolute; /* Позиционируется относительно tech-tree-container */
     visibility: hidden; /* Скрыт, пока JS не установит координаты */
@@ -265,6 +337,7 @@ main {
     transition: opacity 0.1s ease-in-out; /* Плавное появление (опционально) */
     opacity: 1; /* Начальная непрозрачность */
 }
+
 .folder-popup-content {
     padding: 8px;
     max-height: 400px; /* Ограничение высоты с прокруткой */
@@ -280,9 +353,11 @@ main {
     border: 1px dashed #777;
     /* Стили из .folder-items-container .vehicle-node можно перенести сюда */
 }
+
 .tree-grid-item .folder-node.folder-active {
     background-color: #4f4f4f; /* Подсветка активной папки */
 }
+
 .folder-popup-item .node-content {
     /* Стили из .node-content, если нужно переопределить */
     min-height: 45px; /* Чуть меньше для попапа */
@@ -292,6 +367,7 @@ main {
     width: 40px; /* Чуть меньше */
     height: 40px;
 }
+
 .node-icon {
     width: 48px;
     height: 48px;
@@ -326,6 +402,7 @@ main {
     color: #bbb;
     white-space: nowrap;
 }
+
 .node-detail-item.node-exp {
     display: flex;
     align-items: center;
@@ -442,6 +519,7 @@ main {
     left: 0; /* К левому краю */
     z-index: 2; /* Поверх обычных узлов, но под выпадающими папками */
 }
+
 .rank-requirement-counter {
     font-size: 0.8em; /* Меньший шрифт для счетчика */
     margin-top: 4px; /* Отступ от "Rank N" */
@@ -611,6 +689,7 @@ main {
             margin-left: 1.5rem !important;
         }
 }
+
 body .page .sidebar {
     width: 70px !important; /* Ваша желаемая ширина */
     min-width: 70px !important; /* Ваша желаемая ширина */

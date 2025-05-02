@@ -180,9 +180,23 @@
     {
         public long TotalRp { get; set; } 
         public long TotalSl { get; set; }
+        public string SelectedNames { get; set; } = string.Empty; 
+
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Здесь НЕТ проверки параметров и НЕТ вызова LoadData
 
+        // Оставляем только отрисовку линий
+        if (LoadingState == "loaded" && Dependencies.Any())
+        {
+            // Небольшая задержка, чтобы DOM успел обновиться
+            await Task.Delay(50);
+            await DrawConnectionLines();
+        }
+        // Позиционирование папки (если оно было здесь) теперь в HandleNodeClick
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -196,7 +210,7 @@
             _previousTypeId = TypeId;
             _isFirstLoad = false; // Сбрасываем флаг первой загрузки
 
-            await LoadData(); // <--- ВЫЗЫВАЕМ LoadData ЗДЕСЬ
+            await LoadData(); // <--- ВЫЗОВ LoadData ВНУТРИ IF
         }
         else
         {
@@ -267,6 +281,7 @@
 
         totalSelectedRp = 0;
         totalSelectedSl = 0;
+        var nameList = new List<string>();
 
         foreach (int nodeId in selectedNodeIds)
         {
@@ -276,6 +291,7 @@
                 long slValue = node.SilverCost ?? 0; // Используем SL
                 totalSelectedRp += rpValue;
                 totalSelectedSl += slValue;
+                nameList.Add(node.Name);
                 // Выводим, что суммируем (для отладки данных)
                 Console.WriteLine($"[DEBUG]   - Node ID: {nodeId}, RP: {rpValue}, SL: {slValue}. Current totals: RP={totalSelectedRp}, SL={totalSelectedSl}"); // <-- ДОБАВИТЬ
             }
@@ -284,13 +300,20 @@
                 Console.WriteLine($"[DEBUG]   - Node ID: {nodeId} NOT FOUND in NodeLookup!"); // <-- ДОБАВИТЬ (на случай ошибки)
             }
         }
-        Console.WriteLine($"[DEBUG] Final calculated totals: RP={totalSelectedRp}, SL={totalSelectedSl}");
+        string namesString = string.Join(", ", nameList); // <-- Формируем строку
 
-        // Вызываем событие ТОЛЬКО если есть подписчик
+        Console.WriteLine($"[DEBUG] Final calculated totals: RP={totalSelectedRp}, SL={totalSelectedSl}");
+        Console.WriteLine($"[DEBUG] Selected Names: {namesString}"); // <-- Лог для имен
+
         if (OnTotalsUpdated.HasDelegate)
         {
             Console.WriteLine("[DEBUG] OnTotalsUpdated has delegate. Invoking...");
-            await OnTotalsUpdated.InvokeAsync(new TotalsUpdateEventArgs { TotalRp = totalSelectedRp, TotalSl = totalSelectedSl });
+            await OnTotalsUpdated.InvokeAsync(new TotalsUpdateEventArgs
+                {
+                    TotalRp = totalSelectedRp,
+                    TotalSl = totalSelectedSl,
+                    SelectedNames = namesString // <-- Передаем строку с именами
+                });
             Console.WriteLine("[DEBUG] OnTotalsUpdated invoked successfully.");
         }
         else
@@ -369,7 +392,7 @@
             $"display: grid; " +
             $"grid-template-rows: {gridRowsStyle}; " +
             $"grid-template-columns: auto {(stdCount > 0 ? $"repeat({stdCount}, minmax(100px, auto)) " : "")}{(premCount > 0 ? $"repeat({premCount}, minmax(100px, auto))" : "")}; " +
-            $"gap: 15px 25px; position: relative;";
+            $"gap: 30px 40px; position: relative;";
     }
 
     private string GetNodeGridStyle(Node node)
@@ -431,7 +454,27 @@
         if (node.Type != "vehicle") return;
 
         Console.WriteLine($"[DEBUG] ToggleNodeSelection called for Node ID: {node.Id}, Name: {node.Name}"); // <-- ДОБАВИТЬ
+        if (currentlyExpandedFolder != null) // Если какая-то папка открыта
+        {
+            // Получаем список узлов ВНУТРИ открытой папки
+            var nodesInCurrentPopup = GetVisualNodesInFolderSequence(currentlyExpandedFolder)
+                                        .Where(n => n.Type == "vehicle") // Убедимся, что берем только технику
+                                        .Select(n => n.Id)               // Берем только ID
+                                        .ToHashSet();                    // Преобразуем в HashSet для быстрой проверки
 
+            // Закрываем папку ТОЛЬКО ЕСЛИ кликнутый узел НЕ находится внутри нее
+            if (!nodesInCurrentPopup.Contains(node.Id))
+            {
+                Console.WriteLine($"[DEBUG] Closing folder ID {currentlyExpandedFolder.Id} because vehicle node {node.Id} (OUTSIDE the folder) was clicked.");
+                currentlyExpandedFolder = null;
+                // StateHasChanged() вызовется ниже
+            }
+            else
+            {
+                // Кликнули по узлу внутри открытой папки - папку НЕ закрываем
+                Console.WriteLine($"[DEBUG] Clicked node {node.Id} is INSIDE the currently open folder {currentlyExpandedFolder.Id}. Keeping folder open.");
+            }
+        }
         bool isSelected = selectedNodeIds.Contains(node.Id);
         int initialCount = selectedNodeIds.Count; // <-- ДОБАВИТЬ
 

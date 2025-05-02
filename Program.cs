@@ -11,16 +11,36 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // Регистрация HttpClient для отправки запросов на тот же origin,
 // с которого загружено приложение. Traefik будет маршрутизировать /api/*
-builder.Services.AddScoped(sp => new HttpClient
-{
-    BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
+builder.Services.AddScoped(sp => { // Используем лямбду для доступа к builder внутри AddScoped
+    var httpClient = new HttpClient();
+    if (builder.HostEnvironment.IsDevelopment())
+    {
+        // Среда разработки (dotnet run)
+        Console.WriteLine("Режим разработки: Настройка HttpClient для доступа через Traefik на сервере.");
+        // Читаем АБСОЛЮТНЫЙ URL Traefik из конфигурации
+        var backendUrl = builder.Configuration["BackendApi:BaseUrl"];
+        if (string.IsNullOrEmpty(backendUrl))
+        {
+            backendUrl = "http://192.168.0.105:8881/"; // Дефолт, если не найден
+            Console.WriteLine($"URL Traefik для разработки не найден, используется дефолтный: {backendUrl}");
+        }
+        else
+        {
+            Console.WriteLine($"Используется URL Traefik для разработки: {backendUrl}");
+        }
+        httpClient.BaseAddress = new Uri(backendUrl);
+    }
+    else
+    {
+        // Среда НЕ разработки (Production, в Docker)
+        // Используем относительный базовый адрес (адрес самого приложения)
+        Console.WriteLine("Режим НЕ разработки: Настройка HttpClient с относительным BaseAddress.");
+        httpClient.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
+    }
+    return httpClient; // Возвращаем сконфигурированный HttpClient
 });
-
-// Регистрация вашего сервиса API
 builder.Services.AddScoped<IExperienceApi, ExperienceApiService>();
 
-// Настройка опций JSON сериализации (если ваш API использует snake_case)
-// Оставьте этот блок, если он нужен вашему API (PostgREST обычно использует snake_case)
 builder.Services.Configure<JsonSerializerOptions>(options =>
 {
     options.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;

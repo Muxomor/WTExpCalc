@@ -27,7 +27,53 @@
             console.log(`Positioned popup ${popupId} at top: ${top}, left: ${left}`);
         });
     },
+    copyTextToClipboard: function (text) {
+        navigator.clipboard.writeText(text).then(function () {
+            console.log('Async: Copying to clipboard was successful!');
+            // Здесь можно было бы показать короткое уведомление пользователю
+        }, function (err) {
+            console.error('Async: Could not copy text: ', err);
+            // Можно показать сообщение об ошибке
+            alert("Не удалось скопировать текст."); // Простое уведомление
+        });
+    }, copyTextToClipboard_fallback: function (text) {
+        try {
+            // Создаем временный элемент textarea
+            const textArea = document.createElement("textarea");
 
+            // Скрываем его от пользователя
+            textArea.style.position = 'fixed';
+            textArea.style.top = '-9999px';
+            textArea.style.left = '-9999px';
+            textArea.style.opacity = '0';
+
+            // Задаем текст и добавляем в DOM
+            textArea.value = text;
+            document.body.appendChild(textArea);
+
+            // Фокусируемся и выделяем текст
+            textArea.focus();
+            textArea.select();
+
+            // Пытаемся скопировать
+            const successful = document.execCommand('copy');
+
+            // Удаляем временный элемент
+            document.body.removeChild(textArea);
+
+            if (successful) {
+                console.log('Fallback: Copying to clipboard was successful!');
+                // Можно добавить простое уведомление
+                // alert("Текст скопирован!");
+            } else {
+                console.error('Fallback: document.execCommand("copy") failed.');
+                alert("Не удалось скопировать текст (fallback). Браузер не поддерживает или заблокировал команду.");
+            }
+        } catch (err) {
+            console.error('Fallback: Exception while copying text: ', err);
+            alert("Ошибка при копировании текста (fallback).");
+        }
+    },
     drawConnections: function (connectionData) {
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {

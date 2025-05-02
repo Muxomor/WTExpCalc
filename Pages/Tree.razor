@@ -5,6 +5,7 @@
 @using WTExpCalc.Shared
 @using static WTExpCalc.Shared.TechTree
 @inject IExperienceApi Api
+@inject IJSRuntime JSRuntime
 
 <h3>Ветка прокачки для нации @FormatNationName(currentNation?.Name)</h3>
 @if (vehicleTypes == null)
@@ -33,17 +34,39 @@ else
             <TechTree NationId="NationId" TypeId="activeTypeId.Value" OnTotalsUpdated="HandleTotalsUpdate" />
         }
     </div>
-    <div id="summary-panel">
-        <span class="summary-item">
-            <span>RP: </span>
-            @currentTotalRp.ToString("N0")
-        </span>
-        <span class="summary-item">
-            <span>SL: </span>
-            @currentTotalSl.ToString("N0")
-        </span>
-        @* Можно добавить кнопку сброса выделения *@
-        @* <button class="btn btn-sm btn-secondary" @onclick="ClearSelection">Сбросить</button> *@
+    <div id="summary-container">
+        <div id="summary-panel">
+            <span class="summary-item summary-rp">
+                <span>RP:</span> @currentTotalRp.ToString("N0")
+            </span>
+            <span class="summary-item summary-sl">
+                <span>SL:</span> @currentTotalSl.ToString("N0")
+            </span>
+        </div>
+
+        @* Контейнер для имен и кнопки копирования *@
+        <div id="selected-names-container">
+            <div id="selected-names-panel">
+                @if (!string.IsNullOrEmpty(selectedVehicleNames))
+                {
+                    <span title="@selectedVehicleNames">
+                        @* Добавляем title с полным списком *@
+                        Выбрано: @selectedVehicleNames
+                    </span>
+                }
+                else
+                {
+                    <span>&nbsp;</span>
+                }
+            </div>
+            @* Кнопка копирования (появляется, если есть что копировать) *@
+            @if (!string.IsNullOrEmpty(selectedVehicleNames))
+            {
+                <button class="btn btn-sm btn-secondary copy-button" title="Копировать список" @onclick="CopyNamesToClipboard">
+                    <i class="bi bi-clipboard"></i> @* Иконка копирования Bootstrap Icons *@
+                </button>
+            }
+        </div>
     </div>
 }
 
@@ -51,9 +74,10 @@ else
     [Parameter] public int NationId { get; set; }
     private List<VehicleType>? vehicleTypes;
     private int? activeTypeId;
-    private Nation? currentNation; // Переменная для хранения данных о нации 
+    private Nation? currentNation; // Переменная для хранения данных о нации
     private long currentTotalRp = 0;
     private long currentTotalSl = 0;
+    private string selectedVehicleNames = "";
 
     protected override async Task OnParametersSetAsync() // Используем OnParametersSetAsync, чтобы реагировать на изменение NationId
     {
@@ -69,8 +93,28 @@ else
         if (vehicleTypes != null && vehicleTypes.Any())
         {
             activeTypeId = vehicleTypes.First().Id; // Устанавливаем первую вкладку активной
+            selectedVehicleNames = "";
+            currentTotalRp = 0;
+            currentTotalSl = 0;
         }
         StateHasChanged(); // Обновить UI с загруженными данными
+    }
+    private async Task CopyNamesToClipboard()
+    {
+        if (!string.IsNullOrEmpty(selectedVehicleNames))
+        {
+            try
+            {
+                // Вызываем новую JS функцию для копирования
+                await JSRuntime.InvokeVoidAsync("techTreeFunctions.copyTextToClipboard_fallback", selectedVehicleNames);
+                // Можно добавить уведомление для пользователя (сложнее)
+                Console.WriteLine("Copied names to clipboard."); // Пока выводим в консоль
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error copying to clipboard: {ex.Message}");
+            }
+        }
     }
     private void HandleTotalsUpdate(TotalsUpdateEventArgs args)
     {
@@ -78,10 +122,11 @@ else
 
         currentTotalRp = args.TotalRp;
         currentTotalSl = args.TotalSl;
+        selectedVehicleNames = args.SelectedNames;
 
         Console.WriteLine($"[DEBUG] Tree.razor state updated: currentTotalRp={currentTotalRp}, currentTotalSl={currentTotalSl}"); // <-- ДОБАВИТЬ
 
-       // StateHasChanged(); // Убедитесь, что этот вызов есть
+        // StateHasChanged(); // Убедитесь, что этот вызов есть
         Console.WriteLine("[DEBUG] StateHasChanged called in HandleTotalsUpdate."); // <-- ДОБАВИТЬ
     }
     void SelectType(int id)

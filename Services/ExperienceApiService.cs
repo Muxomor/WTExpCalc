@@ -30,48 +30,39 @@ namespace WTExpCalc.Services
         public async Task<List<Nation>> GetNationsAsync()
         {
             List<Nation> nations = new();
-            string url = "/api/nations"; // Правильный URL с префиксом
-            Console.WriteLine($"[GetNationsAsync] LOG: Попытка вызова URL: {url}"); // Лог ПЕРЕД вызовом
+            string url = "/api/nations"; 
+            Console.WriteLine($"[GetNationsAsync] LOG: Попытка вызова URL: {url}");
 
             try
             {
                 // Используем GetAsync чтобы разделить получение ответа и десериализацию
                 var response = await _http.GetAsync(url);
-                Console.WriteLine($"[GetNationsAsync] LOG: Статус код ответа: {response.StatusCode}"); // Лог статус кода
 
                 if (response.IsSuccessStatusCode)
                 {
                     string responseBody = await response.Content.ReadAsStringAsync();
-                    // Логируем только часть ответа, чтобы не засорять консоль
-                    Console.WriteLine($"[GetNationsAsync] LOG: Получен ответ (сырой, начало): {responseBody.Substring(0, Math.Min(responseBody.Length, 300))}...");
-
-                    Console.WriteLine("[GetNationsAsync] LOG: Попытка десериализации...");
                     nations = JsonSerializer.Deserialize<List<Nation>>(responseBody, _jsonOptions) ?? new();
-                    Console.WriteLine($"[GetNationsAsync] LOG: Десериализация успешна. Получено наций: {nations.Count}");
                 }
                 else
                 {
-                    // Логируем тело ошибки, если статус код не успешный
                     string errorBody = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"[GetNationsAsync] LOG: HTTP Ошибка {response.StatusCode}. Тело ответа: {errorBody}");
                 }
             }
-            catch (HttpRequestException httpEx) // Ловим ошибки сети/HTTP
+            catch (HttpRequestException httpEx)
             {
                 Console.WriteLine($"[GetNationsAsync] ERROR: HttpRequestException: {httpEx.Message}");
-                Console.WriteLine($"---> Status Code: {httpEx.StatusCode}"); // Попробуем вывести статус код, если есть
+                Console.WriteLine($"---> Status Code: {httpEx.StatusCode}");
             }
-            catch (JsonException jsonEx) // Ловим именно ошибки парсинга JSON
+            catch (JsonException jsonEx) 
             {
                 Console.WriteLine($"[GetNationsAsync] ERROR: JsonException при парсинге ответа: {jsonEx.Message}");
                 Console.WriteLine($"---> LineNumber: {jsonEx.LineNumber} | BytePositionInLine: {jsonEx.BytePositionInLine} | Path: {jsonEx.Path}");
             }
-            catch (Exception ex) // Ловим любые другие ошибки
+            catch (Exception ex) 
             {
                 Console.WriteLine($"[GetNationsAsync] ERROR: Неожиданная ошибка: {ex}");
             }
 
-            Console.WriteLine("[GetNationsAsync] LOG: Метод завершен.");
             return nations;
         }
 
