@@ -352,6 +352,7 @@
 
         if (AllNodesFlat == null || !AllNodesFlat.Any()) return;
 
+        // --- Расчет максимальных индексов строк по рангам (оставляем как было) ---
         foreach (var node in AllNodesFlat)
         {
             int currentMax = MaxRowIndexPerRank.TryGetValue(node.Rank, out var max) ? max : -1;
@@ -359,23 +360,39 @@
             else if (!MaxRowIndexPerRank.ContainsKey(node.Rank)) MaxRowIndexPerRank[node.Rank] = node.RowIndex ?? 0;
         }
         TotalDataGridRows = MaxRowIndexPerRank.Sum(kvp => kvp.Value + 1);
+        // --- Конец расчета строк ---
 
+
+        // --- НОВАЯ ЛОГИКА: Определяем, какие узлы показывать в сетке ---
         foreach (var node in AllNodesFlat)
         {
-            bool isGridNode;
-            if (node.ParentNode == null) isGridNode = true;
-            else if (node.ParentNode.Type != "folder") isGridNode = true;
-            else
+            bool isGridNode = false; // По умолчанию узел НЕ показывается в сетке
+
+            if (node.Type == "folder")
             {
-                if (node.Rank != node.ParentNode.Rank ||
-                    (node.ColumnIndex ?? 0) != (node.ParentNode.ColumnIndex ?? 0) ||
-                    (node.RowIndex ?? 0) != (node.ParentNode.RowIndex ?? 0))
-                    isGridNode = true;
-                else
-                    isGridNode = false;
+                // Папки всегда показываем в сетке
+                isGridNode = true;
             }
-            if (isGridNode) GridNodes.Add(node);
+            else if (node.Type == "vehicle")
+            {
+                // Машины показываем в сетке, ТОЛЬКО если у них НЕТ OrderInFolder
+                if (!node.OrderInFolder.HasValue)
+                {
+                    isGridNode = true;
+                }
+                // Если OrderInFolder ЕСТЬ, isGridNode остается false - узел будет в попапе
+            }
+            // Можно добавить логику для других типов узлов, если они появятся
+
+            // Если узел должен быть в сетке, добавляем его
+            if (isGridNode)
+            {
+                GridNodes.Add(node);
+            }
         }
+        // --- КОНЕЦ НОВОЙ ЛОГИКИ ---
+
+        Console.WriteLine($"[DEBUG] Prepared GridNodes. Count: {GridNodes.Count}"); // Лог для отладки
     }
 
     private void CalculateGridDimensions()
