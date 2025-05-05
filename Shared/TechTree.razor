@@ -550,6 +550,12 @@
       {
           bool isCurrentlyExpanded = currentlyExpandedFolder?.Id == node.Id;
           bool containsSelected = IsFolderSelected(node); // Проверяем наличие выделенных детей
+          var children = GetVisualNodesInFolderSequence(node)
+                    .Where(c => c.Type == "vehicle")
+                    .ToList();
+          int totalChildren = children.Count;
+          int selectedChildrenCount = children.Count(c => selectedNodeIds.Contains(c.Id));
+
           int seq = 0;
 
           // Внешний контейнер .folder-visual-container БОЛЬШЕ НЕ НУЖЕН И НЕ РЕНДЕРИТСЯ
@@ -574,6 +580,16 @@
           builder.AddAttribute(seq++, "class", "node-name");
           builder.AddContent(seq++, node.Name);
           builder.CloseElement(); // Закрыли название
+
+          if (totalChildren > 0) // Показываем счетчик только если есть машины в папке
+          {
+              builder.OpenElement(seq++, "div");
+              builder.AddAttribute(seq++, "class", "folder-child-counter");
+              // Формируем строку "X / Y"
+              builder.AddContent(seq++, $"{selectedChildrenCount} / {totalChildren}");
+              builder.CloseElement();
+          }
+          //builder.CloseElement(); // Закрыли node-info
 
           // Плюс/минус
           builder.OpenElement(seq++, "div");

@@ -220,7 +220,7 @@ main {
     bottom: 0; /* Прижимаем к низу */
     left: 0; /* Растягиваем на всю ширину */
     right: 0;
-    z-index: 100; /* Поверх всего */
+    z-index: 99; /* Поверх всего */
     background-color: rgba(40, 40, 40, 0.9); /* Фон общий */
     backdrop-filter: blur(3px);
     border-top: 1px solid #666;
@@ -309,10 +309,21 @@ main {
 .folder-popup {
     position: absolute;
     visibility: hidden;
-    z-index: 100 !important; /* Поверх overlay */
+    z-index: 111 !important; /* Поверх overlay */
     /* ... остальные стили попапа ... */
 }
-
+.folder-child-counter {
+    position: absolute; /* Абсолютное позиционирование */
+    bottom: 3px; /* Отступ снизу от границы .tree-grid-item */
+    right: 5px; /* Отступ справа от границы .tree-grid-item */
+    font-size: 0.8em;
+    color: #a0a0a0;
+    background-color: rgba(0, 0, 0, 0.4); /* Легкий фон для читаемости */
+    padding: 0 4px; /* Небольшие горизонтальные отступы */
+    border-radius: 3px;
+    line-height: 1.2;
+    z-index: 2; /* Чуть выше базового z-index узла */
+}
 #selected-names-container {
     display: flex;
     align-items: center; /* Выравниваем текст и кнопку по вертикали */
@@ -404,13 +415,14 @@ main {
     flex-direction: column;
     justify-content: center;
     font-size: 0.85em;
+    padding-bottom: 10px;
     flex-grow: 1;
     overflow: hidden; /* Обрезать длинные названия */
 }
 
 .node-name {
     font-weight: bold;
-    margin-bottom: 3px;
+    margin-bottom: 1px;
     color: #fff;
     white-space: nowrap; /* Не переносить имя */
     overflow: hidden;
