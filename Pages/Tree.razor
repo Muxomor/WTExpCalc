@@ -1,5 +1,4 @@
-﻿@* Tree.razor (без изменений маршрутизации) *@
-@page "/tree/{NationId:int}"
+﻿@page "/tree/{NationId:int}"
 @using WTExpCalc.Models
 @using WTExpCalc.Services
 @using WTExpCalc.Shared
@@ -7,7 +6,7 @@
 @inject IExperienceApi Api
 @inject IJSRuntime JSRuntime
 
-<h3>Ветка прокачки для нации @FormatNationName(currentNation?.Name)</h3>
+<h3>Ветка прокачки для нации @FormattingUtils.FormatNationName(currentNation?.Name, NationId)</h3>
 @if (vehicleTypes == null)
 {
     <p><em>Загрузка типов…</em></p>
@@ -44,13 +43,11 @@ else
             </span>
         </div>
 
-        @* Контейнер для имен и кнопки копирования *@
         <div id="selected-names-container">
             <div id="selected-names-panel">
                 @if (!string.IsNullOrEmpty(selectedVehicleNames))
                 {
                     <span title="@selectedVehicleNames">
-                        @* Добавляем title с полным списком *@
                         Выбрано: @selectedVehicleNames
                     </span>
                 }
@@ -59,11 +56,10 @@ else
                     <span>&nbsp;</span>
                 }
             </div>
-            @* Кнопка копирования (появляется, если есть что копировать) *@
             @if (!string.IsNullOrEmpty(selectedVehicleNames))
             {
                 <button class="btn btn-sm btn-secondary copy-button" title="Копировать список" @onclick="CopyNamesToClipboard">
-                    <i class="bi bi-clipboard"></i> @* Иконка копирования Bootstrap Icons *@
+                    <i class="bi bi-clipboard"></i>
                 </button>
             }
         </div>
@@ -74,30 +70,29 @@ else
     [Parameter] public int NationId { get; set; }
     private List<VehicleType>? vehicleTypes;
     private int? activeTypeId;
-    private Nation? currentNation; // Переменная для хранения данных о нации
+    private Nation? currentNation; 
     private long currentTotalRp = 0;
     private long currentTotalSl = 0;
     private string selectedVehicleNames = "";
 
-    protected override async Task OnParametersSetAsync() // Используем OnParametersSetAsync, чтобы реагировать на изменение NationId
+    protected override async Task OnParametersSetAsync() 
     {
-        // Сбрасываем состояние при смене параметра
         vehicleTypes = null;
         currentNation = null;
         activeTypeId = null;
-        StateHasChanged(); // Показать индикатор загрузки
+        StateHasChanged(); 
 
         vehicleTypes = await Api.GetVehicleTypesAsync();
-        currentNation = await Api.GetNationByIdAsync(NationId); // Загружаем данные о нации
+        currentNation = await Api.GetNationByIdAsync(NationId); 
 
         if (vehicleTypes != null && vehicleTypes.Any())
         {
-            activeTypeId = vehicleTypes.First().Id; // Устанавливаем первую вкладку активной
+            activeTypeId = vehicleTypes.First().Id;
             selectedVehicleNames = "";
             currentTotalRp = 0;
             currentTotalSl = 0;
         }
-        StateHasChanged(); // Обновить UI с загруженными данными
+        StateHasChanged(); 
     }
     private async Task CopyNamesToClipboard()
     {
@@ -105,10 +100,8 @@ else
         {
             try
             {
-                // Вызываем новую JS функцию для копирования
                 await JSRuntime.InvokeVoidAsync("techTreeFunctions.copyTextToClipboard_fallback", selectedVehicleNames);
-                // Можно добавить уведомление для пользователя (сложнее)
-                Console.WriteLine("Copied names to clipboard."); // Пока выводим в консоль
+                Console.WriteLine("Copied names to clipboard.");
             }
             catch (Exception ex)
             {
@@ -118,30 +111,18 @@ else
     }
     private void HandleTotalsUpdate(TotalsUpdateEventArgs args)
     {
-        Console.WriteLine($"[DEBUG] HandleTotalsUpdate called in Tree.razor. Received RP: {args.TotalRp}, SL: {args.TotalSl}"); // <-- ДОБАВИТЬ
+        Console.WriteLine($"[DEBUG] HandleTotalsUpdate called in Tree.razor. Received RP: {args.TotalRp}, SL: {args.TotalSl}"); 
 
         currentTotalRp = args.TotalRp;
         currentTotalSl = args.TotalSl;
         selectedVehicleNames = args.SelectedNames;
 
-        Console.WriteLine($"[DEBUG] Tree.razor state updated: currentTotalRp={currentTotalRp}, currentTotalSl={currentTotalSl}"); // <-- ДОБАВИТЬ
+        Console.WriteLine($"[DEBUG] Tree.razor state updated: currentTotalRp={currentTotalRp}, currentTotalSl={currentTotalSl}");
 
-        // StateHasChanged(); // Убедитесь, что этот вызов есть
-        Console.WriteLine("[DEBUG] StateHasChanged called in HandleTotalsUpdate."); // <-- ДОБАВИТЬ
+        Console.WriteLine("[DEBUG] StateHasChanged called in HandleTotalsUpdate.");
     }
     void SelectType(int id)
     {
         activeTypeId = id;
-        // StateHasChanged() здесь обычно не нужен, Blazor сам отследит изменение
-    }
-
-    // Вспомогательный метод для форматирования имени нации
-    private string FormatNationName(string? name)
-    {
-        if (string.IsNullOrEmpty(name))
-            return $"ID: {NationId}"; // Возвращаем ID, если имя не загрузилось
-        if (name.Length == 1)
-            return name.ToUpper();
-        return char.ToUpper(name[0]) + name.Substring(1);
     }
 }

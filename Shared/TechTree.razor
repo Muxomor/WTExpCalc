@@ -28,13 +28,11 @@
                         int startGridRow = 2 + (cumulativeRowsBefore.TryGetValue(rank, out var cumRows) ? cumRows : 0);
                         string rankLabelStyle = $"grid-column: 1; grid-row: {startGridRow} / span {rowsInThisRank};";
                         var requirement = rankRequirements.FirstOrDefault(r => r.PreviousRank == rank);
-                        int requiredCount = requirement?.RequiredUnits ?? 0; // Получаем Y
-                        // Считаем количество ВЫДЕЛЕННОЙ техники НА ЭТОМ ранге
-                        int selectedCount = AllNodesFlat.Count(n => n.Rank == rank && n.Type == "vehicle" && selectedNodeIds.Contains(n.Id)); // Получаем X
+                        int requiredCount = requirement?.RequiredUnits ?? 0; 
+                        int selectedCount = AllNodesFlat.Count(n => n.Rank == rank && n.Type == "vehicle" && selectedNodeIds.Contains(n.Id)); 
 
                         <div class="rank-label" style="@rankLabelStyle">
                             <span>Rank @rank</span>
-                            @* Отображаем счетчик, если требование найдено *@
                             @if (requirement != null)
                             {
                                 <span class="rank-requirement-counter @(selectedCount >= requiredCount ? "req-met" : "req-not-met")">
@@ -66,48 +64,43 @@
                     @foreach (var dep in Dependencies)
                     {
                         <line id="dep-@dep.NodeId-@dep.PrerequisiteNodeId"
-                              x1="0" y1="0" x2="0" y2="0"
-                              stroke="#cccccc" stroke-width="2"
-                              marker-end="url(#arrowhead)"
-                              visibility="hidden" />
+                        x1="0" y1="0" x2="0" y2="0"
+                        stroke="#cccccc" stroke-width="2"
+                        marker-end="url(#arrowhead)"
+                        visibility="hidden" />
                     }
                     <defs>
                         <marker id="arrowhead" markerWidth="10" markerHeight="7"
-                                refX="10" refY="3.5" orient="auto">
+                        refX="10" refY="3.5" orient="auto">
                             <polygon points="0 0, 10 3.5, 0 7" fill="#cccccc" />
                         </marker>
                     </defs>
                 }
             </svg>
             @{
-                // Вычисляем последнюю колонку стандартной техники
                 var standardNodes = AllNodesFlat.Where(n => n.TechCategory == "standard");
                 int maxStdColIndex = standardNodes.Any() ? standardNodes.Max(n => n.ColumnIndex ?? 0) : -1;
                 int standardColumnCount = Math.Max(0, maxStdColIndex + 1);
-                int premiumDividerColumn = 2 + standardColumnCount; // +1 за RankLabel, +1 за сам индекс -> +1 за следующую колонку
+                int premiumDividerColumn = 2 + standardColumnCount;
 
-                // Вычисляем последнюю строку сетки данных
-                int lastDataRow = 1 + TotalDataGridRows; // +1, т.к. строки начинаются с 1 в CSS Grid
+                int lastDataRow = 1 + TotalDataGridRows; 
 
-                // --- Вертикальный разделитель (Премиум) ---
-                // Проверяем, есть ли вообще премиум техника
+                //Вертикальный разделитель (Премы)
                 var premiumNodesExist = AllNodesFlat.Any(n => n.TechCategory != "standard");
-                if (premiumNodesExist && standardColumnCount > 0) // Рисуем, только если есть и стандартные, и премиум
+                if (premiumNodesExist && standardColumnCount > 0) 
                 {
-                    string premiumDividerStyle = $"grid-column: {premiumDividerColumn}; grid-row: 2 / {lastDataRow + 1};"; // Начинаем со 2-й строки до конца
+                    string premiumDividerStyle = $"grid-column: {premiumDividerColumn}; grid-row: 2 / {lastDataRow + 1};";
                     <div class="premium-divider-v" style="@premiumDividerStyle"></div>
                 }
 
-                // --- Горизонтальные разделители (Ранги) ---
-                for (int rank = 1; rank < MaxRank; rank++) // До предпоследнего ранга
+                //Горизонтальные разделители (Ранги)
+                for (int rank = 1; rank < MaxRank; rank++) 
                 {
-                    // Находим последнюю строку текущего ранга
                     int rowsInThisRank = (MaxRowIndexPerRank.TryGetValue(rank, out var maxRowIdx) ? maxRowIdx : 0) + 1;
                     int startGridRowCurrentRank = 2 + (cumulativeRowsBefore.TryGetValue(rank, out var cumRows) ? cumRows : 0);
                     int endGridRowCurrentRank = startGridRowCurrentRank + rowsInThisRank - 1;
 
-                    // Стиль для разделителя ПОД текущим рангом
-                    string rankDividerStyle = $"grid-column: 2 / -1; grid-row: {endGridRowCurrentRank + 1};"; // +1 чтобы линия была ПОД последней строкой ранга
+                    string rankDividerStyle = $"grid-column: 2 / -1; grid-row: {endGridRowCurrentRank + 1};";
 
                     <div class="rank-divider-h" style="@rankDividerStyle"></div>
                 }
@@ -116,24 +109,17 @@
         </div>
         @if (currentlyExpandedFolder != null)
         {
-            // Этот div будет перекрывать все, кроме самого попапа
             <div class="folder-popup-overlay" @onclick="CloseFolderPopup"></div>
         }
 
         @if (currentlyExpandedFolder != null)
         {
-            // Используем @key, чтобы Blazor пересоздавал попап при смене папки
             <div class="folder-popup" id="folder-popup-@currentlyExpandedFolder.Id" style="position:absolute; visibility: hidden;" @key="currentlyExpandedFolder.Id" @onclick:stopPropagation="true">
-                @* Здесь можно добавить стрелку, если нужно *@
-                @* <div class="folder-popup-arrow"></div> *@
                 <div class="folder-popup-content">
                     @foreach (var child in GetVisualNodesInFolderSequence(currentlyExpandedFolder))
                     {
-                        // Важно: рендерим только дочерние машины, а не другие папки
                         if (child.Type == "vehicle")
                         {
-                            // Используем тот же рендерер, что и в сетке
-                            // Оборачиваем в div, чтобы применить стили, если нужно
                             <div class="folder-popup-item">
                                 @RenderVehicleNode(child)
                             </div>
@@ -167,19 +153,17 @@
     private Dictionary<int, Node> NodeLookup = new();
     private List<Node> GridNodes = new();
     private List<NodeDependency> Dependencies = new();
-    // private HashSet<int> ExpandedFolderIds = new(); // <-- ЗАМЕНИТЬ
-    private Node? currentlyExpandedFolder; // <-- НА ЭТО (хранит ссылку на узел или null)
+    private Node? currentlyExpandedFolder; 
     private string LoadingState = "loading";
-    private List<RankRequirement> rankRequirements = new(); // Для хранения требований по рангам
+    private List<RankRequirement> rankRequirements = new(); 
     private HashSet<int> selectedNodeIds = new();
     private int MaxRank = 0;
     private string GridStyles = "";
-    // private Dictionary<(int Rank, int Col, string Category), List<Node>> _vehiclesInFoldersCache = new(); // Эта логика может измениться
     private Dictionary<int, int> MaxRowIndexPerRank = new();
     private int TotalDataGridRows = 0;
     private long totalSelectedRp = 0;
-    private long totalSelectedSl = 0; private int _previousNationId = -1; // Инициализируем невалидным значением
-    private int _previousTypeId = -1;   // Инициализируем невалидным значением
+    private long totalSelectedSl = 0; private int _previousNationId = -1;
+    private int _previousTypeId = -1;  
     private bool _isFirstLoad = true;
 
     public class TotalsUpdateEventArgs : EventArgs
@@ -192,31 +176,24 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Здесь НЕТ проверки параметров и НЕТ вызова LoadData
-
-        // Оставляем только отрисовку линий
         if (LoadingState == "loaded" && Dependencies.Any())
         {
-            // Небольшая задержка, чтобы DOM успел обновиться
             await Task.Delay(50);
             await DrawConnectionLines();
         }
-        // Позиционирование папки (если оно было здесь) теперь в HandleNodeClick
     }
 
     protected override async Task OnParametersSetAsync()
     {
-        // Вызываем LoadData только если параметры изменились ИЛИ это первая загрузка
         if (_isFirstLoad || NationId != _previousNationId || TypeId != _previousTypeId)
         {
             Console.WriteLine($"[DEBUG] OnParametersSetAsync: Parameters changed or first load. Loading data for NationId={NationId}, TypeId={TypeId}");
 
-            // Сохраняем текущие значения как "предыдущие" для следующей проверки
             _previousNationId = NationId;
             _previousTypeId = TypeId;
-            _isFirstLoad = false; // Сбрасываем флаг первой загрузки
+            _isFirstLoad = false;
 
-            await LoadData(); // <--- ВЫЗОВ LoadData ВНУТРИ IF
+            await LoadData(); 
         }
         else
         {
@@ -231,21 +208,17 @@
         try
         {
             LoadingState = "loading";
-            // Очищаем все перед загрузкой
             MaxRowIndexPerRank.Clear();
-            // _vehiclesInFoldersCache.Clear(); // Если используется, раскомментировать
             GridNodes.Clear();
             Dependencies.Clear();
-            rankRequirements.Clear(); // Очищаем требования
-            selectedNodeIds.Clear();  // Очищаем выделение
-            currentlyExpandedFolder = null; // Закрываем папку
-            StateHasChanged(); // Обновляем UI (показываем загрузку)
+            rankRequirements.Clear(); 
+            selectedNodeIds.Clear();  
+            currentlyExpandedFolder = null; 
+            StateHasChanged(); 
 
-            // Загружаем основные данные
             AllNodesFlat = await Api.GetAllNodesFlatAsync(NationId, TypeId);
             if (AllNodesFlat == null || !AllNodesFlat.Any())
             {
-                // Обработка случая без данных (как было)
                 MaxRank = 0;
                 GridStyles = "";
                 LoadingState = "loaded";
@@ -253,10 +226,8 @@
                 return;
             }
 
-            // Загружаем требования по рангам
             rankRequirements = await Api.GetRankRequirementsAsync(NationId, TypeId);
 
-            // Остальная логика загрузки и подготовки (как было)
             NodeLookup = AllNodesFlat.ToDictionary(n => n.Id);
             BuildHierarchy();
             PrepareGridNodesAndCalculateRows();
@@ -267,8 +238,6 @@
         }
         catch (Exception ex)
         {
-            // ... (обработка ошибок) ...
-            // Сброс сумм при ошибке и вызов события
             totalSelectedRp = 0;
             totalSelectedSl = 0;
             if (OnTotalsUpdated.HasDelegate)
@@ -276,14 +245,14 @@
                 await OnTotalsUpdated.InvokeAsync(new TotalsUpdateEventArgs { TotalRp = 0, TotalSl = 0 });
             }
         }
-        StateHasChanged(); // Оставляем здесь на случай, если LoadData вызывается не только из OnParametersSetAsync
+        StateHasChanged(); 
         Console.WriteLine($"[DEBUG] LoadData END for NationId={NationId}, TypeId={TypeId}");
 
     }
 
     private async Task CalculateAndUpdateTotals()
     {
-        Console.WriteLine($"[DEBUG] CalculateAndUpdateTotals called. Selected IDs count: {selectedNodeIds.Count}"); // <-- ДОБАВИТЬ
+        Console.WriteLine($"[DEBUG] CalculateAndUpdateTotals called. Selected IDs count: {selectedNodeIds.Count}");
 
         totalSelectedRp = 0;
         totalSelectedSl = 0;
@@ -293,23 +262,22 @@
         {
             if (NodeLookup.TryGetValue(nodeId, out var node))
             {
-                long rpValue = node.RequiredExp ?? 0; // Используем текущее значение RP
-                long slValue = node.SilverCost ?? 0; // Используем SL
+                long rpValue = node.RequiredExp ?? 0;
+                long slValue = node.SilverCost ?? 0;
                 totalSelectedRp += rpValue;
                 totalSelectedSl += slValue;
                 nameList.Add(node.Name);
-                // Выводим, что суммируем (для отладки данных)
-                Console.WriteLine($"[DEBUG]   - Node ID: {nodeId}, RP: {rpValue}, SL: {slValue}. Current totals: RP={totalSelectedRp}, SL={totalSelectedSl}"); // <-- ДОБАВИТЬ
+                Console.WriteLine($"[DEBUG]   - Node ID: {nodeId}, RP: {rpValue}, SL: {slValue}. Current totals: RP={totalSelectedRp}, SL={totalSelectedSl}");
             }
             else
             {
-                Console.WriteLine($"[DEBUG]   - Node ID: {nodeId} NOT FOUND in NodeLookup!"); // <-- ДОБАВИТЬ (на случай ошибки)
+                Console.WriteLine($"[DEBUG]   - Node ID: {nodeId} NOT FOUND in NodeLookup!");
             }
         }
-        string namesString = string.Join(", ", nameList); // <-- Формируем строку
+        string namesString = string.Join(", ", nameList); 
 
         Console.WriteLine($"[DEBUG] Final calculated totals: RP={totalSelectedRp}, SL={totalSelectedSl}");
-        Console.WriteLine($"[DEBUG] Selected Names: {namesString}"); // <-- Лог для имен
+        Console.WriteLine($"[DEBUG] Selected Names: {namesString}");
 
         if (OnTotalsUpdated.HasDelegate)
         {
@@ -318,7 +286,7 @@
                 {
                     TotalRp = totalSelectedRp,
                     TotalSl = totalSelectedSl,
-                    SelectedNames = namesString // <-- Передаем строку с именами
+                    SelectedNames = namesString 
                 });
             Console.WriteLine("[DEBUG] OnTotalsUpdated invoked successfully.");
         }
@@ -352,7 +320,6 @@
 
         if (AllNodesFlat == null || !AllNodesFlat.Any()) return;
 
-        // --- Расчет максимальных индексов строк по рангам (оставляем как было) ---
         foreach (var node in AllNodesFlat)
         {
             int currentMax = MaxRowIndexPerRank.TryGetValue(node.Rank, out var max) ? max : -1;
@@ -360,39 +327,31 @@
             else if (!MaxRowIndexPerRank.ContainsKey(node.Rank)) MaxRowIndexPerRank[node.Rank] = node.RowIndex ?? 0;
         }
         TotalDataGridRows = MaxRowIndexPerRank.Sum(kvp => kvp.Value + 1);
-        // --- Конец расчета строк ---
 
 
-        // --- НОВАЯ ЛОГИКА: Определяем, какие узлы показывать в сетке ---
+
         foreach (var node in AllNodesFlat)
         {
-            bool isGridNode = false; // По умолчанию узел НЕ показывается в сетке
+            bool isGridNode = false;
 
             if (node.Type == "folder")
             {
-                // Папки всегда показываем в сетке
                 isGridNode = true;
             }
             else if (node.Type == "vehicle")
             {
-                // Машины показываем в сетке, ТОЛЬКО если у них НЕТ OrderInFolder
                 if (!node.OrderInFolder.HasValue)
                 {
                     isGridNode = true;
                 }
-                // Если OrderInFolder ЕСТЬ, isGridNode остается false - узел будет в попапе
             }
-            // Можно добавить логику для других типов узлов, если они появятся
-
-            // Если узел должен быть в сетке, добавляем его
             if (isGridNode)
             {
                 GridNodes.Add(node);
             }
         }
-        // --- КОНЕЦ НОВОЙ ЛОГИКИ ---
 
-        Console.WriteLine($"[DEBUG] Prepared GridNodes. Count: {GridNodes.Count}"); // Лог для отладки
+        Console.WriteLine($"[DEBUG] Prepared GridNodes. Count: {GridNodes.Count}");
     }
 
     private void CalculateGridDimensions()
@@ -432,44 +391,37 @@
 
     private string GetNodeCssClass(Node node)
     {
-        // Убираем добавление класса folder-open отсюда
         return $"tree-grid-item node-type-{node.Type} tech-cat-{node.TechCategory}";
     }
 
-    private async Task HandleNodeClick(Node node) // Делаем async для вызова JS
+    private async Task HandleNodeClick(Node node)
     {
         if (node.Type != "folder") return;
 
-        // Если кликнули по уже открытой папке - закрываем
         if (currentlyExpandedFolder?.Id == node.Id)
         {
             currentlyExpandedFolder = null;
         }
-        else // Иначе - открываем новую (старая закроется автоматически)
+        else 
         {
             currentlyExpandedFolder = node;
         }
 
-        StateHasChanged(); // Обновляем DOM (попап появится/исчезнет)
+        StateHasChanged(); 
 
-        // Если папка открыта, позиционируем попап через JS
         if (currentlyExpandedFolder != null)
         {
-            // Небольшая задержка, чтобы Blazor успел отрендерить попап в DOM
             await Task.Delay(10);
             try
             {
-                // Вызываем JS для установки top/left
                 await JSRuntime.InvokeVoidAsync("techTreeFunctions.positionFolderPopup",
-                    $"folder-popup-{currentlyExpandedFolder.Id}", // ID попапа
-                    $"node-{currentlyExpandedFolder.Id}",         // ID заголовка папки (цель)
-                    "tech-tree-container-id"                     // ID контейнера дерева (для расчета смещения)
+                    $"folder-popup-{currentlyExpandedFolder.Id}", 
+                    $"node-{currentlyExpandedFolder.Id}",      
+                    "tech-tree-container-id"                    
                 );
             }
             catch (Exception ex) { Console.WriteLine($"JS interop error: {ex.Message}"); }
         }
-        // Перерисовка линий теперь может быть не нужна сразу после клика, т.к. структура не меняется
-        // await DrawConnectionLines();
     }
     private void CloseFolderPopup()
     {
@@ -477,79 +429,63 @@
         {
             Console.WriteLine($"[DEBUG] Closing folder ID {currentlyExpandedFolder.Id} via overlay click.");
             currentlyExpandedFolder = null;
-            StateHasChanged(); // Обновляем UI, чтобы убрать попап и overlay
+            StateHasChanged(); 
         }
     }
-    private async Task ToggleNodeSelection(Node node) // Убедимся, что он async, так как вызывает async метод
+    private async Task ToggleNodeSelection(Node node) 
     {
         if (node.Type != "vehicle") return;
 
-        Console.WriteLine($"[DEBUG] ToggleNodeSelection called for Node ID: {node.Id}, Name: {node.Name}"); // <-- ДОБАВИТЬ
-        if (currentlyExpandedFolder != null) // Если какая-то папка открыта
+        Console.WriteLine($"[DEBUG] ToggleNodeSelection called for Node ID: {node.Id}, Name: {node.Name}");
+        if (currentlyExpandedFolder != null) 
         {
-            // Получаем список узлов ВНУТРИ открытой папки
             var nodesInCurrentPopup = GetVisualNodesInFolderSequence(currentlyExpandedFolder)
-                                        .Where(n => n.Type == "vehicle") // Убедимся, что берем только технику
-                                        .Select(n => n.Id)               // Берем только ID
-                                        .ToHashSet();                    // Преобразуем в HashSet для быстрой проверки
+                                        .Where(n => n.Type == "vehicle") 
+                                        .Select(n => n.Id)               
+                                        .ToHashSet();                    
 
-            // Закрываем папку ТОЛЬКО ЕСЛИ кликнутый узел НЕ находится внутри нее
             if (!nodesInCurrentPopup.Contains(node.Id))
             {
                 Console.WriteLine($"[DEBUG] Closing folder ID {currentlyExpandedFolder.Id} because vehicle node {node.Id} (OUTSIDE the folder) was clicked.");
                 currentlyExpandedFolder = null;
-                // StateHasChanged() вызовется ниже
             }
             else
             {
-                // Кликнули по узлу внутри открытой папки - папку НЕ закрываем
                 Console.WriteLine($"[DEBUG] Clicked node {node.Id} is INSIDE the currently open folder {currentlyExpandedFolder.Id}. Keeping folder open.");
             }
         }
         bool isSelected = selectedNodeIds.Contains(node.Id);
-        int initialCount = selectedNodeIds.Count; // <-- ДОБАВИТЬ
+        int initialCount = selectedNodeIds.Count;
 
         if (isSelected)
         {
             selectedNodeIds.Remove(node.Id);
-            Console.WriteLine($"[DEBUG] Node {node.Id} REMOVED from selection."); // <-- ДОБАВИТЬ
+            Console.WriteLine($"[DEBUG] Node {node.Id} REMOVED from selection.");
         }
         else
         {
             selectedNodeIds.Add(node.Id);
-            Console.WriteLine($"[DEBUG] Node {node.Id} ADDED to selection."); // <-- ДОБАВИТЬ
+            Console.WriteLine($"[DEBUG] Node {node.Id} ADDED to selection."); 
         }
 
-        Console.WriteLine($"[DEBUG] Selection count changed from {initialCount} to {selectedNodeIds.Count}."); // <-- ДОБАВИТЬ
+        Console.WriteLine($"[DEBUG] Selection count changed from {initialCount} to {selectedNodeIds.Count}.");
 
-        // Пересчитываем суммы и вызываем событие
-        await CalculateAndUpdateTotals(); // Убедитесь, что этот вызов есть
+        await CalculateAndUpdateTotals();
 
-        StateHasChanged(); // Убедитесь, что этот вызов есть
-        Console.WriteLine($"[DEBUG] ToggleNodeSelection finished for Node ID: {node.Id}. StateHasChanged called."); // <-- ДОБАВИТЬ
+        StateHasChanged(); 
+        Console.WriteLine($"[DEBUG] ToggleNodeSelection finished for Node ID: {node.Id}. StateHasChanged called.");
     }
 
     private bool IsFolderSelected(Node folderNode)
     {
-        // Папка считается "выделенной", если хотя бы один дочерний узел техники выделен
-        // Используем NodeLookup для быстрого поиска детей по ID, если иерархия построена
-        // или GetVisualNodesInFolderSequence, если он возвращает всех нужных детей
-
-        // Вариант 1: Если у Node есть Children
-        // return folderNode.Children.Any(child => child.Type == "vehicle" && selectedNodeIds.Contains(child.Id));
-
-        // Вариант 2: Используем GetVisualNodesInFolderSequence (если он надежно возвращает всех детей)
         var children = GetVisualNodesInFolderSequence(folderNode);
         return children.Any(child => child.Type == "vehicle" && selectedNodeIds.Contains(child.Id));
-
-        // Вариант 3: Ищем по ParentId (если иерархия не всегда полная в Children)
-        // return AllNodesFlat.Any(n => n.ParentId == folderNode.Id && n.Type == "vehicle" && selectedNodeIds.Contains(n.Id));
     }
 
     private RenderFragment RenderFolderNode(Node node) => builder =>
       {
           bool isCurrentlyExpanded = currentlyExpandedFolder?.Id == node.Id;
-          bool containsSelected = IsFolderSelected(node); // Проверяем наличие выделенных детей
+          bool containsSelected = IsFolderSelected(node); 
           var children = GetVisualNodesInFolderSequence(node)
                     .Where(c => c.Type == "vehicle")
                     .ToList();
@@ -558,52 +494,45 @@
 
           int seq = 0;
 
-          // Внешний контейнер .folder-visual-container БОЛЬШЕ НЕ НУЖЕН И НЕ РЕНДЕРИТСЯ
+          builder.OpenElement(seq++, "div"); 
 
-          // Рендерим ТОЛЬКО сам «заголовок» папки
-          builder.OpenElement(seq++, "div"); // Открываем div заголовка
-
-          // Добавляем нужные классы ПРЯМО СЮДА
+          //нужные классы
           builder.AddAttribute(seq++, "class",
           $"node-content folder-node {(isCurrentlyExpanded ? "folder-active" : "")} {(containsSelected ? "folder-contains-selected" : "")}");
-          builder.AddAttribute(seq++, "id", $"node-{node.Id}"); // ID для JS и стилей
-          builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => HandleNodeClick(node))); // Обработчик клика
+          builder.AddAttribute(seq++, "id", $"node-{node.Id}");
+          builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => HandleNodeClick(node))); 
 
           // Иконка
           builder.OpenElement(seq++, "div");
           builder.AddAttribute(seq++, "class", "node-icon");
           builder.AddAttribute(seq++, "style", $"background-image:url('{node.ImageUrl}')");
-          builder.CloseElement(); // Закрыли иконку
+          builder.CloseElement(); 
 
           // Название
           builder.OpenElement(seq++, "div");
           builder.AddAttribute(seq++, "class", "node-name");
           builder.AddContent(seq++, node.Name);
-          builder.CloseElement(); // Закрыли название
+          builder.CloseElement();
 
-          if (totalChildren > 0) // Показываем счетчик только если есть машины в папке
+          if (totalChildren > 0) 
           {
               builder.OpenElement(seq++, "div");
               builder.AddAttribute(seq++, "class", "folder-child-counter");
-              // Формируем строку "X / Y"
               builder.AddContent(seq++, $"{selectedChildrenCount} / {totalChildren}");
               builder.CloseElement();
           }
-          //builder.CloseElement(); // Закрыли node-info
 
           // Плюс/минус
           builder.OpenElement(seq++, "div");
           builder.AddAttribute(seq++, "class", "folder-toggle-icon");
           builder.AddContent(seq++, isCurrentlyExpanded ? "−" : "+");
-          builder.CloseElement(); // Закрыли плюс/минус
+          builder.CloseElement();
 
-          builder.CloseElement(); // Закрыли div заголовка ("node-content folder-node")
+          builder.CloseElement(); 
       };
 
     private List<Node> GetVisualNodesInFolderSequence(Node folderNode)
     {
-        // Берём из полного списка все узлы, у которых указан order_in_folder
-        // и которые лежат в той же «ячейке» (rank, column, row)
         return AllNodesFlat
             .Where(n =>
                 n.Rank == folderNode.Rank
@@ -619,45 +548,37 @@
          bool isSelected = selectedNodeIds.Contains(node.Id);
          int seq = 0;
 
-         // --- Open the MAIN vehicle node element ---
          __builder.OpenElement(seq++, "div");
-         __builder.AddAttribute(seq++, "id", $"node-{node.Id}"); // ID for targeting
+         __builder.AddAttribute(seq++, "id", $"node-{node.Id}"); 
 
-         // Add ALL classes and the onclick handler HERE
          __builder.AddAttribute(seq++, "class",
          $"node-content vehicle-node {(node.RequiredExp.HasValue ? "rp-editable" : "")} {(isSelected ? "node-selected" : "")}");
          __builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => ToggleNodeSelection(node)));
 
-         // --- Icon ---
          __builder.OpenElement(seq++, "div");
          __builder.AddAttribute(seq++, "class", "node-icon");
          __builder.AddAttribute(seq++, "style", $"background-image:url('{node.ImageUrl}')");
-         __builder.CloseElement(); // Close Icon
+         __builder.CloseElement(); 
 
-         // --- Info ---
          __builder.OpenElement(seq++, "div");
          __builder.AddAttribute(seq++, "class", "node-info");
 
-         // --- Name ---
          __builder.OpenElement(seq++, "div");
          __builder.AddAttribute(seq++, "class", "node-name");
          __builder.AddContent(seq++, node.Name);
-         __builder.CloseElement(); // Close Name
+         __builder.CloseElement(); 
 
-         // --- Details ---
          __builder.OpenElement(seq++, "div");
          __builder.AddAttribute(seq++, "class", "node-details");
 
-         // BR
          if (node.Br.HasValue)
          {
              __builder.OpenElement(seq++, "div");
              __builder.AddAttribute(seq++, "class", "node-detail-item node-br");
              __builder.AddContent(seq++, $"BR: {node.Br}");
-             __builder.CloseElement(); // Close BR Div
+             __builder.CloseElement(); 
          }
 
-         // RP
          __builder.OpenElement(seq++, "div");
          __builder.AddAttribute(seq++, "class", "node-detail-item node-exp");
          if (node.RequiredExp.HasValue)
@@ -667,20 +588,18 @@
              __builder.AddAttribute(seq++, "type", "number");
              __builder.AddAttribute(seq++, "class", "rp-input");
              __builder.AddAttribute(seq++, "min", "0");
-             // --- TYPE CHECK --- Make sure the binder type matches node.RequiredExp's type (int? or long?)
-             __builder.AddAttribute(seq++, "value", BindConverter.FormatValue(node.RequiredExp)); // Use nullable directly
-             __builder.AddAttribute(seq++, "onchange", EventCallback.Factory.CreateBinder<int?>(this, // <-- CHANGE int? to long? if needed
-             v => { node.RequiredExp = v; StateHasChanged(); /* Optional: Add StateHasChanged if needed */ }, node.RequiredExp));
-             __builder.AddElementReferenceCapture(seq++, capturedRef => { /* ... */ });
-             __builder.CloseElement(); // Close Input
+             __builder.AddAttribute(seq++, "value", BindConverter.FormatValue(node.RequiredExp)); 
+             __builder.AddAttribute(seq++, "onchange", EventCallback.Factory.CreateBinder<int?>(this, 
+             v => { node.RequiredExp = v; StateHasChanged();}, node.RequiredExp));
+             __builder.AddElementReferenceCapture(seq++, capturedRef => { });
+             __builder.CloseElement();
          }
-         __builder.CloseElement(); // Close RP Div
+         __builder.CloseElement();
 
-         __builder.CloseElement(); // Close Details
+         __builder.CloseElement();
 
-         __builder.CloseElement(); // Close Info
+         __builder.CloseElement();
 
-         // --- Close the MAIN vehicle node element ---
          __builder.CloseElement();
      };
 
@@ -699,7 +618,7 @@
         }
         catch
         {
-            // Handle JS interop errors silently
+            
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using WTExpCalc.Models
 @using WTExpCalc.Services
+@using WTExpCalc.Shared
 @inject IExperienceApi Api
 @inject NavigationManager Nav
 
@@ -21,10 +22,9 @@ else
                      @onclick="@(() => Nav.NavigateTo("/tree/" + n.Id))">
                     <img src="@n.ImageUrl"
                          class="card-img-top p-3"
-                         alt="@n.Name"
-                         style="height:120px; object-fit:contain;" />
+                         alt="@FormattingUtils.FormatNationName(n.Name, n.Id)"  style="height:120px; object-fit:contain;" />
                     <div class="card-footer text-center">
-                        <strong>@n.Name</strong>
+                        <strong>@FormattingUtils.FormatNationName(n.Name, n.Id)</strong> 
                     </div>
                 </div>
             </div>

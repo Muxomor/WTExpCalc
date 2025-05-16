@@ -1,5 +1,4 @@
-﻿// В файле ExperienceApiService.cs
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using WTExpCalc.Models;
@@ -11,7 +10,6 @@ namespace WTExpCalc.Services
         private readonly HttpClient _http;
         private readonly JsonSerializerOptions _jsonOptions;
 
-        // Переменная для кэширования плоского списка узлов внутри одного запроса зависимостей
         private List<Node>? _lastFetchedNodesForDeps = null;
         private int _lastNationIdForDeps = -1;
         private int _lastTypeIdForDeps = -1;
@@ -35,7 +33,6 @@ namespace WTExpCalc.Services
 
             try
             {
-                // Используем GetAsync чтобы разделить получение ответа и десериализацию
                 var response = await _http.GetAsync(url);
 
                 if (response.IsSuccessStatusCode)
@@ -76,11 +73,8 @@ namespace WTExpCalc.Services
         /// </summary>
         public async Task<List<Node>> GetAllNodesFlatAsync(int nationId, int vehicleTypeId)
         {
-            // URL для вашего API (PostgREST?). Загружаем все поля узла.
-            // Возможно, стоит добавить select=*, если нужны все поля из Node класса.
             var url = $"api/nodes?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}&select=*";
 
-            // Кэшируем результат для возможного использования в GetAllDependenciesAsync
             var nodes = await _http.GetFromJsonAsync<List<Node>>(url, _jsonOptions) ?? new List<Node>();
 
             _lastFetchedNodesForDeps = nodes;
@@ -98,37 +92,31 @@ namespace WTExpCalc.Services
         {
             List<Node> relevantNodes;
 
-            // Проверяем, есть ли у нас уже загруженные узлы для этой комбинации нации/типа
             if (_lastNationIdForDeps == nationId && _lastTypeIdForDeps == vehicleTypeId && _lastFetchedNodesForDeps != null)
             {
                 relevantNodes = _lastFetchedNodesForDeps;
             }
             else
             {
-                // Если нет, загружаем их снова (менее эффективно, но необходимо)
                 relevantNodes = await GetAllNodesFlatAsync(nationId, vehicleTypeId);
             }
 
             if (relevantNodes == null || !relevantNodes.Any())
             {
-                return new List<NodeDependency>(); // Нет узлов - нет зависимостей
+                return new List<NodeDependency>(); 
             }
 
-            // Получаем список ID всех релевантных узлов
             var nodeIds = relevantNodes.Select(n => n.Id).ToList();
             if (!nodeIds.Any())
             {
                 return new List<NodeDependency>();
             }
 
-            // Формируем строку ID для запроса PostgREST "in.(id1,id2,...)"
             var nodeIdFilter = string.Join(",", nodeIds);
 
-            // Формируем URL для PostgREST:
-            // Ищем зависимости, где ЛИБО node_id из нашего списка, ЛИБО prerequisite_node_id из нашего списка
             var url = $"api/node_dependencies?select=*&or=(node_id.in.({nodeIdFilter}),prerequisite_node_id.in.({nodeIdFilter}))";
 
-            Console.WriteLine($"Fetching dependencies with URL: {url}"); // Для отладки
+            Console.WriteLine($"Fetching dependencies with URL: {url}"); 
 
             try
             {
@@ -137,7 +125,6 @@ namespace WTExpCalc.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Error fetching dependencies: {ex.Message}");
-                // В зависимости от требований, можно вернуть пустой список или пробросить исключение
                 return new List<NodeDependency>();
             }
         }
@@ -147,7 +134,6 @@ namespace WTExpCalc.Services
             var url = $"api/nodes?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}&select=*";
             var nodes = await _http.GetFromJsonAsync<List<Node>>(url, _jsonOptions) ?? new List<Node>();
 
-            // Возвращаем корневые узлы построенного дерева
             return BuildTree(nodes);
         }
 
@@ -162,23 +148,19 @@ namespace WTExpCalc.Services
 
             foreach (var node in nodes)
             {
-                // Важно очищать Children перед построением, если объект Node используется повторно
                 node.Children.Clear();
-                node.ParentNode = null; // Сбрасываем ссылку на родителя
+                node.ParentNode = null; 
 
                 if (node.ParentId.HasValue && nodeMap.TryGetValue(node.ParentId.Value, out var parent))
                 {
-                    // Добавляем ссылку на родителя и ребенка друг к другу
                     node.ParentNode = parent;
                     parent.Children.Add(node);
                 }
                 else
                 {
-                    rootNodes.Add(node); // Узел без родителя - корень
+                    rootNodes.Add(node); 
                 }
             }
-            // Опциональная сортировка корневых узлов (возможно, лучше сортировать в компоненте)
-            // return rootNodes.OrderBy(n => n.Rank).ThenBy(n => n.ColumnIndex ?? 0).ToList();
             return rootNodes;
         }
 
@@ -195,7 +177,6 @@ namespace WTExpCalc.Services
         }
         public async Task<List<Node>> GetRootNodesAsync(int nationId, int vehicleTypeId)
         {
-            // Этот метод может быть полезен, если вам нужны ТОЛЬКО корневые узлы
             var url = $"api/nodes?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}&parent_id=is.null&select=*";
             return await _http.GetFromJsonAsync<List<Node>>(url, _jsonOptions) ?? new();
         }

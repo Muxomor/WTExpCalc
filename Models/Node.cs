@@ -29,7 +29,7 @@ namespace WTExpCalc.Models
         public int? ParentId { get; set; }
 
         [JsonIgnore]
-        public Node? ParentNode { get; set; } // вот это добавили
+        public Node? ParentNode { get; set; }
 
         [JsonPropertyName("rank")]
         public int Rank { get; set; }

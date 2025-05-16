@@ -1,10 +1,7 @@
-/* NavMenu.razor.css */
-
-/* Контейнер для прокрутки флагов */
 .nav-scrollable {
-    flex-grow: 1; /* Занимает все доступное место в .sidebar */
+    flex-grow: 1;
     overflow-y: auto;
-    padding-top: 0.5rem; /* Отступ над первым флагом */
+    padding-top: 0.5rem; 
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.2) transparent;
 }
@@ -26,25 +23,22 @@
             background-color: rgba(255,255,255,0.5);
         }
 
-/* Контейнер для каждого флага (элемент списка) */
 .nav-item {
     width: 100%;
-    margin-bottom: 12px; /* Увеличенный отступ между флагами */
-    padding: 0; /* Сброс стандартных отступов */
+    margin-bottom: 12px; 
+    padding: 0;
 }
 
-/* Сама ссылка (тег <a>), генерируемый NavLink */
-/* Используем ::deep, т.к. <a> находится внутри NavLink */
 ::deep a.nav-link {
-    display: flex !important; /* Переопределяем display по умолчанию */
+    display: flex !important; 
     justify-content: center;
     align-items: center;
-    padding: 0.5rem 0 !important; /* Только вертикальный padding! */
-    min-height: 55px; /* Высота кликабельной зоны */
+    padding: 0.5rem 0 !important;
+    min-height: 55px;
     border-radius: 4px;
     color: rgba(255, 255, 255, 0.65);
     transition: background-color 0.1s ease-in-out;
-    text-decoration: none; /* Без подчеркивания */
+    text-decoration: none;
 }
 
     ::deep a.nav-link:hover {
@@ -55,13 +49,12 @@
     ::deep a.nav-link.active {
         background-color: rgba(255,255,255,0.25) !important;
         color: white !important;
-        outline: 2px solid rgba(0, 0, 255, 0.6) !important; /* Белый полупрозрачный контур */
-        outline-offset: -2px; /* Рисуем контур внутрь элемента (не выходит за padding) */
+        outline: 2px solid rgba(0, 0, 255, 0.6) !important; 
+        outline-offset: -2px; 
     }
 
-/* Изображение флага */
 .nation-flag-icon {
-    width: 50px; /* Ширина флага (меньше 70px сайдбара) */
+    width: 50px; 
     height: auto;
     max-width: 100%;
     object-fit: contain;
@@ -69,12 +62,10 @@
     transition: transform 0.1s ease-in-out;
 }
 
-/* Активный флаг */
 ::deep a.nav-link.active .nation-flag-icon {
     transform: scale(1.05);
 }
 
-/* Скрываем стандартные элементы NavMenu, если они вдруг появятся */
 .navbar-toggler, .top-row, .navbar-brand, .bi {
     display: none !important;
 }

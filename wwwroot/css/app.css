@@ -5,10 +5,8 @@ html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     height: 100%;
     margin: 0;
-    /*overflow: hidden;*/
 }
 
-/* --- Базовый макет страницы --- */
 .page {
     display: flex;
     flex-direction: row;
@@ -27,55 +25,47 @@ main {
     padding: 1.1rem 1.5rem;
 }
 
-/* --- Верхняя строка (Top Row) --- */
-/* Скрываем стандартную верхнюю строку в сайдбаре, т.к. убрали ее из разметки NavMenu */
-
-/* Стили для основной верхней строки (над main контентом), если она используется */
 .top-row {
     height: 3.5rem;
     display: flex;
     align-items: center;
     background-color: rgba(0,0,0,0.4);
     padding: 0 1rem;
-    position: sticky; /* Делаем липкой верхнюю панель над контентом */
+    position: sticky; 
     top: 0;
-    z-index: 10; /* Поверх контента */
+    z-index: 10; 
 }
 
-
-
-/* --- Стили для страницы выбора наций (Nations.razor) --- */
 .nation-card {
     border: 2px solid transparent;
     transition: border-color .2s;
-    background-color: #3a3a3a; /* Добавим фон, если его не было */
+    background-color: #3a3a3a;
     color: #eee;
 }
 
     .nation-card:hover {
         border-color: #007bff;
     }
-
+    
     .nation-card img {
-        background-color: #444; /* Фон для области изображения, если флаг не квадратный */
+        background-color: #444; 
     }
-
+    
     .nation-card .card-footer {
         background-color: #2a2a2a;
         border-top: 1px solid #555;
     }
-
-/* --- Стили для дерева прокачки (TechTree) --- */
-.tech-tree-container {
-    overflow: auto;
-    position: relative; /* Для позиционирования overlay и сообщений */
-    min-height: 300px; /* Минимальная высота на время загрузки/ошибки */
-    padding-bottom: 70px;
-}
+    
+    .tech-tree-container {
+        overflow: auto;
+        position: relative; 
+        min-height: 300px; 
+        padding-bottom: 70px;
+    }
 
     .tech-tree-container.loading::after,
     .tech-tree-container.error::after {
-        content: ''; /* Убираем текстовые псевдоэлементы */
+        content: '';
         position: absolute;
         top: 0;
         left: 0;
@@ -85,13 +75,13 @@ main {
         align-items: center;
         justify-content: center;
         font-size: 1.5em;
-        background-color: rgba(0, 0, 0, 0.5); /* Полупрозрачный фон */
+        background-color: rgba(0, 0, 0, 0.5);
         z-index: 10;
     }
 
-    .tech-tree-container.loading::before { /* Используем ::before для текста */
+    .tech-tree-container.loading::before { 
         content: 'Загрузка...';
-        position: absolute; /* Текст будет поверх фона ::after */
+        position: absolute; 
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
@@ -111,34 +101,29 @@ main {
 
 .tree-grid {
     display: grid;
-    gap: 10px 20px; /* Расстояние между ячейками */
+    gap: 10px 20px; 
     padding: 10px;
     background-color: #222;
-    position: relative; /* Для overlay */
-    /* grid-template-columns, grid-template-rows, grid-auto-rows задаются из C# */
+    position: relative; 
 }
 
 .rank-divider-h {
-    /* Горизонтальная линия между рангами */
-    grid-column: 2 / -1; /* Растягиваем от второй до последней колонки */
-    height: 3px; /* Толщина линии */
-    background-color: #555; /* Цвет линии (можно использовать border-top) */
-    align-self: start; /* Размещаем линию в начале строки grid */
-    position: relative; /* Для z-index */
-    z-index: 0; /* Под узлами, но над фоном grid */
-    margin: -8px 0; /* Компенсируем половину grid-gap по вертикали (gap: 15px -> -7.5px) */
-    /* Подберите значение, чтобы линия была посередине gap */
+    grid-column: 2 / -1; 
+    height: 3px; 
+    background-color: #555; 
+    align-self: start; 
+    position: relative; 
+    z-index: 0; 
+    margin: -8px 0;
 }
 
 .premium-divider-v {
-    /* Вертикальная линия между стандартной и премиум техникой */
-    width: 3px; /* Толщина линии */
-    background-color: #555; /* Цвет линии (можно использовать border-left) */
-    justify-self: start; /* Размещаем линию в начале колонки grid */
-    position: relative; /* Для z-index */
-    z-index: 0; /* Под узлами, но над фоном grid */
-    margin: 0 -19px; /* Компенсируем половину grid-gap по горизонтали (gap: 25px -> -12.5px) */
-    /* Подберите значение, чтобы линия была посередине gap */
+    width: 3px; 
+    background-color: #555;
+    justify-self: start;
+    position: relative;
+    z-index: 0; 
+    margin: 0 -19px; 
 }
 
 .tree-grid-item {
@@ -147,67 +132,57 @@ main {
     color: #eee;
     padding: 5px;
     border-radius: 4px;
-    position: relative; /* Для z-index и позиционирования внутренних элементов */
+    position: relative;
     display: flex;
     flex-direction: column;
-    overflow: visible; /* Важно для выпадающих папок и линий */
-    z-index: 1; /* Базовый z-index */
-    transition: background-color 0.2s ease-in-out, outline 0.2s ease-in-out; /* Плавность для выделения */
+    overflow: visible; 
+    z-index: 1;
+    transition: background-color 0.2s ease-in-out, outline 0.2s ease-in-out;
 }
 
 .node-content.vehicle-node {
-    cursor: pointer; /* Показываем, что на технику можно кликнуть */
+    cursor: pointer; 
 }
 
     .node-content.vehicle-node:hover {
-        background-color: #4f4f4f; /* Легкая подсветка при наведении */
+        background-color: #4f4f4f;
     }
 
-/* Стиль для выделенного узла техники */
 .vehicle-node.node-selected {
-    outline: 2px solid #0dcaf0; /* Яркая рамка */
-    outline-offset: -2px; /* Рамка внутрь */
-    background-color: #505f70; /* Другой фон для выделения */
+    outline: 2px solid #0dcaf0;
+    outline-offset: -2px; 
+    background-color: #505f70; 
 }
 
 .node-content.folder-node.folder-contains-selected {
-    /* Применяем стиль прямо к элементу заголовка папки */
-    border: 1px dashed #0dcaf0 !important; /* Пунктирная рамка (добавим !important на всякий случай) */
-    background-color: rgba(13, 202, 240, 0.15) !important; /* Легкий голубоватый фон для наглядности */
-    border-radius: 4px; /* Сохраняем скругление */
+    border: 1px dashed #0dcaf0 !important; 
+    background-color: rgba(13, 202, 240, 0.15) !important;
+    border-radius: 4px; 
 }
 
 .tree-grid-item.node-type-folder {
     cursor: pointer;
 }
-/*.tree-page-container {
-    display: flex;
-    flex-direction: column;
-    height: calc(100vh - 56px);*/ /* Примерная высота за вычетом top-row, подберите значение */
-/* Или используйте другие методы для управления высотой */
-/*}*/
 .tab-content {
     flex-grow: 1;
-    position: relative; /* Контекст для .tech-tree-container */
-    display: flex; /* Чтобы .tech-tree-container мог использовать flex-grow */
+    position: relative; 
+    display: flex; 
     flex-direction: column;
 }
 
 .tech-tree-container {
-    overflow: auto; /* Оставляем прокрутку */
+    overflow: auto; 
     position: relative;
     min-height: 300px;
-    flex-grow: 1; /* Занимает доступное пространство по высоте */
-    /* ОТСТУП СНИЗУ под панель сумм */
-    padding-bottom: 70px; /* Высота панели (напр. 60px) + запас (20px) */
+    flex-grow: 1;
+    padding-bottom: 70px; 
 }
 
-/* Стиль для фиксированной панели сумм */
 #summary-panel {
     padding: 10px 20px;
     display: flex;
     align-items: center;
-    gap: 25px; /* Расстояние между элементами RP и SL */
+    gap: 25px; 
     flex-shrink: 0;
     padding: 5px 0;
     width: auto;
@@ -217,22 +192,21 @@ main {
 
 #summary-container {
     position: fixed;
-    bottom: 0; /* Прижимаем к низу */
-    left: 0; /* Растягиваем на всю ширину */
+    bottom: 0; 
+    left: 0; 
     right: 0;
-    z-index: 99; /* Поверх всего */
-    background-color: rgba(40, 40, 40, 0.9); /* Фон общий */
+    z-index: 99;
+    background-color: rgba(40, 40, 40, 0.9); 
     backdrop-filter: blur(3px);
     border-top: 1px solid #666;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
-    padding: 8px 20px; /* Небольшие вертикальные отступы */
-    display: flex; /* Располагаем панели рядом или друг под другом */
-    flex-direction: column; /* Имена под суммами */
-    align-items: center; /* Центрируем по горизонтали */
-    gap: 8px; /* Промежуток между панелями */
+    padding: 8px 20px; 
+    display: flex; 
+    flex-direction: column;
+    align-items: center; 
+    gap: 8px; 
 }
 
-/* Стиль для каждого элемента в панели (RP, SL) */
 #summary-panel .summary-item {
     display: flex;
     align-items: center;
@@ -241,11 +215,10 @@ main {
     white-space: nowrap;
 }
 
-    /* Стиль для иконок RP и SL */
     #summary-panel .summary-item img {
-        width: 24px; /* Размер иконки */
+        width: 24px; 
         height: 24px;
-        margin-right: 8px; /* Отступ от числа */
+        margin-right: 8px; 
         vertical-align: middle;
     }
 
@@ -255,7 +228,7 @@ main {
 
 #summary-panel .summary-item span:first-child {
     margin-right: 5px;
-    color: #bbb; /* Метку можно сделать тусклее */
+    color: #bbb; 
     font-weight: normal;
 }
 
@@ -263,12 +236,11 @@ main {
     color: #ccc;
     font-size: 0.9em;
     text-align: left;
-    /*width: 90%;*/ /* Ограничиваем ширину */
     max-width: 600px;
-    white-space: nowrap; /* Запрещаем перенос строк */
-    overflow: hidden; /* Скрываем то, что не влезло */
-    text-overflow: ellipsis; /* Добавляем троеточие */
-    min-height: 1.2em; /* Минимальная высота, чтобы не прыгало при отсутствии текста */
+    white-space: nowrap; 
+    overflow: hidden;
+    text-overflow: ellipsis; 
+    min-height: 1.2em; 
     padding-bottom: 5px;
     flex-shrink: 0;
     flex-grow: 1;
@@ -278,125 +250,109 @@ main {
 }
 
 .copy-button {
-    padding: 0.1rem 0.4rem; /* Меньший размер кнопки */
-    line-height: 1; /* Убрать лишнюю высоту */
-    flex-shrink: 0; /* Не сжиматься */
+    padding: 0.1rem 0.4rem;
+    line-height: 1; 
+    flex-shrink: 0; 
 }
 
     .copy-button i {
-        vertical-align: middle; /* Выровнять иконку */
+        vertical-align: middle;
     }
 
 #selected-names-panel span[title] {
-    cursor: help; /* Подсказка при наведении на обрезанный текст */
+    cursor: help; 
     max-width: 600px;
 }
 
 .folder-popup-overlay {
-    position: fixed; /* Позиционирование относительно окна браузера */
+    position: fixed; 
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: transparent; /* Полностью прозрачный */
-    /* Или легкое затемнение: */
-    /* background-color: rgba(0, 0, 0, 0.1); */
-    z-index: 99; /* ДОЛЖЕН БЫТЬ НИЖЕ, чем z-index у .folder-popup (у нас 100) */
-    /* но ВЫШЕ, чем у остального контента (например, дерева с z-index 1) */
+    background-color: transparent; 
+    z-index: 99;
 }
 
-/* Попап папки (убедимся, что z-index выше overlay) */
 .folder-popup {
     position: absolute;
     visibility: hidden;
-    z-index: 111 !important; /* Поверх overlay */
-    /* ... остальные стили попапа ... */
+    z-index: 111 !important;
 }
 .folder-child-counter {
-    position: absolute; /* Абсолютное позиционирование */
-    bottom: 3px; /* Отступ снизу от границы .tree-grid-item */
-    right: 5px; /* Отступ справа от границы .tree-grid-item */
+    position: absolute; 
+    bottom: 3px; 
+    right: 5px;
     font-size: 0.8em;
     color: #a0a0a0;
-    background-color: rgba(0, 0, 0, 0.4); /* Легкий фон для читаемости */
-    padding: 0 4px; /* Небольшие горизонтальные отступы */
+    background-color: rgba(0, 0, 0, 0.4); 
+    padding: 0 4px; 
     border-radius: 3px;
     line-height: 1.2;
-    z-index: 2; /* Чуть выше базового z-index узла */
+    z-index: 2; 
 }
 #selected-names-container {
     display: flex;
-    align-items: center; /* Выравниваем текст и кнопку по вертикали */
-    /*justify-content: center;*/ /* Центрируем */
-    width: 90%; /* Ширина как у панели имен */
+    align-items: center;
+    width: 90%; 
     max-width: 600px;
-    gap: 10px; /* Промежуток между текстом и кнопкой */
+    gap: 10px; 
 }
-/*.tree-grid-item.folder-open {
-        z-index: 3;*/ /* Должен быть выше, чем у rank-label (z-index: 2) */
-/* и выше, чем у обычных tree-grid-item (z-index: 1) */
-/*}*/
-/* Стили для премиум/ивентов */
 .tech-cat-premium, .tech-cat-event {
     border-left: 5px solid gold;
 }
 
 .folder-visual-container.folder-open {
-    /* Этот div уже имеет position: relative */
-    z-index: 3; /* Попробуем поднять его над соседями и метками рангов */
+    z-index: 3; 
     position: relative;
     transform: translateZ(0);
     background-color: red !important;
 }
-/* Контент внутри узла */
 .node-content {
     display: flex;
     align-items: center;
     width: 100%;
-    min-height: 50px; /* Минимальная высота контента узла */
+    min-height: 50px; 
 }
 
 .folder-popup {
-    position: absolute; /* Позиционируется относительно tech-tree-container */
-    visibility: hidden; /* Скрыт, пока JS не установит координаты */
-    z-index: 100 !important; /* Гарантированно поверх всего */
+    position: absolute; 
+    visibility: hidden; 
+    z-index: 100 !important; 
     background-color: #3a3a3a;
     border: 1px solid #555;
     border-radius: 4px;
     box-shadow: 0 3px 8px rgba(0,0,0,0.6);
-    min-width: 180px; /* Или другая ширина */
-    max-width: 250px; /* Ограничение ширины */
-    transition: opacity 0.1s ease-in-out; /* Плавное появление (опционально) */
-    opacity: 1; /* Начальная непрозрачность */
+    min-width: 180px; 
+    max-width: 250px; 
+    transition: opacity 0.1s ease-in-out; 
+    opacity: 1; 
 }
 
 .folder-popup-content {
     padding: 8px;
-    max-height: 400px; /* Ограничение высоты с прокруткой */
+    max-height: 400px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 8px; /* Расстояние между элементами */
+    gap: 8px; 
 }
 
-/* Стиль для элементов внутри попапа (можно переиспользовать стили .vehicle-node) */
 .folder-popup-item .vehicle-node {
     background-color: #444;
     border: 1px dashed #777;
-    /* Стили из .folder-items-container .vehicle-node можно перенести сюда */
 }
 
 .tree-grid-item .folder-node.folder-active {
-    background-color: #4f4f4f; /* Подсветка активной папки */
+    background-color: #4f4f4f; 
 }
 
 .folder-popup-item .node-content {
-    /* Стили из .node-content, если нужно переопределить */
-    min-height: 45px; /* Чуть меньше для попапа */
+    min-height: 45px;
 }
 
 .folder-popup-item .node-icon {
-    width: 40px; /* Чуть меньше */
+    width: 40px;
     height: 40px;
 }
 
@@ -417,16 +373,16 @@ main {
     font-size: 0.85em;
     padding-bottom: 10px;
     flex-grow: 1;
-    overflow: hidden; /* Обрезать длинные названия */
+    overflow: hidden; 
 }
 
 .node-name {
     font-weight: bold;
     margin-bottom: 1px;
     color: #fff;
-    white-space: nowrap; /* Не переносить имя */
+    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis; /* Многоточие для длинных имен */
+    text-overflow: ellipsis; 
 }
 
 .node-details span {
@@ -439,49 +395,42 @@ main {
 .node-detail-item.node-exp {
     display: flex;
     align-items: center;
-    color: #bbb; /* Цвет метки "RP:" */
+    color: #bbb;
 }
 
-/* Стиль для поля ввода RP - МИНИМАЛИСТИЧНЫЙ */
 .rp-input {
-    background-color: transparent; /* Убираем фон */
-    color: inherit; /* Наследуем цвет текста (#bbb) */
-    border: none; /* Убираем рамку по умолчанию */
-    border-bottom: 1px dotted #777; /* Тонкое пунктирное подчеркивание как подсказка */
-    border-radius: 0; /* Убираем скругление для вида "текста" */
-    padding: 1px 2px; /* Минимальные отступы */
+    background-color: transparent; 
+    color: inherit; 
+    border: none; 
+    border-bottom: 1px dotted #777; 
+    border-radius: 0; 
+    padding: 1px 2px; 
     margin-left: 4px;
-    width: 80px; /* Оставляем ширину для предсказуемости */
+    width: 80px;
     font-size: inherit;
-    text-align: left; /* Выравнивание текста в поле */
+    text-align: left; 
     -moz-appearance: textfield;
-    outline: none; /* Убираем стандартный контур фокуса */
-    transition: border-color 0.1s ease-in-out, background-color 0.1s ease-in-out; /* Плавные переходы */
+    outline: none; 
+    transition: border-color 0.1s ease-in-out, background-color 0.1s ease-in-out;
 }
 
-    /* Убрать стрелки (оставляем как было) */
     .rp-input::-webkit-outer-spin-button,
     .rp-input::-webkit-inner-spin-button {
         -webkit-appearance: none;
         margin: 0;
     }
 
-    /* Стиль при НАВЕДЕНИИ */
     .rp-input:hover {
-        border-bottom-color: #aaa; /* Делаем подчеркивание чуть заметнее */
-        background-color: rgba(255, 255, 255, 0.05); /* Очень легкий фон */
+        border-bottom-color: #aaa; 
+        background-color: rgba(255, 255, 255, 0.05); 
     }
 
-    /* Стиль при ФОКУСЕ (когда пользователь кликнул в поле) */
     .rp-input:focus {
-        color: #eee; /* Можно сделать текст чуть ярче при редактировании */
-        background-color: rgba(0, 0, 0, 0.2); /* Возвращаем темный фон для ясности */
-        border: 1px solid #007bff; /* Добавляем синюю рамку */
-        border-radius: 3px; /* Возвращаем небольшое скругление при фокусе */
-        /* Можно вернуть тень, если нужно */
-        /* box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25); */
+        color: #eee; 
+        background-color: rgba(0, 0, 0, 0.2); 
+        border: 1px solid #007bff;
+        border-radius: 3px; 
     }
-/* Иконка +/- для папок */
 .folder-toggle-icon {
     margin-left: auto;
     padding: 0 8px;
@@ -489,21 +438,18 @@ main {
     font-weight: bold;
     color: #ccc;
     align-self: center;
-    flex-shrink: 0; /* Не сжиматься */
+    flex-shrink: 0;
 }
 
-/* Выпадающий контейнер для элементов внутри папки */
-.folder-visual-container { /* Обертка для элемента папки */
+.folder-visual-container {
     position: relative;
-    /* display: block; */ /* По умолчанию для div */
 }
 
 .folder-items-container {
-    /* Стили для случая, когда папка РАСКРЫТА */
-    position: absolute; /* Вырываем из потока */
-    top: calc(100% + 5px); /* Под родительским элементом с небольшим отступом */
-    left: 0; /* Выравниваем по левому краю родителя */
-    z-index: 500; /* Поверх других узлов */
+    position: absolute; 
+    top: calc(100% + 5px);
+    left: 0; 
+    z-index: 500; 
     background: #3a3a3a;
     border: 1px solid #555;
     border-radius: 4px;
@@ -512,22 +458,17 @@ main {
     flex-direction: column;
     gap: 8px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-    min-width: 180px; /* Минимальная ширина выпадающего списка */
+    min-width: 180px; 
 }
 
     .folder-items-container .vehicle-node {
         background-color: #444;
         border: 1px dashed #777;
         z-index: 50;
-        padding: 5px; /* Внутренние отступы для элементов в папке */
+        padding: 5px; 
     }
-/* Скрыть контейнер, когда папка ЗАКРЫТА */
-/*.tree-grid-item:not(.folder-open) .folder-items-container {
-    display: none;
-}*/
 
 
-/* Метки рангов (предполагается, что они в отдельной колонке) */
 .rank-label {
     background: #555;
     color: #fff;
@@ -541,48 +482,41 @@ main {
     writing-mode: unset;
     transform: none;
     line-height: 1.2;
-    border-right: 1px solid #444; /* Разделитель справа */
-    /* Если нужна вертикальная ориентация */
-    /* writing-mode: vertical-rl; */
-    /* transform: rotate(180deg); */
-    /* overflow: hidden; */ /* Может понадобиться с vertical */
-    grid-row: 1 / -1; /* Растянуть на все строки */
-    /* grid-column должен быть задан из C# */
-    position: sticky; /* Прилипание при горизонтальной прокрутке */
-    left: 0; /* К левому краю */
-    z-index: 2; /* Поверх обычных узлов, но под выпадающими папками */
+    border-right: 1px solid #444; 
+    grid-row: 1 / -1; 
+    position: sticky; 
+    left: 0; 
+    z-index: 2;
 }
 
 .rank-requirement-counter {
-    font-size: 0.8em; /* Меньший шрифт для счетчика */
-    margin-top: 4px; /* Отступ от "Rank N" */
-    color: #ccc; /* Цвет по умолчанию */
+    font-size: 0.8em; 
+    margin-top: 4px;
+    color: #ccc; 
 }
 
     .rank-requirement-counter.req-met {
-        color: #4CAF50; /* Зеленый, если требование выполнено */
+        color: #4CAF50; 
         font-weight: bold;
     }
 
     .rank-requirement-counter.req-not-met {
-        color: #ffcc80; /* Оранжевый/желтый, если не выполнено */
+        color: #ffcc80; 
     }
 
-
-/* Холст для рисования линий связей */
 .tree-connections-overlay {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%; /* Или динамически под размер grid */
-    height: 100%; /* Или динамически под размер grid */
+    width: 100%; 
+    height: 100%; 
     pointer-events: none;
-    z-index: 0; /* Под узлами */
-    overflow: visible; /* Чтобы линии не обрезались */
+    z-index: 0;
+    overflow: visible; 
 }
 
     .tree-connections-overlay svg {
-        display: block; /* Убрать лишнее пространство под SVG */
+        display: block; 
         width: 100%;
         height: 100%;
     }
@@ -593,17 +527,15 @@ main {
     }
 
     .tree-connections-overlay .line-researched {
-        stroke: #4CAF50; /* Зеленый для исследованных */
+        stroke: #4CAF50; 
         stroke-width: 2.5;
     }
 
     .tree-connections-overlay .line-researching {
-        stroke: #2196F3; /* Синий для изучаемых */
+        stroke: #2196F3; 
         stroke-width: 2.5;
     }
 
-
-/* --- Утилиты и стандартные стили Blazor --- */
 .validation-message {
     color: red;
 }
@@ -616,7 +548,6 @@ main {
     outline: 1px solid red;
 }
 
-/* --- Индикатор загрузки Blazor --- */
 .loading-progress {
     position: relative;
     display: block;
@@ -650,7 +581,6 @@ main {
         content: var(--blazor-load-percentage-text, "Loading");
     }
 
-/* --- Панель ошибок Blazor --- */
 #blazor-error-ui {
     background: lightyellow;
     bottom: 0;
@@ -681,39 +611,9 @@ main {
     }
 
 
-/* --- Медиа-запросы (Адаптивность) --- */
 
 
 @media (max-width: 767.98px) {
-    /* Здесь нужно будет решить, как будет вести себя сайдбар */
-    /* Вариант 1: Он всегда виден узким (как сейчас настроено) */
-    /* Вариант 2: Он скрывается и появляется по клику на кнопку */
-    /* (требует вернуть кнопку и логику в NavMenu.razor */
-    /* и добавить стили для скрытия/показа .sidebar) */
-
-    /* Пример стилей, если нужно скрывать сайдбар на мобильных */
-    /*
-    .sidebar {
-        position: fixed;
-        top: 0;
-        bottom: 0;
-        left: 0;
-        z-index: 100;
-        padding: 3.5rem 0 0; // Отступ под top-row, если он будет общим
-        box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
-        transform: translateX(-100%); // Скрыт по умолчанию
-        transition: transform .3s ease-in-out;
-    }
-    .sidebar.open { // Класс для показа
-        transform: translateX(0);
-    }
-    main {
-        // Если сайдбар скрыт, main занимает все место
-    }
-    .navbar-toggler { display: block !important; } // Показать кнопку
-    */
-
-    /* Стили для основной верхней строки (над main контентом) на мобильных */
     .top-row {
         justify-content: space-between;
     }
@@ -724,41 +624,36 @@ main {
 }
 
 body .page .sidebar {
-    width: 70px !important; /* Ваша желаемая ширина */
-    min-width: 70px !important; /* Ваша желаемая ширина */
-    position: static !important; /* Убираем sticky, если мешает */
-    padding-top: 0.5rem !important; /* Убедимся, что отступ есть */
-    display: flex !important; /* Убедимся, что это flex-контейнер */
+    width: 70px !important; 
+    min-width: 70px !important;
+    position: static !important; 
+    padding-top: 0.5rem !important; 
+    display: flex !important; 
     flex-direction: column !important;
     flex-shrink: 0 !important;
-    height: 100vh !important; /* Занимает всю высоту */
-    overflow: visible !important; /* На случай конфликтов с overflow */
+    height: 100vh !important; 
+    overflow: visible !important; 
 }
 
-    /* Принудительно скрываем top-row ВНУТРИ сайдбара */
     body .page .sidebar .top-row {
         display: none !important;
     }
 
-/* Убедимся, что main правильно занимает место */
 body .page main {
     flex-grow: 1 !important;
     height: 100vh !important;
     overflow-y: auto !important;
-    /* Убираем padding-left, который мог добавляться медиа-запросами */
     padding-left: 0 !important;
 }
 
-/* Переопределяем отступы для article/top-row ВНЕ сайдбара, если они добавлялись */
 @media (min-width: 641px) {
-    body .page .top-row:not(.sidebar .top-row), /* Стили для top-row над main */
+    body .page .top-row:not(.sidebar .top-row), 
     body .page article {
-        padding-left: 1.5rem !important; /* Стандартный или нужный вам отступ */
+        padding-left: 1.5rem !important; 
         padding-right: 1.5rem !important;
     }
 }
 
-/* Убедимся, что базовый .page это flex */
 .page {
     display: flex;
     flex-direction: row;
