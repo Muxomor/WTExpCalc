@@ -32,7 +32,7 @@
                         int selectedCount = AllNodesFlat.Count(n => n.Rank == rank && n.Type == "vehicle" && selectedNodeIds.Contains(n.Id)); 
 
                         <div class="rank-label" style="@rankLabelStyle">
-                            <span>Rank @rank</span>
+                            <span>Ранг @rank</span>
                             @if (requirement != null)
                             {
                                 <span class="rank-requirement-counter @(selectedCount >= requiredCount ? "req-met" : "req-not-met")">
@@ -131,7 +131,7 @@
     }
     else if (LoadingState != "loading")
     {
-        <p>Нет данных для отображения для NationId=@NationId, TypeId=@TypeId.</p>
+        <p>Нет данных для отображения.</p>
     }
 
     @if (LoadingState == "loading")
