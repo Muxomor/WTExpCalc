@@ -187,8 +187,6 @@
     {
         if (_isFirstLoad || NationId != _previousNationId || TypeId != _previousTypeId)
         {
-            Console.WriteLine($"[DEBUG] OnParametersSetAsync: Parameters changed or first load. Loading data for NationId={NationId}, TypeId={TypeId}");
-
             _previousNationId = NationId;
             _previousTypeId = TypeId;
             _isFirstLoad = false;
@@ -197,14 +195,12 @@
         }
         else
         {
-            Console.WriteLine($"[DEBUG] OnParametersSetAsync: Parameters NOT changed. Skipping LoadData.");
+            
         }
     }
 
     private async Task LoadData()
     {
-        Console.WriteLine($"[DEBUG] LoadData START for NationId={NationId}, TypeId={TypeId}");
-
         try
         {
             LoadingState = "loading";
@@ -229,7 +225,7 @@
             rankRequirements = await Api.GetRankRequirementsAsync(NationId, TypeId);
 
             NodeLookup = AllNodesFlat.ToDictionary(n => n.Id);
-            BuildHierarchy();
+            // BuildHierarchy();
             PrepareGridNodesAndCalculateRows();
             Dependencies = await Api.GetAllDependenciesAsync(NationId, TypeId);
             CalculateGridDimensions();
@@ -246,14 +242,11 @@
             }
         }
         StateHasChanged(); 
-        Console.WriteLine($"[DEBUG] LoadData END for NationId={NationId}, TypeId={TypeId}");
 
     }
 
     private async Task CalculateAndUpdateTotals()
     {
-        Console.WriteLine($"[DEBUG] CalculateAndUpdateTotals called. Selected IDs count: {selectedNodeIds.Count}");
-
         totalSelectedRp = 0;
         totalSelectedSl = 0;
         var nameList = new List<string>();
@@ -267,50 +260,44 @@
                 totalSelectedRp += rpValue;
                 totalSelectedSl += slValue;
                 nameList.Add(node.Name);
-                Console.WriteLine($"[DEBUG]   - Node ID: {nodeId}, RP: {rpValue}, SL: {slValue}. Current totals: RP={totalSelectedRp}, SL={totalSelectedSl}");
             }
             else
             {
-                Console.WriteLine($"[DEBUG]   - Node ID: {nodeId} NOT FOUND in NodeLookup!");
+                
             }
         }
         string namesString = string.Join(", ", nameList); 
 
-        Console.WriteLine($"[DEBUG] Final calculated totals: RP={totalSelectedRp}, SL={totalSelectedSl}");
-        Console.WriteLine($"[DEBUG] Selected Names: {namesString}");
-
         if (OnTotalsUpdated.HasDelegate)
         {
-            Console.WriteLine("[DEBUG] OnTotalsUpdated has delegate. Invoking...");
             await OnTotalsUpdated.InvokeAsync(new TotalsUpdateEventArgs
                 {
                     TotalRp = totalSelectedRp,
                     TotalSl = totalSelectedSl,
                     SelectedNames = namesString 
                 });
-            Console.WriteLine("[DEBUG] OnTotalsUpdated invoked successfully.");
         }
         else
         {
-            Console.WriteLine("[DEBUG] WARNING: OnTotalsUpdated delegate is NOT set in CalculateAndUpdateTotals!"); // Изменили на Warning
+
         }
     }
 
-    private void BuildHierarchy()
-    {
-        if (NodeLookup == null || !NodeLookup.Any()) return;
+    // private void BuildHierarchy()
+    // {
+    //     if (NodeLookup == null || !NodeLookup.Any()) return;
 
-        foreach (var node in AllNodesFlat)
-        {
-            node.Children.Clear();
-            node.ParentNode = null;
-            if (node.ParentId.HasValue && NodeLookup.TryGetValue(node.ParentId.Value, out var parent))
-            {
-                node.ParentNode = parent;
-                parent.Children.Add(node);
-            }
-        }
-    }
+    //     foreach (var node in AllNodesFlat)
+    //     {
+    //         node.Children.Clear();
+    //         node.ParentNode = null;
+    //         if (node.ParentId.HasValue && NodeLookup.TryGetValue(node.ParentId.Value, out var parent))
+    //         {
+    //             node.ParentNode = parent;
+    //             parent.Children.Add(node);
+    //         }
+    //     }
+    // }
 
     private void PrepareGridNodesAndCalculateRows()
     {
@@ -327,8 +314,6 @@
             else if (!MaxRowIndexPerRank.ContainsKey(node.Rank)) MaxRowIndexPerRank[node.Rank] = node.RowIndex ?? 0;
         }
         TotalDataGridRows = MaxRowIndexPerRank.Sum(kvp => kvp.Value + 1);
-
-
 
         foreach (var node in AllNodesFlat)
         {
@@ -350,8 +335,6 @@
                 GridNodes.Add(node);
             }
         }
-
-        Console.WriteLine($"[DEBUG] Prepared GridNodes. Count: {GridNodes.Count}");
     }
 
     private void CalculateGridDimensions()
@@ -427,7 +410,6 @@
     {
         if (currentlyExpandedFolder != null)
         {
-            Console.WriteLine($"[DEBUG] Closing folder ID {currentlyExpandedFolder.Id} via overlay click.");
             currentlyExpandedFolder = null;
             StateHasChanged(); 
         }
@@ -436,7 +418,6 @@
     {
         if (node.Type != "vehicle") return;
 
-        Console.WriteLine($"[DEBUG] ToggleNodeSelection called for Node ID: {node.Id}, Name: {node.Name}");
         if (currentlyExpandedFolder != null) 
         {
             var nodesInCurrentPopup = GetVisualNodesInFolderSequence(currentlyExpandedFolder)
@@ -446,12 +427,11 @@
 
             if (!nodesInCurrentPopup.Contains(node.Id))
             {
-                Console.WriteLine($"[DEBUG] Closing folder ID {currentlyExpandedFolder.Id} because vehicle node {node.Id} (OUTSIDE the folder) was clicked.");
                 currentlyExpandedFolder = null;
             }
             else
             {
-                Console.WriteLine($"[DEBUG] Clicked node {node.Id} is INSIDE the currently open folder {currentlyExpandedFolder.Id}. Keeping folder open.");
+                
             }
         }
         bool isSelected = selectedNodeIds.Contains(node.Id);
@@ -460,20 +440,19 @@
         if (isSelected)
         {
             selectedNodeIds.Remove(node.Id);
-            Console.WriteLine($"[DEBUG] Node {node.Id} REMOVED from selection.");
+            Console.WriteLine($"Node {node.Id} REMOVED from selection.");
         }
         else
         {
             selectedNodeIds.Add(node.Id);
-            Console.WriteLine($"[DEBUG] Node {node.Id} ADDED to selection."); 
+            Console.WriteLine($"Node {node.Id} ADDED to selection."); 
         }
 
-        Console.WriteLine($"[DEBUG] Selection count changed from {initialCount} to {selectedNodeIds.Count}.");
+        Console.WriteLine($"Selection count changed from {initialCount} to {selectedNodeIds.Count}.");
 
         await CalculateAndUpdateTotals();
 
         StateHasChanged(); 
-        Console.WriteLine($"[DEBUG] ToggleNodeSelection finished for Node ID: {node.Id}. StateHasChanged called.");
     }
 
     private bool IsFolderSelected(Node folderNode)
@@ -496,7 +475,6 @@
 
           builder.OpenElement(seq++, "div"); 
 
-          //нужные классы
           builder.AddAttribute(seq++, "class",
           $"node-content folder-node {(isCurrentlyExpanded ? "folder-active" : "")} {(containsSelected ? "folder-contains-selected" : "")}");
           builder.AddAttribute(seq++, "id", $"node-{node.Id}");
@@ -575,7 +553,7 @@
          {
              __builder.OpenElement(seq++, "div");
              __builder.AddAttribute(seq++, "class", "node-detail-item node-br");
-             __builder.AddContent(seq++, $"BR: {node.Br}");
+             __builder.AddContent(seq++, $"БР: {node.Br}");
              __builder.CloseElement(); 
          }
 
@@ -583,7 +561,7 @@
          __builder.AddAttribute(seq++, "class", "node-detail-item node-exp");
          if (node.RequiredExp.HasValue)
          {
-             __builder.AddContent(seq++, "RP: ");
+             __builder.AddContent(seq++, "ОИ: ");
              __builder.OpenElement(seq++, "input");
              __builder.AddAttribute(seq++, "type", "number");
              __builder.AddAttribute(seq++, "class", "rp-input");

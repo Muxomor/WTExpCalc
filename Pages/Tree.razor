@@ -111,15 +111,9 @@ else
     }
     private void HandleTotalsUpdate(TotalsUpdateEventArgs args)
     {
-        Console.WriteLine($"[DEBUG] HandleTotalsUpdate called in Tree.razor. Received RP: {args.TotalRp}, SL: {args.TotalSl}"); 
-
         currentTotalRp = args.TotalRp;
         currentTotalSl = args.TotalSl;
         selectedVehicleNames = args.SelectedNames;
-
-        Console.WriteLine($"[DEBUG] Tree.razor state updated: currentTotalRp={currentTotalRp}, currentTotalSl={currentTotalSl}");
-
-        Console.WriteLine("[DEBUG] StateHasChanged called in HandleTotalsUpdate.");
     }
     void SelectType(int id)
     {

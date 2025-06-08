@@ -13,7 +13,6 @@ builder.Services.AddScoped(sp => {
     var httpClient = new HttpClient();
     if (builder.HostEnvironment.IsDevelopment())
     {
-        Console.WriteLine("Режим разработки: Настройка HttpClient для доступа через Traefik на сервере.");
         var backendUrl = builder.Configuration["BackendApi:BaseUrl"];
         if (string.IsNullOrEmpty(backendUrl))
         {
@@ -28,7 +27,7 @@ builder.Services.AddScoped(sp => {
     }
     else
     {
-        Console.WriteLine("Режим НЕ разработки: Настройка HttpClient с относительным BaseAddress.");
+        Console.WriteLine("Стандартный режим: Настройка HttpClient с относительным BaseAddress.");
         httpClient.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
     }
     return httpClient; 

@@ -34,17 +34,14 @@
 
             if (popupHeight <= spaceBelow) {
                 top = targetRect.bottom - containerRect.top + (containerElement.scrollTop || 0) + 5;
-                console.log(`Popup ${popupId} fits below. Space: ${spaceBelow}, PopupHeight: ${popupHeight}`);
             } else if (popupHeight <= spaceAbove) {
                 top = targetRect.top - containerRect.top + (containerElement.scrollTop || 0) - popupHeight - 5;
-                console.log(`Popup ${popupId} fits ABOVE. Space: ${spaceAbove}, PopupHeight: ${popupHeight}`);
             } else {
                 top = targetRect.bottom - containerRect.top + (containerElement.scrollTop || 0) + 5;
                 const availableHeight = viewportHeight - summaryPanelHeight - (targetRect.bottom + 5);
                 if (availableHeight < popupHeight && availableHeight > 50) { 
-                    console.log(`Popup ${popupId} doesn't fit well, using default bottom position. Available: ${availableHeight}`);
-                } else {
-                    console.log(`Popup ${popupId} placed below by default due to insufficient space above either.`);
+                }
+                else {
                 }
             }
 
@@ -60,7 +57,6 @@
             popupElement.style.left = `${finalLeft}px`;
             popupElement.style.top = `${top}px`;
             popupElement.style.visibility = 'visible'; 
-            console.log(`Positioned popup ${popupId} at top: ${top}, left: ${finalLeft}`);
         });
     },
 
@@ -91,13 +87,13 @@
             document.body.removeChild(textArea);
 
             if (successful) {
-                console.log('Fallback: Copying to clipboard was successful!');
+                console.log('Copying to clipboard was successful!');
             } else {
-                console.error('Fallback: document.execCommand("copy") failed.');
-                alert("Не удалось скопировать текст (fallback). Браузер не поддерживает или заблокировал команду.");
+                console.error('document.execCommand("copy") failed.');
+                alert("Не удалось скопировать текст. Браузер не поддерживает или заблокировал команду.");
             }
         } catch (err) {
-            console.error('Fallback: Exception while copying text: ', err);
+            console.error('Exception while copying text: ', err);
             alert("Ошибка при копировании текста (fallback).");
         }
     },
@@ -112,7 +108,6 @@
 
                 const svg = document.querySelector('.tree-connections-overlay');
                 if (!svg) {
-                    console.error("SVG overlay not found!");
                     return;
                 }
                 const svgRect = svg.getBoundingClientRect();
@@ -160,7 +155,6 @@
                             line.style.visibility = 'visible';
 
                         } catch (e) {
-                            console.error("Error calculating line coordinates for conn:", conn, e);
                             if (line) line.style.visibility = 'hidden';
                         }
                     } else {

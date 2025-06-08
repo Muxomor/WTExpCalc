@@ -17,7 +17,7 @@ services:
       - "traefik.docker.network=proxy-net"
       - "traefik.http.routers.blazor-ui.priority=1"
   traefik:
-    image: traefik:v2.11 # Используйте актуальную версию v2.x или v3.x
+    image: traefik:v2.11
     container_name: traefik
     restart: unless-stopped
     ports:
@@ -27,15 +27,9 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"      
       - "./traefik.yml:/etc/traefik/custom_traefik.yml:ro"
     networks:
-      - proxy-net # Присоединяем Traefik к общей сети
-    command: # Можно использовать command вместо файла traefik.yml
+      - proxy-net 
+    command:
       - "--configFile=/etc/traefik/custom_traefik.yml"
-    #  - "--api.insecure=true"
-    #  - "--providers.docker=true"
-    #  - "--providers.docker.exposedbydefault=false"
-    #  - "--entrypoints.web.address=:8880"
-    #  - "--accesslog=true"
-    #  - "--log.level=DEBUG" # Уровень логов для отладки
 
 
 

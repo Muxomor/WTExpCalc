@@ -29,7 +29,6 @@ namespace WTExpCalc.Services
         {
             List<Nation> nations = new();
             string url = "/api/nations"; 
-            Console.WriteLine($"[GetNationsAsync] LOG: Попытка вызова URL: {url}");
 
             try
             {
@@ -47,17 +46,17 @@ namespace WTExpCalc.Services
             }
             catch (HttpRequestException httpEx)
             {
-                Console.WriteLine($"[GetNationsAsync] ERROR: HttpRequestException: {httpEx.Message}");
-                Console.WriteLine($"---> Status Code: {httpEx.StatusCode}");
+                Console.WriteLine($"ERROR: HttpRequestException: {httpEx.Message}");
+                Console.WriteLine($"Status Code: {httpEx.StatusCode}");
             }
             catch (JsonException jsonEx) 
             {
-                Console.WriteLine($"[GetNationsAsync] ERROR: JsonException при парсинге ответа: {jsonEx.Message}");
-                Console.WriteLine($"---> LineNumber: {jsonEx.LineNumber} | BytePositionInLine: {jsonEx.BytePositionInLine} | Path: {jsonEx.Path}");
+                Console.WriteLine($"JsonException при парсинге ответа: {jsonEx.Message}");
+                Console.WriteLine($"LineNumber: {jsonEx.LineNumber} | BytePositionInLine: {jsonEx.BytePositionInLine} | Path: {jsonEx.Path}");
             }
             catch (Exception ex) 
             {
-                Console.WriteLine($"[GetNationsAsync] ERROR: Неожиданная ошибка: {ex}");
+                Console.WriteLine($"ERROR: Неожиданная ошибка: {ex}");
             }
 
             return nations;
@@ -67,10 +66,6 @@ namespace WTExpCalc.Services
             => await _http.GetFromJsonAsync<List<VehicleType>>("api/vehicle_types", _jsonOptions) ?? new();
 
 
-        /// <summary>
-        /// Получает плоский список ВСЕХ узлов для заданной нации и типа техники.
-        /// НЕ строит иерархию здесь.
-        /// </summary>
         public async Task<List<Node>> GetAllNodesFlatAsync(int nationId, int vehicleTypeId)
         {
             var url = $"api/nodes?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}&select=*";
@@ -84,10 +79,6 @@ namespace WTExpCalc.Services
             return nodes;
         }
 
-        /// <summary>
-        /// Получает ВСЕ зависимости (стрелки) для узлов, релевантных для заданной нации и типа техники.
-        /// Использует предварительно загруженные узлы (если возможно) для получения их ID.
-        /// </summary>
         public async Task<List<NodeDependency>> GetAllDependenciesAsync(int nationId, int vehicleTypeId)
         {
             List<Node> relevantNodes;
@@ -129,63 +120,59 @@ namespace WTExpCalc.Services
             }
         }
 
-        public async Task<List<Node>> GetAllNodesAsync(int nationId, int vehicleTypeId)
-        {
-            var url = $"api/nodes?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}&select=*";
-            var nodes = await _http.GetFromJsonAsync<List<Node>>(url, _jsonOptions) ?? new List<Node>();
+        //public async Task<List<Node>> GetAllNodesAsync(int nationId, int vehicleTypeId)
+        //{
+        //    var url = $"api/nodes?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}&select=*";
+        //    var nodes = await _http.GetFromJsonAsync<List<Node>>(url, _jsonOptions) ?? new List<Node>();
 
-            return BuildTree(nodes);
-        }
+        //    return BuildTree(nodes);
+        //}
 
-        /// <summary>
-        /// Строит иерархию узлов на основе ParentId из плоского списка.
-        /// Возвращает список корневых узлов.
-        /// </summary>
-        private List<Node> BuildTree(List<Node> nodes)
-        {
-            var nodeMap = nodes.ToDictionary(n => n.Id);
-            var rootNodes = new List<Node>();
+        //private List<Node> BuildTree(List<Node> nodes)
+        //{
+        //    var nodeMap = nodes.ToDictionary(n => n.Id);
+        //    var rootNodes = new List<Node>();
 
-            foreach (var node in nodes)
-            {
-                node.Children.Clear();
-                node.ParentNode = null; 
+        //    foreach (var node in nodes)
+        //    {
+        //        node.Children.Clear();
+        //        node.ParentNode = null; 
 
-                if (node.ParentId.HasValue && nodeMap.TryGetValue(node.ParentId.Value, out var parent))
-                {
-                    node.ParentNode = parent;
-                    parent.Children.Add(node);
-                }
-                else
-                {
-                    rootNodes.Add(node); 
-                }
-            }
-            return rootNodes;
-        }
+        //        if (node.ParentId.HasValue && nodeMap.TryGetValue(node.ParentId.Value, out var parent))
+        //        {
+        //            node.ParentNode = parent;
+        //            parent.Children.Add(node);
+        //        }
+        //        else
+        //        {
+        //            rootNodes.Add(node); 
+        //        }
+        //    }
+        //    return rootNodes;
+        //}
 
-        public async Task<List<NodeDependency>> GetDependenciesAsync(int nodeId)
-        {
-            var url = $"api/node_dependencies?node_id=eq.{nodeId}";
-            return await _http.GetFromJsonAsync<List<NodeDependency>>(url, _jsonOptions) ?? new();
-        }
+        //public async Task<List<NodeDependency>> GetDependenciesAsync(int nodeId)
+        //{
+        //    var url = $"api/node_dependencies?node_id=eq.{nodeId}";
+        //    return await _http.GetFromJsonAsync<List<NodeDependency>>(url, _jsonOptions) ?? new();
+        //}
 
         public async Task<List<RankRequirement>> GetRankRequirementsAsync(int nationId, int vehicleTypeId)
         {
             var url = $"api/rank_requirements?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}";
             return await _http.GetFromJsonAsync<List<RankRequirement>>(url, _jsonOptions) ?? new();
         }
-        public async Task<List<Node>> GetRootNodesAsync(int nationId, int vehicleTypeId)
-        {
-            var url = $"api/nodes?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}&parent_id=is.null&select=*";
-            return await _http.GetFromJsonAsync<List<Node>>(url, _jsonOptions) ?? new();
-        }
+        //public async Task<List<Node>> GetRootNodesAsync(int nationId, int vehicleTypeId)
+        //{
+        //    var url = $"api/nodes?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}&parent_id=is.null&select=*";
+        //    return await _http.GetFromJsonAsync<List<Node>>(url, _jsonOptions) ?? new();
+        //}
 
-        public async Task<List<Node>> GetChildNodesAsync(int parentNodeId)
-        {
-            var url = $"api/nodes?parent_id=eq.{parentNodeId}&select=*";
-            return await _http.GetFromJsonAsync<List<Node>>(url, _jsonOptions) ?? new();
-        }
+        //public async Task<List<Node>> GetChildNodesAsync(int parentNodeId)
+        //{
+        //    var url = $"api/nodes?parent_id=eq.{parentNodeId}&select=*";
+        //    return await _http.GetFromJsonAsync<List<Node>>(url, _jsonOptions) ?? new();
+        //}
         public async Task<Nation?> GetNationByIdAsync(int id)
         {
             try
