@@ -25,7 +25,7 @@ services:
       - "8090:8080" 
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"      
-      - "./traefik-config.yml:/etc/traefik/traefik.yml:roo"
+      - "./traefik-config.yml:/etc/traefik/traefik.yml:ro"
     networks:
       - proxy-net 
 
