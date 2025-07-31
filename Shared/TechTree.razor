@@ -3,50 +3,50 @@
 @inject IExperienceApi Api
 @inject IJSRuntime JSRuntime
 
-<div class="tech-tree-container @LoadingState" id="tech-tree-container-id">
+    <div class="tech-tree-container @LoadingState" id="tech-tree-container-id">
     @if (GridNodes.Any())
     {
-            <div class="tree-grid" style="@GridStyles">
+                <div class="tree-grid" style="@GridStyles">
             @{
+                var activeRanks = GetActiveRanks();
                 var cumulativeRowsBefore = new Dictionary<int, int>();
-                if (MaxRank > 0 && MaxRowIndexPerRank != null)
+
+                if (activeRanks.Any() && MaxRowIndexPerRank != null)
                 {
                     int currentCumulativeRowCount = 0;
-                    for (int r = 1; r <= MaxRank; r++)
+                    foreach (var rank in activeRanks)
                     {
-                        cumulativeRowsBefore[r] = currentCumulativeRowCount;
-                        int rowsInRankR = (MaxRowIndexPerRank.TryGetValue(r, out var maxRowIndex) ? maxRowIndex : 0) + 1;
+                        cumulativeRowsBefore[rank] = currentCumulativeRowCount;
+                        int rowsInRankR = (MaxRowIndexPerRank.TryGetValue(rank, out var maxRowIndex) ? maxRowIndex : 0) + 1;
                         currentCumulativeRowCount += rowsInRankR;
                     }
                 }
 
-                if (cumulativeRowsBefore != null)
+                // Отрисовываем только активные ранги
+                foreach (var rank in activeRanks)
                 {
-                    @foreach (var rank in Enumerable.Range(1, MaxRank))
-                    {
-                        int rowsInThisRank = (MaxRowIndexPerRank.TryGetValue(rank, out var maxRowIndex) ? maxRowIndex : 0) + 1;
-                        int startGridRow = 2 + (cumulativeRowsBefore.TryGetValue(rank, out var cumRows) ? cumRows : 0);
-                        string rankLabelStyle = $"grid-column: 1; grid-row: {startGridRow} / span {rowsInThisRank};";
-                        var requirement = rankRequirements.FirstOrDefault(r => r.PreviousRank == rank);
-                        int requiredCount = requirement?.RequiredUnits ?? 0;
-                        int selectedCount = AllNodesFlat.Count(n => n.Rank == rank && n.Type == "vehicle" && selectedNodeIds.Contains(n.Id)); 
+                    int rowsInThisRank = (MaxRowIndexPerRank.TryGetValue(rank, out var maxRowIndex) ? maxRowIndex : 0) + 1;
+                    int startGridRow = 2 + (cumulativeRowsBefore.TryGetValue(rank, out var cumRows) ? cumRows : 0);
+                    string rankLabelStyle = $"grid-column: 1; grid-row: {startGridRow} / span {rowsInThisRank};";
+                    var requirement = rankRequirements.FirstOrDefault(r => r.PreviousRank == rank);
+                    int requiredCount = requirement?.RequiredUnits ?? 0;
+                    int selectedCount = AllNodesFlat.Count(n => n.Rank == rank && n.Type == "vehicle" && selectedNodeIds.Contains(n.Id)); 
 
-                                        <div class="rank-label" style="@rankLabelStyle">
-                                            <span>Ранг @rank</span>
-                            @if (requirement != null)
-                            {
-                                                    <span class="rank-requirement-counter @(selectedCount >= requiredCount ? "req-met" : "req-not-met")">
-                                    @selectedCount / @requiredCount
-                                                    </span>
-                            }
-                                        </div>
-                    }
+                                            <div class="rank-label" style="@rankLabelStyle">
+                                                <span>Ранг @rank</span>
+                        @if (requirement != null)
+                        {
+                                                            <span class="rank-requirement-counter @(selectedCount >= requiredCount ? "req-met" : "req-not-met")">
+                                @selectedCount / @requiredCount
+                                                            </span>
+                        }
+                                            </div>
                 }
             }
 
             @foreach (var node in GridNodes)
             {
-                        <div @key="node.Id" class="@GetNodeCssClass(node)" style="@GetNodeGridStyle(node)" id="node-container-@node.Id">
+                                <div @key="node.Id" class="@GetNodeCssClass(node)" style="@GetNodeGridStyle(node)" id="node-container-@node.Id">
                     @if (node.Type == "folder")
                     {
                         @RenderFolderNode(node)
@@ -55,28 +55,28 @@
                     {
                         @RenderVehicleNode(node)
                     }
-                        </div>
+                                </div>
             }
 
-                <svg class="tree-connections-overlay" width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0;">
+                    <svg class="tree-connections-overlay" width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0;">
                 @if (Dependencies != null)
                 {
                     @foreach (var dep in Dependencies)
                     {
-                                    <line id="dep-@dep.NodeId-@dep.PrerequisiteNodeId"
-                                    x1="0" y1="0" x2="0" y2="0"
-                                    stroke="#cccccc" stroke-width="2"
-                                    marker-end="url(#arrowhead)"
-                                    visibility="hidden" />
+                                                <line id="dep-@dep.NodeId-@dep.PrerequisiteNodeId"
+                                                x1="0" y1="0" x2="0" y2="0"
+                                                stroke="#cccccc" stroke-width="2"
+                                                marker-end="url(#arrowhead)"
+                                                visibility="hidden" />
                     }
-                            <defs>
-                                <marker id="arrowhead" markerWidth="10" markerHeight="7"
-                                refX="10" refY="3.5" orient="auto">
-                                    <polygon points="0 0, 10 3.5, 0 7" fill="#cccccc" />
-                                </marker>
-                            </defs>
+                                    <defs>
+                                        <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                                        refX="10" refY="3.5" orient="auto">
+                                            <polygon points="0 0, 10 3.5, 0 7" fill="#cccccc" />
+                                        </marker>
+                                    </defs>
                 }
-                </svg>
+                    </svg>
             @{
                 var standardNodes = AllNodesFlat.Where(n => n.TechCategory == "standard");
                 int maxStdColIndex = standardNodes.Any() ? standardNodes.Max(n => n.ColumnIndex ?? 0) : -1;
@@ -90,57 +90,57 @@
                 if (premiumNodesExist && standardColumnCount > 0)
                 {
                     string premiumDividerStyle = $"grid-column: {premiumDividerColumn}; grid-row: 2 / {lastDataRow + 1};";
-                                <div class="premium-divider-v" style="@premiumDividerStyle"></div>
+                                            <div class="premium-divider-v" style="@premiumDividerStyle"></div>
                 }
 
-                //Горизонтальные разделители (Ранги)
-                for (int rank = 1; rank < MaxRank; rank++)
+                //Горизонтальные разделители (только между активными рангами)
+                for (int i = 0; i < activeRanks.Count - 1; i++)
                 {
-                    int rowsInThisRank = (MaxRowIndexPerRank.TryGetValue(rank, out var maxRowIdx) ? maxRowIdx : 0) + 1;
-                    int startGridRowCurrentRank = 2 + (cumulativeRowsBefore.TryGetValue(rank, out var cumRows) ? cumRows : 0);
+                    var currentRank = activeRanks[i];
+                    int rowsInThisRank = (MaxRowIndexPerRank.TryGetValue(currentRank, out var maxRowIdx) ? maxRowIdx : 0) + 1;
+                    int startGridRowCurrentRank = 2 + (cumulativeRowsBefore.TryGetValue(currentRank, out var cumRows) ? cumRows : 0);
                     int endGridRowCurrentRank = startGridRowCurrentRank + rowsInThisRank - 1;
 
                     string rankDividerStyle = $"grid-column: 2 / -1; grid-row: {endGridRowCurrentRank + 1};";
-
-                                <div class="rank-divider-h" style="@rankDividerStyle"></div>
+                                            <div class="rank-divider-h" style="@rankDividerStyle"></div>
                 }
             }
 
-            </div>
+                </div>
         @if (currentlyExpandedFolder != null)
         {
-                    <div class="folder-popup-overlay" @onclick="CloseFolderPopup"></div>
+                            <div class="folder-popup-overlay" @onclick="CloseFolderPopup"></div>
         }
 
         @if (currentlyExpandedFolder != null)
         {
-                    <div class="folder-popup" id="folder-popup-@currentlyExpandedFolder.Id" style="position:absolute; visibility: hidden;" @key="currentlyExpandedFolder.Id" @onclick:stopPropagation="true">
-                        <div class="folder-popup-content">
+                            <div class="folder-popup" id="folder-popup-@currentlyExpandedFolder.Id" style="position:absolute; visibility: hidden;" @key="currentlyExpandedFolder.Id" @onclick:stopPropagation="true">
+                                <div class="folder-popup-content">
                     @foreach (var child in GetVisualNodesInFolderSequence(currentlyExpandedFolder))
                     {
                         if (child.Type == "vehicle")
                         {
-                                            <div class="folder-popup-item">
+                                                            <div class="folder-popup-item">
                                 @RenderVehicleNode(child)
-                                            </div>
+                                                            </div>
                         }
                     }
-                        </div>
-                    </div>
+                                </div>
+                            </div>
         }
     }
     else if (LoadingState != "loading")
     {
-            <p>Нет данных для отображения.</p>
+                <p>Нет данных для отображения.</p>
     }
 
     @if (LoadingState == "loading")
     {
-            <p>Загрузка...</p>
+                <p>Загрузка...</p>
     }
     @if (LoadingState == "error")
     {
-            <p style="color: red;">Ошибка загрузки данных!</p>
+                <p style="color: red;">Ошибка загрузки данных!</p>
     }
 </div>
 
@@ -411,15 +411,35 @@
             $"gap: 30px 40px; position: relative;";
     }
 
+    private List<int> GetActiveRanks()
+    {
+        // Получаем ранги из rankRequirements и из техники
+        var ranksFromRequirements = rankRequirements.Select(r => r.PreviousRank).ToHashSet();
+        var ranksFromNodes = AllNodesFlat.Select(n => n.Rank).ToHashSet();
+
+        // Объединяем и сортируем
+        var allActiveRanks = ranksFromRequirements.Union(ranksFromNodes).OrderBy(r => r).ToList();
+
+        return allActiveRanks;
+    }
+
     private string GetNodeGridStyle(Node node)
     {
+        var activeRanks = GetActiveRanks();
+
         int col = node.TechCategory == "standard"
             ? 1 + (node.ColumnIndex ?? 0) + 1
             : 1 + ((AllNodesFlat.Where(n => n.TechCategory == "standard").Max(n => n.ColumnIndex ?? 0)) + 1) + (node.ColumnIndex ?? 0) + 1;
+
+        // Вычисляем строку на базе активных рангов
         int calculatedRow = 1;
-        for (int r = 1; r < node.Rank; r++)
-            calculatedRow += (MaxRowIndexPerRank.TryGetValue(r, out var prev) ? prev : 0) + 1;
+        foreach (var activeRank in activeRanks)
+        {
+            if (activeRank >= node.Rank) break;
+            calculatedRow += (MaxRowIndexPerRank.TryGetValue(activeRank, out var prev) ? prev : 0) + 1;
+        }
         calculatedRow += (node.RowIndex ?? 0);
+
         return $"grid-column: {col}; grid-row: {calculatedRow + 1}; z-index:1; position:relative;";
     }
 
