@@ -365,6 +365,9 @@ h3 {
     position: sticky;
     left: 0;
     z-index: 2;
+    width: 70px; /* Фиксированная ширина */
+    min-width: 60px;
+    max-width: 70px;
 }
 
 .rank-requirement-counter {
