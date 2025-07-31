@@ -30,15 +30,16 @@ builder.Services.AddScoped(sp => {
         Console.WriteLine("Стандартный режим: Настройка HttpClient с относительным BaseAddress.");
         httpClient.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
     }
-    return httpClient; 
+    return httpClient;
 });
+
 builder.Services.AddScoped<IExperienceApi, ExperienceApiService>();
+builder.Services.AddScoped<IUrlHelperService, UrlHelperService>();
 
 builder.Services.Configure<JsonSerializerOptions>(options =>
 {
     options.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
-    options.PropertyNameCaseInsensitive = true; 
+    options.PropertyNameCaseInsensitive = true;
 });
-
 
 await builder.Build().RunAsync();

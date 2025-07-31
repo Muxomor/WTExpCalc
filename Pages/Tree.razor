@@ -1,99 +1,182 @@
-﻿@page "/tree/{NationId:int}"
+﻿@page "/tree/{NationSlug}/{TypeSlug?}"
 @using WTExpCalc.Models
 @using WTExpCalc.Services
 @using WTExpCalc.Shared
 @using static WTExpCalc.Shared.TechTree
 @inject IExperienceApi Api
 @inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
 
-<h3>Ветка прокачки для нации @FormattingUtils.FormatNationName(currentNation?.Name, NationId)</h3>
-@if (vehicleTypes == null)
+<h3>Ветка прокачки для нации @(currentNation?.DisplayName ?? "Загрузка...")</h3>
+
+@if (isLoading)
 {
-    <p><em>Загрузка типов…</em></p>
+        <p><em>Загрузка данных…</em></p>
+}
+else if (loadingError != null)
+{
+        <div class="alert alert-danger" style="background-color: #5a1e1e; border-color: #721c24; color: #f8d7d7;">
+            <p>Ошибка загрузки: @loadingError</p>
+            <button class="btn btn-primary" @onclick="RetryLoad">Повторить</button>
+        </div>
+}
+else if (vehicleTypes == null || !vehicleTypes.Any())
+{
+        <p><em>Нет доступных типов техники для данной нации.</em></p>
 }
 else
 {
-    <ul class="nav nav-tabs">
+        <ul class="nav nav-tabs">
         @foreach (var vt in vehicleTypes)
         {
-            <li class="nav-item">
-                <a class="nav-link @(vt.Id == activeTypeId ? "active" : "")"
-                   href="#"
-                   @onclick="() => SelectType(vt.Id)"
-                @onclick:preventDefault>
-                    @vt.Name
-                </a>
-            </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(vt.Slug == activeTypeSlug ? "active" : "")"
+                           href="/tree/@NationSlug/@vt.Slug">
+                    @vt.DisplayName
+                        </a>
+                    </li>
         }
-    </ul>
+        </ul>
 
-    <div class="tab-content mt-3">
-        @if (activeTypeId != null)
+        <div class="tab-content mt-3">
+        @if (activeTypeId != null && activeNationId != null)
         {
-            <TechTree NationId="NationId" TypeId="activeTypeId.Value" OnTotalsUpdated="HandleTotalsUpdate" />
+                    <TechTree NationId="activeNationId.Value" TypeId="activeTypeId.Value" OnTotalsUpdated="HandleTotalsUpdate" />
         }
-    </div>
-    <div id="summary-container">
-        <div id="summary-panel">
-            <span class="summary-item summary-rp">
-                <span>ОИ:</span> @currentTotalRp.ToString("N0")
-            </span>
-            <span class="summary-item summary-sl">
-                <span>СЛ:</span> @currentTotalSl.ToString("N0")
-            </span>
         </div>
 
-        <div id="selected-names-container">
-            <div id="selected-names-panel">
+        <div id="summary-container">
+            <div id="summary-panel">
+                <span class="summary-item summary-rp">
+                    <span>ОИ:</span> @currentTotalRp.ToString("N0")
+                </span>
+                <span class="summary-item summary-sl">
+                    <span>СЛ:</span> @currentTotalSl.ToString("N0")
+                </span>
+            </div>
+
+            <div id="selected-names-container">
+                <div id="selected-names-panel">
                 @if (!string.IsNullOrEmpty(selectedVehicleNames))
                 {
-                    <span title="@selectedVehicleNames">
-                        Выбрано: @selectedVehicleNames
-                    </span>
+                            <span title="@selectedVehicleNames">
+                                Выбрано: @selectedVehicleNames
+                            </span>
                 }
                 else
                 {
-                    <span>&nbsp;</span>
+                            <span>&nbsp;</span>
                 }
-            </div>
+                </div>
             @if (!string.IsNullOrEmpty(selectedVehicleNames))
             {
-                <button class="btn btn-sm btn-secondary copy-button" title="Копировать список" @onclick="CopyNamesToClipboard">
-                    <i class="bi bi-clipboard"></i>
-                </button>
+                        <button class="btn btn-sm btn-secondary copy-button" title="Копировать список" @onclick="CopyNamesToClipboard">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
             }
+            </div>
         </div>
-    </div>
 }
 
 @code {
-    [Parameter] public int NationId { get; set; }
+    [Parameter] public string NationSlug { get; set; } = string.Empty;
+    [Parameter] public string? TypeSlug { get; set; }
+
     private List<VehicleType>? vehicleTypes;
+    private string? activeTypeSlug;
     private int? activeTypeId;
-    private Nation? currentNation; 
+    private int? activeNationId;
+    private Nation? currentNation;
     private long currentTotalRp = 0;
     private long currentTotalSl = 0;
     private string selectedVehicleNames = "";
+    private bool isLoading = false;
+    private string? loadingError = null;
 
-    protected override async Task OnParametersSetAsync() 
+    protected override async Task OnParametersSetAsync()
     {
-        vehicleTypes = null;
-        currentNation = null;
-        activeTypeId = null;
-        StateHasChanged(); 
+        await LoadPageData();
+    }
 
-        vehicleTypes = await Api.GetVehicleTypesAsync();
-        currentNation = await Api.GetNationByIdAsync(NationId); 
+    private async Task LoadPageData()
+    {
+        isLoading = true;
+        loadingError = null;
+        StateHasChanged();
 
-        if (vehicleTypes != null && vehicleTypes.Any())
+        try
         {
-            activeTypeId = vehicleTypes.First().Id;
+            // Загружаем нацию по slug
+            currentNation = await Api.GetNationBySlugAsync(NationSlug);
+            if (currentNation == null)
+            {
+                loadingError = $"Нация '{NationSlug}' не найдена.";
+                return;
+            }
+
+            activeNationId = currentNation.Id;
+
+            // Загружаем типы техники
+            vehicleTypes = await Api.GetVehicleTypesAsync();
+            if (vehicleTypes == null || !vehicleTypes.Any())
+            {
+                loadingError = "Не удалось загрузить типы техники.";
+                return;
+            }
+
+            // Определяем активный тип техники
+            if (!string.IsNullOrEmpty(TypeSlug))
+            {
+                // Проверяем валидность slug
+                if (!VehicleTypeFormattingUtils.IsValidSlug(TypeSlug))
+                {
+                    var firstType = vehicleTypes.First();
+                    Navigation.NavigateTo($"/tree/{NationSlug}/{firstType.Slug}", replace: true);
+                    return;
+                }
+
+                var requestedType = vehicleTypes.FirstOrDefault(vt => vt.Slug == TypeSlug);
+                if (requestedType != null)
+                {
+                    activeTypeSlug = requestedType.Slug;
+                    activeTypeId = requestedType.Id;
+                }
+                else
+                {
+                    var firstType = vehicleTypes.First();
+                    Navigation.NavigateTo($"/tree/{NationSlug}/{firstType.Slug}", replace: true);
+                    return;
+                }
+            }
+            else
+            {
+                // Перенаправляем на первый доступный тип
+                var firstType = vehicleTypes.First();
+                Navigation.NavigateTo($"/tree/{NationSlug}/{firstType.Slug}", replace: true);
+                return;
+            }
+
+            // Сбрасываем данные при смене параметров
             selectedVehicleNames = "";
             currentTotalRp = 0;
             currentTotalSl = 0;
         }
-        StateHasChanged(); 
+        catch (Exception ex)
+        {
+            loadingError = $"Произошла ошибка при загрузке данных: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
     }
+
+    private async Task RetryLoad()
+    {
+        await LoadPageData();
+    }
+
     private async Task CopyNamesToClipboard()
     {
         if (!string.IsNullOrEmpty(selectedVehicleNames))
@@ -101,22 +184,18 @@ else
             try
             {
                 await JSRuntime.InvokeVoidAsync("techTreeFunctions.copyTextToClipboard_fallback", selectedVehicleNames);
-                Console.WriteLine("Copied names to clipboard.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error copying to clipboard: {ex.Message}");
+                // Обработка ошибки копирования, если нужно
             }
         }
     }
+
     private void HandleTotalsUpdate(TotalsUpdateEventArgs args)
     {
         currentTotalRp = args.TotalRp;
         currentTotalSl = args.TotalSl;
         selectedVehicleNames = args.SelectedNames;
-    }
-    void SelectType(int id)
-    {
-        activeTypeId = id;
     }
 }

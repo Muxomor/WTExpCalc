@@ -3,39 +3,79 @@
 @using WTExpCalc.Shared
 @inject IExperienceApi Api
 @inject NavigationManager Nav
-@* 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu"> *@
-    <nav class="flex-column">
-        @if (nations == null)
-        {
-            <div class="nav-item px-1 py-2 text-center">
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            </div>
-        }
-        else
-        {
-            @foreach (var nation in nations)
-            {
-                <div class="nav-item">
-                    <NavLink class="nav-link py-2 px-0 d-flex justify-content-center align-items-center"
-                             href="@($"/tree/{nation.Id}")"
-                             Match="NavLinkMatch.Prefix"
-                             title="@FormattingUtils.FormatNationName(nation.Name, nation.Id)">
-                        <img src="@nation.ImageUrl"
-                             alt="@FormattingUtils.FormatNationName(nation.Name, nation.Id)" class="nation-flag-icon" />
-                    </NavLink>
+@implements IDisposable
+
+<nav class="flex-column">
+    @if (nations == null)
+    {
+                <div class="nav-item px-1 py-2 text-center">
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                 </div>
-            }
+    }
+    else
+    {
+        @foreach (var nation in nations)
+        {
+                            <div class="nav-item">
+                                <a class="nav-link py-2 px-0 d-flex justify-content-center align-items-center @GetActiveCssClass(nation.Slug)"
+                                   href="@GetNationUrl(nation.Slug)"
+                                   title="@nation.DisplayName">
+                                    <img src="@nation.ImageUrl"
+                                         alt="@nation.DisplayName" class="nation-flag-icon" />
+                                </a>
+                            </div>
         }
-    </nav>
-    @* </div> *@
+    }
+</nav>
 
 @code {
-
     private List<Nation>? nations;
+    private List<VehicleType>? vehicleTypes;
+    private string currentUrl = "";
 
     protected override async Task OnInitializedAsync()
     {
         nations = await Api.GetNationsAsync();
+        vehicleTypes = await Api.GetVehicleTypesAsync();
+
+        // Подписываемся на изменения URL
+        Nav.LocationChanged += OnLocationChanged;
+        currentUrl = Nav.Uri;
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        currentUrl = e.Location;
+        StateHasChanged();
+    }
+
+    private string GetActiveCssClass(string nationSlug)
+    {
+        // Извлекаем текущий slug нации из URL
+        var uri = new Uri(currentUrl);
+        var segments = uri.LocalPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+        // URL должен быть вида: /tree/{nationSlug}/{typeSlug}
+        if (segments.Length >= 2 && segments[0] == "tree" && segments[1] == nationSlug)
+        {
+            return "active";
+        }
+
+        return "";
+    }
+
+    private string GetNationUrl(string nationSlug)
+    {
+        if (vehicleTypes != null && vehicleTypes.Any())
+        {
+            var firstType = vehicleTypes.First();
+            return $"/tree/{nationSlug}/{firstType.Slug}";
+        }
+        return $"/tree/{nationSlug}";
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
     }
 }
