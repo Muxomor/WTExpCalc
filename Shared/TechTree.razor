@@ -2,11 +2,13 @@
 @using WTExpCalc.Services
 @inject IExperienceApi Api
 @inject IJSRuntime JSRuntime
+@inject IUrlStateManager UrlStateManager
+@inject NavigationManager Navigation
 
-    <div class="tech-tree-container @LoadingState" id="tech-tree-container-id">
+<div class="tech-tree-container @LoadingState" id="tech-tree-container-id">
     @if (GridNodes.Any())
     {
-                <div class="tree-grid" style="@GridStyles">
+            <div class="tree-grid" style="@GridStyles">
             @{
                 var activeRanks = GetActiveRanks();
                 var cumulativeRowsBefore = new Dictionary<int, int>();
@@ -32,21 +34,21 @@
                     int requiredCount = requirement?.RequiredUnits ?? 0;
                     int selectedCount = AllNodesFlat.Count(n => n.Rank == rank && n.Type == "vehicle" && selectedNodeIds.Contains(n.Id)); 
 
-                                            <div class="rank-label" style="@rankLabelStyle">
-                                                <span>Ранг @rank</span>
+                                <div class="rank-label" style="@rankLabelStyle">
+                                    <span>Ранг @rank</span>
                         @if (requirement != null)
                         {
-                                                            <span class="rank-requirement-counter @(selectedCount >= requiredCount ? "req-met" : "req-not-met")">
+                                            <span class="rank-requirement-counter @(selectedCount >= requiredCount ? "req-met" : "req-not-met")">
                                 @selectedCount / @requiredCount
-                                                            </span>
+                                            </span>
                         }
-                                            </div>
+                                </div>
                 }
             }
 
             @foreach (var node in GridNodes)
             {
-                                <div @key="node.Id" class="@GetNodeCssClass(node)" style="@GetNodeGridStyle(node)" id="node-container-@node.Id">
+                        <div @key="node.Id" class="@GetNodeCssClass(node)" style="@GetNodeGridStyle(node)" id="node-container-@node.Id">
                     @if (node.Type == "folder")
                     {
                         @RenderFolderNode(node)
@@ -55,29 +57,30 @@
                     {
                         @RenderVehicleNode(node)
                     }
-                                </div>
+                        </div>
             }
 
-                    <svg class="tree-connections-overlay" width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0;">
+                <svg class="tree-connections-overlay" width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0;">
                 @if (Dependencies != null)
                 {
                     @foreach (var dep in Dependencies)
                     {
-                                                <line id="dep-@dep.NodeId-@dep.PrerequisiteNodeId"
-                                                x1="0" y1="0" x2="0" y2="0"
-                                                stroke="#cccccc" stroke-width="2"
-                                                marker-end="url(#arrowhead)"
-                                                visibility="hidden" />
+                                    <line id="dep-@dep.NodeId-@dep.PrerequisiteNodeId"
+                                    x1="0" y1="0" x2="0" y2="0"
+                                    stroke="#cccccc" stroke-width="2"
+                                    marker-end="url(#arrowhead)"
+                                    visibility="hidden" />
                     }
-                                    <defs>
-                                        <marker id="arrowhead" markerWidth="10" markerHeight="7"
-                                        refX="10" refY="3.5" orient="auto">
-                                            <polygon points="0 0, 10 3.5, 0 7" fill="#cccccc" />
-                                        </marker>
-                                    </defs>
+                            <defs>
+                                <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                                refX="10" refY="3.5" orient="auto">
+                                    <polygon points="0 0, 10 3.5, 0 7" fill="#cccccc" />
+                                </marker>
+                            </defs>
                 }
-                    </svg>
+                </svg>
             @{
+                var ranksForDividers = GetActiveRanks();
                 var standardNodes = AllNodesFlat.Where(n => n.TechCategory == "standard");
                 int maxStdColIndex = standardNodes.Any() ? standardNodes.Max(n => n.ColumnIndex ?? 0) : -1;
                 int standardColumnCount = Math.Max(0, maxStdColIndex + 1);
@@ -90,57 +93,57 @@
                 if (premiumNodesExist && standardColumnCount > 0)
                 {
                     string premiumDividerStyle = $"grid-column: {premiumDividerColumn}; grid-row: 2 / {lastDataRow + 1};";
-                                            <div class="premium-divider-v" style="@premiumDividerStyle"></div>
+                                <div class="premium-divider-v" style="@premiumDividerStyle"></div>
                 }
 
                 //Горизонтальные разделители (только между активными рангами)
-                for (int i = 0; i < activeRanks.Count - 1; i++)
+                for (int i = 0; i < ranksForDividers.Count - 1; i++)
                 {
-                    var currentRank = activeRanks[i];
+                    var currentRank = ranksForDividers[i];
                     int rowsInThisRank = (MaxRowIndexPerRank.TryGetValue(currentRank, out var maxRowIdx) ? maxRowIdx : 0) + 1;
                     int startGridRowCurrentRank = 2 + (cumulativeRowsBefore.TryGetValue(currentRank, out var cumRows) ? cumRows : 0);
                     int endGridRowCurrentRank = startGridRowCurrentRank + rowsInThisRank - 1;
 
                     string rankDividerStyle = $"grid-column: 2 / -1; grid-row: {endGridRowCurrentRank + 1};";
-                                            <div class="rank-divider-h" style="@rankDividerStyle"></div>
+                                <div class="rank-divider-h" style="@rankDividerStyle"></div>
                 }
             }
 
-                </div>
+            </div>
         @if (currentlyExpandedFolder != null)
         {
-                            <div class="folder-popup-overlay" @onclick="CloseFolderPopup"></div>
+                    <div class="folder-popup-overlay" @onclick="CloseFolderPopup"></div>
         }
 
         @if (currentlyExpandedFolder != null)
         {
-                            <div class="folder-popup" id="folder-popup-@currentlyExpandedFolder.Id" style="position:absolute; visibility: hidden;" @key="currentlyExpandedFolder.Id" @onclick:stopPropagation="true">
-                                <div class="folder-popup-content">
+                    <div class="folder-popup" id="folder-popup-@currentlyExpandedFolder.Id" style="position:absolute; visibility: hidden;" @key="currentlyExpandedFolder.Id" @onclick:stopPropagation="true">
+                        <div class="folder-popup-content">
                     @foreach (var child in GetVisualNodesInFolderSequence(currentlyExpandedFolder))
                     {
                         if (child.Type == "vehicle")
                         {
-                                                            <div class="folder-popup-item">
+                                            <div class="folder-popup-item">
                                 @RenderVehicleNode(child)
-                                                            </div>
+                                            </div>
                         }
                     }
-                                </div>
-                            </div>
+                        </div>
+                    </div>
         }
     }
     else if (LoadingState != "loading")
     {
-                <p>Нет данных для отображения.</p>
+            <p>Нет данных для отображения.</p>
     }
 
     @if (LoadingState == "loading")
     {
-                <p>Загрузка...</p>
+            <p>Загрузка...</p>
     }
     @if (LoadingState == "error")
     {
-                <p style="color: red;">Ошибка загрузки данных!</p>
+            <p style="color: red;">Ошибка загрузки данных!</p>
     }
 </div>
 
@@ -166,6 +169,8 @@
 
     // Словарь для хранения исходных значений RP
     private Dictionary<int, int?> originalRpValues = new();
+    // Флаг для предотвращения циклических обновлений URL
+    private bool _suppressUrlUpdate = false;
 
     private int _previousNationId = -1;
     private int _previousTypeId = -1;
@@ -205,12 +210,14 @@
         try
         {
             LoadingState = "loading";
+            _suppressUrlUpdate = true; // Предотвращаем обновление URL во время загрузки
+
             MaxRowIndexPerRank.Clear();
             GridNodes.Clear();
             Dependencies.Clear();
             rankRequirements.Clear();
             selectedNodeIds.Clear();
-            originalRpValues.Clear(); // Очищаем исходные значения
+            originalRpValues.Clear();
             currentlyExpandedFolder = null;
             StateHasChanged();
 
@@ -220,6 +227,7 @@
                 MaxRank = 0;
                 GridStyles = "";
                 LoadingState = "loaded";
+                _suppressUrlUpdate = false;
                 StateHasChanged();
                 return;
             }
@@ -234,24 +242,71 @@
             }
 
             rankRequirements = await Api.GetRankRequirementsAsync(NationId, TypeId);
-
             NodeLookup = AllNodesFlat.ToDictionary(n => n.Id);
             PrepareGridNodesAndCalculateRows();
             Dependencies = await Api.GetAllDependenciesAsync(NationId, TypeId);
             CalculateGridDimensions();
+
+            // Восстанавливаем состояние из URL
+            await RestoreStateFromUrl();
+
             LoadingState = "loaded";
+            _suppressUrlUpdate = false; // Разрешаем обновление URL
+
             await CalculateAndUpdateTotals();
         }
         catch (Exception ex)
         {
             totalSelectedRp = 0;
             totalSelectedSl = 0;
+            _suppressUrlUpdate = false;
+
             if (OnTotalsUpdated.HasDelegate)
             {
                 await OnTotalsUpdated.InvokeAsync(new TotalsUpdateEventArgs { TotalRp = 0, TotalSl = 0 });
             }
         }
         StateHasChanged();
+    }
+
+    private async Task RestoreStateFromUrl()
+    {
+        try
+        {
+            var currentUrl = Navigation.Uri;
+            var urlState = await UrlStateManager.RestoreSelectionFromUrlAsync(AllNodesFlat, currentUrl);
+
+            selectedNodeIds = urlState.SelectedNodeIds;
+
+            // Восстанавливаем измененные значения RP
+            foreach (var kvp in urlState.ModifiedRpValues)
+            {
+                if (NodeLookup.TryGetValue(kvp.Key, out var node))
+                {
+                    node.RequiredExp = kvp.Value;
+                }
+            }
+
+            Console.WriteLine($"Restored state: {selectedNodeIds.Count} selected nodes, {urlState.ModifiedRpValues.Count} RP modifications");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error restoring state from URL: {ex.Message}");
+        }
+    }
+
+    private async Task UpdateUrlState()
+    {
+        if (_suppressUrlUpdate || LoadingState != "loaded") return;
+
+        try
+        {
+            UrlStateManager.UpdateUrlWithSelection(AllNodesFlat, selectedNodeIds, originalRpValues);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating URL state: {ex.Message}");
+        }
     }
 
     private async Task CalculateAndUpdateTotals()
@@ -516,6 +571,7 @@
         }
 
         await CalculateAndUpdateTotals();
+        await UpdateUrlState(); // Обновляем URL после изменения выбора
         StateHasChanged();
     }
 
@@ -603,6 +659,7 @@
         {
             node.RequiredExp = newValue;
             await CalculateAndUpdateTotals();
+            await UpdateUrlState(); // Обновляем URL после изменения RP
             StateHasChanged();
         }
     }

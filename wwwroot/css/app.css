@@ -365,9 +365,9 @@ h3 {
     position: sticky;
     left: 0;
     z-index: 2;
-    width: 70px; /* Фиксированная ширина */
+    width: 60px; /* Фиксированная ширина */
     min-width: 60px;
-    max-width: 70px;
+    max-width: 60px;
 }
 
 .rank-requirement-counter {
@@ -611,9 +611,16 @@ h3 {
     border-color: #666;
 }
 
-    .btn-secondary:hover {
-        background-color: #666;
-        border-color: #777;
+.btn-info {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+    color: #fff;
+}
+
+    .btn-info:hover {
+        background-color: #138496;
+        border-color: #117a8b;
+        color: #fff;
     }
 
 /* ==================== САЙДБАР ==================== */

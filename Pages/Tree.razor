@@ -6,6 +6,7 @@
 @inject IExperienceApi Api
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
+@inject IUrlStateManager UrlStateManager
 
 <h3>Ветка прокачки для нации @(currentNation?.DisplayName ?? "Загрузка...")</h3>
 
@@ -72,6 +73,9 @@ else
             {
                         <button class="btn btn-sm btn-secondary copy-button" title="Копировать список" @onclick="CopyNamesToClipboard">
                             <i class="bi bi-clipboard"></i>
+                        </button>
+                        <button class="btn btn-sm btn-info copy-button" title="Копировать ссылку" @onclick="CopyUrlToClipboard" style="margin-left: 5px;">
+                            <i class="bi bi-link-45deg"></i>
                         </button>
             }
             </div>
@@ -177,6 +181,18 @@ else
     private async Task RetryLoad()
     {
         await LoadPageData();
+    }
+
+    private async Task CopyUrlToClipboard()
+    {
+        try
+        {
+            await UrlStateManager.CopyCurrentUrlToClipboardAsync();
+        }
+        catch (Exception ex)
+        {
+            // Обработка ошибки копирования URL
+        }
     }
 
     private async Task CopyNamesToClipboard()
