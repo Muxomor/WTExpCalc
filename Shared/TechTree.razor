@@ -6,7 +6,7 @@
 <div class="tech-tree-container @LoadingState" id="tech-tree-container-id">
     @if (GridNodes.Any())
     {
-        <div class="tree-grid" style="@GridStyles">
+            <div class="tree-grid" style="@GridStyles">
             @{
                 var cumulativeRowsBefore = new Dictionary<int, int>();
                 if (MaxRank > 0 && MaxRowIndexPerRank != null)
@@ -28,25 +28,25 @@
                         int startGridRow = 2 + (cumulativeRowsBefore.TryGetValue(rank, out var cumRows) ? cumRows : 0);
                         string rankLabelStyle = $"grid-column: 1; grid-row: {startGridRow} / span {rowsInThisRank};";
                         var requirement = rankRequirements.FirstOrDefault(r => r.PreviousRank == rank);
-                        int requiredCount = requirement?.RequiredUnits ?? 0; 
+                        int requiredCount = requirement?.RequiredUnits ?? 0;
                         int selectedCount = AllNodesFlat.Count(n => n.Rank == rank && n.Type == "vehicle" && selectedNodeIds.Contains(n.Id)); 
 
-                        <div class="rank-label" style="@rankLabelStyle">
-                            <span>Ранг @rank</span>
+                                        <div class="rank-label" style="@rankLabelStyle">
+                                            <span>Ранг @rank</span>
                             @if (requirement != null)
                             {
-                                <span class="rank-requirement-counter @(selectedCount >= requiredCount ? "req-met" : "req-not-met")">
+                                                    <span class="rank-requirement-counter @(selectedCount >= requiredCount ? "req-met" : "req-not-met")">
                                     @selectedCount / @requiredCount
-                                </span>
+                                                    </span>
                             }
-                        </div>
+                                        </div>
                     }
                 }
             }
 
             @foreach (var node in GridNodes)
             {
-                <div @key="node.Id" class="@GetNodeCssClass(node)" style="@GetNodeGridStyle(node)" id="node-container-@node.Id">
+                        <div @key="node.Id" class="@GetNodeCssClass(node)" style="@GetNodeGridStyle(node)" id="node-container-@node.Id">
                     @if (node.Type == "folder")
                     {
                         @RenderFolderNode(node)
@@ -55,46 +55,46 @@
                     {
                         @RenderVehicleNode(node)
                     }
-                </div>
+                        </div>
             }
 
-            <svg class="tree-connections-overlay" width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0;">
+                <svg class="tree-connections-overlay" width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0;">
                 @if (Dependencies != null)
                 {
                     @foreach (var dep in Dependencies)
                     {
-                        <line id="dep-@dep.NodeId-@dep.PrerequisiteNodeId"
-                        x1="0" y1="0" x2="0" y2="0"
-                        stroke="#cccccc" stroke-width="2"
-                        marker-end="url(#arrowhead)"
-                        visibility="hidden" />
+                                    <line id="dep-@dep.NodeId-@dep.PrerequisiteNodeId"
+                                    x1="0" y1="0" x2="0" y2="0"
+                                    stroke="#cccccc" stroke-width="2"
+                                    marker-end="url(#arrowhead)"
+                                    visibility="hidden" />
                     }
-                    <defs>
-                        <marker id="arrowhead" markerWidth="10" markerHeight="7"
-                        refX="10" refY="3.5" orient="auto">
-                            <polygon points="0 0, 10 3.5, 0 7" fill="#cccccc" />
-                        </marker>
-                    </defs>
+                            <defs>
+                                <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                                refX="10" refY="3.5" orient="auto">
+                                    <polygon points="0 0, 10 3.5, 0 7" fill="#cccccc" />
+                                </marker>
+                            </defs>
                 }
-            </svg>
+                </svg>
             @{
                 var standardNodes = AllNodesFlat.Where(n => n.TechCategory == "standard");
                 int maxStdColIndex = standardNodes.Any() ? standardNodes.Max(n => n.ColumnIndex ?? 0) : -1;
                 int standardColumnCount = Math.Max(0, maxStdColIndex + 1);
                 int premiumDividerColumn = 2 + standardColumnCount;
 
-                int lastDataRow = 1 + TotalDataGridRows; 
+                int lastDataRow = 1 + TotalDataGridRows;
 
                 //Вертикальный разделитель (Премы)
                 var premiumNodesExist = AllNodesFlat.Any(n => n.TechCategory != "standard");
-                if (premiumNodesExist && standardColumnCount > 0) 
+                if (premiumNodesExist && standardColumnCount > 0)
                 {
                     string premiumDividerStyle = $"grid-column: {premiumDividerColumn}; grid-row: 2 / {lastDataRow + 1};";
-                    <div class="premium-divider-v" style="@premiumDividerStyle"></div>
+                                <div class="premium-divider-v" style="@premiumDividerStyle"></div>
                 }
 
                 //Горизонтальные разделители (Ранги)
-                for (int rank = 1; rank < MaxRank; rank++) 
+                for (int rank = 1; rank < MaxRank; rank++)
                 {
                     int rowsInThisRank = (MaxRowIndexPerRank.TryGetValue(rank, out var maxRowIdx) ? maxRowIdx : 0) + 1;
                     int startGridRowCurrentRank = 2 + (cumulativeRowsBefore.TryGetValue(rank, out var cumRows) ? cumRows : 0);
@@ -102,45 +102,45 @@
 
                     string rankDividerStyle = $"grid-column: 2 / -1; grid-row: {endGridRowCurrentRank + 1};";
 
-                    <div class="rank-divider-h" style="@rankDividerStyle"></div>
+                                <div class="rank-divider-h" style="@rankDividerStyle"></div>
                 }
             }
 
-        </div>
+            </div>
         @if (currentlyExpandedFolder != null)
         {
-            <div class="folder-popup-overlay" @onclick="CloseFolderPopup"></div>
+                    <div class="folder-popup-overlay" @onclick="CloseFolderPopup"></div>
         }
 
         @if (currentlyExpandedFolder != null)
         {
-            <div class="folder-popup" id="folder-popup-@currentlyExpandedFolder.Id" style="position:absolute; visibility: hidden;" @key="currentlyExpandedFolder.Id" @onclick:stopPropagation="true">
-                <div class="folder-popup-content">
+                    <div class="folder-popup" id="folder-popup-@currentlyExpandedFolder.Id" style="position:absolute; visibility: hidden;" @key="currentlyExpandedFolder.Id" @onclick:stopPropagation="true">
+                        <div class="folder-popup-content">
                     @foreach (var child in GetVisualNodesInFolderSequence(currentlyExpandedFolder))
                     {
                         if (child.Type == "vehicle")
                         {
-                            <div class="folder-popup-item">
+                                            <div class="folder-popup-item">
                                 @RenderVehicleNode(child)
-                            </div>
+                                            </div>
                         }
                     }
-                </div>
-            </div>
+                        </div>
+                    </div>
         }
     }
     else if (LoadingState != "loading")
     {
-        <p>Нет данных для отображения.</p>
+            <p>Нет данных для отображения.</p>
     }
 
     @if (LoadingState == "loading")
     {
-        <p>Загрузка...</p>
+            <p>Загрузка...</p>
     }
     @if (LoadingState == "error")
     {
-        <p style="color: red;">Ошибка загрузки данных!</p>
+            <p style="color: red;">Ошибка загрузки данных!</p>
     }
 </div>
 
@@ -153,17 +153,22 @@
     private Dictionary<int, Node> NodeLookup = new();
     private List<Node> GridNodes = new();
     private List<NodeDependency> Dependencies = new();
-    private Node? currentlyExpandedFolder; 
+    private Node? currentlyExpandedFolder;
     private string LoadingState = "loading";
-    private List<RankRequirement> rankRequirements = new(); 
+    private List<RankRequirement> rankRequirements = new();
     private HashSet<int> selectedNodeIds = new();
     private int MaxRank = 0;
     private string GridStyles = "";
     private Dictionary<int, int> MaxRowIndexPerRank = new();
     private int TotalDataGridRows = 0;
     private long totalSelectedRp = 0;
-    private long totalSelectedSl = 0; private int _previousNationId = -1;
-    private int _previousTypeId = -1;  
+    private long totalSelectedSl = 0;
+
+    // Словарь для хранения исходных значений RP
+    private Dictionary<int, int?> originalRpValues = new();
+
+    private int _previousNationId = -1;
+    private int _previousTypeId = -1;
     private bool _isFirstLoad = true;
 
     public class TotalsUpdateEventArgs : EventArgs
@@ -171,7 +176,7 @@
         public long TotalRp { get; set; }
         public long TotalSl { get; set; }
         public string SelectedNames { get; set; } = string.Empty;
-
+        public string FormattedText { get; set; } = string.Empty;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -191,11 +196,7 @@
             _previousTypeId = TypeId;
             _isFirstLoad = false;
 
-            await LoadData(); 
-        }
-        else
-        {
-            
+            await LoadData();
         }
     }
 
@@ -207,10 +208,11 @@
             MaxRowIndexPerRank.Clear();
             GridNodes.Clear();
             Dependencies.Clear();
-            rankRequirements.Clear(); 
-            selectedNodeIds.Clear();  
-            currentlyExpandedFolder = null; 
-            StateHasChanged(); 
+            rankRequirements.Clear();
+            selectedNodeIds.Clear();
+            originalRpValues.Clear(); // Очищаем исходные значения
+            currentlyExpandedFolder = null;
+            StateHasChanged();
 
             AllNodesFlat = await Api.GetAllNodesFlatAsync(NationId, TypeId);
             if (AllNodesFlat == null || !AllNodesFlat.Any())
@@ -222,10 +224,18 @@
                 return;
             }
 
+            // Сохраняем исходные значения RP
+            foreach (var node in AllNodesFlat)
+            {
+                if (node.RequiredExp.HasValue)
+                {
+                    originalRpValues[node.Id] = node.RequiredExp.Value;
+                }
+            }
+
             rankRequirements = await Api.GetRankRequirementsAsync(NationId, TypeId);
 
             NodeLookup = AllNodesFlat.ToDictionary(n => n.Id);
-            // BuildHierarchy();
             PrepareGridNodesAndCalculateRows();
             Dependencies = await Api.GetAllDependenciesAsync(NationId, TypeId);
             CalculateGridDimensions();
@@ -241,8 +251,7 @@
                 await OnTotalsUpdated.InvokeAsync(new TotalsUpdateEventArgs { TotalRp = 0, TotalSl = 0 });
             }
         }
-        StateHasChanged(); 
-
+        StateHasChanged();
     }
 
     private async Task CalculateAndUpdateTotals()
@@ -251,22 +260,23 @@
         totalSelectedSl = 0;
         var nameList = new List<string>();
 
-        foreach (int nodeId in selectedNodeIds)
+        // Получаем выбранные узлы с опытом
+        var selectedNodes = selectedNodeIds
+            .Select(id => NodeLookup.TryGetValue(id, out var node) ? node : null)
+            .Where(node => node != null && node.RequiredExp.HasValue)
+            .ToList();
+
+        foreach (var node in selectedNodes)
         {
-            if (NodeLookup.TryGetValue(nodeId, out var node))
-            {
-                long rpValue = node.RequiredExp ?? 0;
-                long slValue = node.SilverCost ?? 0;
-                totalSelectedRp += rpValue;
-                totalSelectedSl += slValue;
-                nameList.Add(node.Name);
-            }
-            else
-            {
-                
-            }
+            long rpValue = node!.RequiredExp ?? 0;
+            long slValue = node.SilverCost ?? 0;
+            totalSelectedRp += rpValue;
+            totalSelectedSl += slValue;
+            nameList.Add(node.Name);
         }
-        string namesString = string.Join(", ", nameList); 
+
+        string namesString = string.Join(", ", nameList);
+        string formattedText = FormatVehicleListForCopy(selectedNodes!);
 
         if (OnTotalsUpdated.HasDelegate)
         {
@@ -274,30 +284,71 @@
                 {
                     TotalRp = totalSelectedRp,
                     TotalSl = totalSelectedSl,
-                    SelectedNames = namesString 
+                    SelectedNames = namesString,
+                    FormattedText = formattedText
                 });
-        }
-        else
-        {
-
         }
     }
 
-    // private void BuildHierarchy()
-    // {
-    //     if (NodeLookup == null || !NodeLookup.Any()) return;
+    private string FormatVehicleListForCopy(List<Node> selectedNodes)
+    {
+        if (!selectedNodes.Any()) return "";
 
-    //     foreach (var node in AllNodesFlat)
-    //     {
-    //         node.Children.Clear();
-    //         node.ParentNode = null;
-    //         if (node.ParentId.HasValue && NodeLookup.TryGetValue(node.ParentId.Value, out var parent))
-    //         {
-    //             node.ParentNode = parent;
-    //             parent.Children.Add(node);
-    //         }
-    //     }
-    // }
+        // Группируем по рангам и сортируем внутри каждого ранга по колонке
+        var groupedByRank = selectedNodes
+            .GroupBy(n => n.Rank)
+            .OrderBy(g => g.Key)
+            .ToList();
+
+        var result = new List<string>();
+
+        foreach (var rankGroup in groupedByRank)
+        {
+            var rankNumber = rankGroup.Key;
+            var vehiclesInRank = rankGroup
+                .OrderBy(n => n.ColumnIndex ?? 0)
+                .ToList();
+
+            var vehicleNames = new List<string>();
+
+            foreach (var vehicle in vehiclesInRank)
+            {
+                string vehicleName = vehicle.Name;
+
+                // Проверяем, изменено ли значение RP
+                if (IsRpValueModified(vehicle))
+                {
+                    var currentRp = vehicle.RequiredExp ?? 0;
+                    var originalRp = originalRpValues.TryGetValue(vehicle.Id, out var orig) ? orig ?? 0 : 0;
+                    vehicleName += $" ({currentRp} из {originalRp})";
+                }
+
+                vehicleNames.Add(vehicleName);
+            }
+
+            // Формируем строку для ранга
+            string rankLine = $"Ранг {ToRomanNumeral(rankNumber)}:\n{string.Join(", ", vehicleNames)}";
+            result.Add(rankLine);
+        }
+
+        return string.Join("\n\n", result);
+    }
+
+    private string ToRomanNumeral(int number)
+    {
+        return number switch
+        {
+            1 => "I",
+            2 => "II",
+            3 => "III",
+            4 => "IV",
+            5 => "V",
+            6 => "VI",
+            7 => "VII",
+            8 => "VIII",
+            _ => number.ToString()
+        };
+    }
 
     private void PrepareGridNodesAndCalculateRows()
     {
@@ -385,12 +436,12 @@
         {
             currentlyExpandedFolder = null;
         }
-        else 
+        else
         {
             currentlyExpandedFolder = node;
         }
 
-        StateHasChanged(); 
+        StateHasChanged();
 
         if (currentlyExpandedFolder != null)
         {
@@ -398,61 +449,54 @@
             try
             {
                 await JSRuntime.InvokeVoidAsync("techTreeFunctions.positionFolderPopup",
-                    $"folder-popup-{currentlyExpandedFolder.Id}", 
-                    $"node-{currentlyExpandedFolder.Id}",      
-                    "tech-tree-container-id"                    
+                    $"folder-popup-{currentlyExpandedFolder.Id}",
+                    $"node-{currentlyExpandedFolder.Id}",
+                    "tech-tree-container-id"
                 );
             }
-            catch (Exception ex) { Console.WriteLine($"JS interop error: {ex.Message}"); }
+            catch (Exception ex) { }
         }
     }
+
     private void CloseFolderPopup()
     {
         if (currentlyExpandedFolder != null)
         {
             currentlyExpandedFolder = null;
-            StateHasChanged(); 
+            StateHasChanged();
         }
     }
-    private async Task ToggleNodeSelection(Node node) 
+
+    private async Task ToggleNodeSelection(Node node)
     {
         if (node.Type != "vehicle") return;
 
-        if (currentlyExpandedFolder != null) 
+        if (currentlyExpandedFolder != null)
         {
             var nodesInCurrentPopup = GetVisualNodesInFolderSequence(currentlyExpandedFolder)
-                                        .Where(n => n.Type == "vehicle") 
-                                        .Select(n => n.Id)               
-                                        .ToHashSet();                    
+                                        .Where(n => n.Type == "vehicle")
+                                        .Select(n => n.Id)
+                                        .ToHashSet();
 
             if (!nodesInCurrentPopup.Contains(node.Id))
             {
                 currentlyExpandedFolder = null;
             }
-            else
-            {
-                
-            }
         }
+
         bool isSelected = selectedNodeIds.Contains(node.Id);
-        int initialCount = selectedNodeIds.Count;
 
         if (isSelected)
         {
             selectedNodeIds.Remove(node.Id);
-            Console.WriteLine($"Node {node.Id} REMOVED from selection.");
         }
         else
         {
             selectedNodeIds.Add(node.Id);
-            Console.WriteLine($"Node {node.Id} ADDED to selection."); 
         }
 
-        Console.WriteLine($"Selection count changed from {initialCount} to {selectedNodeIds.Count}.");
-
         await CalculateAndUpdateTotals();
-
-        StateHasChanged(); 
+        StateHasChanged();
     }
 
     private bool IsFolderSelected(Node folderNode)
@@ -464,7 +508,7 @@
     private RenderFragment RenderFolderNode(Node node) => builder =>
       {
           bool isCurrentlyExpanded = currentlyExpandedFolder?.Id == node.Id;
-          bool containsSelected = IsFolderSelected(node); 
+          bool containsSelected = IsFolderSelected(node);
           var children = GetVisualNodesInFolderSequence(node)
                     .Where(c => c.Type == "vehicle")
                     .ToList();
@@ -473,18 +517,18 @@
 
           int seq = 0;
 
-          builder.OpenElement(seq++, "div"); 
+          builder.OpenElement(seq++, "div");
 
           builder.AddAttribute(seq++, "class",
           $"node-content folder-node {(isCurrentlyExpanded ? "folder-active" : "")} {(containsSelected ? "folder-contains-selected" : "")}");
           builder.AddAttribute(seq++, "id", $"node-{node.Id}");
-          builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => HandleNodeClick(node))); 
+          builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => HandleNodeClick(node)));
 
           // Иконка
           builder.OpenElement(seq++, "div");
           builder.AddAttribute(seq++, "class", "node-icon");
           builder.AddAttribute(seq++, "style", $"background-image:url('{node.ImageUrl}')");
-          builder.CloseElement(); 
+          builder.CloseElement();
 
           // Название
           builder.OpenElement(seq++, "div");
@@ -492,7 +536,7 @@
           builder.AddContent(seq++, node.Name);
           builder.CloseElement();
 
-          if (totalChildren > 0) 
+          if (totalChildren > 0)
           {
               builder.OpenElement(seq++, "div");
               builder.AddAttribute(seq++, "class", "folder-child-counter");
@@ -506,7 +550,7 @@
           builder.AddContent(seq++, isCurrentlyExpanded ? "−" : "+");
           builder.CloseElement();
 
-          builder.CloseElement(); 
+          builder.CloseElement();
       };
 
     private List<Node> GetVisualNodesInFolderSequence(Node folderNode)
@@ -521,13 +565,36 @@
             .ToList();
     }
 
+    private bool IsRpValueModified(Node node)
+    {
+        if (!node.RequiredExp.HasValue) return false;
+
+        if (originalRpValues.TryGetValue(node.Id, out var originalValue))
+        {
+            return node.RequiredExp.Value != originalValue;
+        }
+
+        return false;
+    }
+
+    private async Task OnRpValueChanged(Node node, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int newValue))
+        {
+            node.RequiredExp = newValue;
+            await CalculateAndUpdateTotals();
+            StateHasChanged();
+        }
+    }
+
     private RenderFragment RenderVehicleNode(Node node) => __builder =>
      {
          bool isSelected = selectedNodeIds.Contains(node.Id);
+         bool isRpModified = IsRpValueModified(node);
          int seq = 0;
 
          __builder.OpenElement(seq++, "div");
-         __builder.AddAttribute(seq++, "id", $"node-{node.Id}"); 
+         __builder.AddAttribute(seq++, "id", $"node-{node.Id}");
 
          __builder.AddAttribute(seq++, "class",
          $"node-content vehicle-node {(node.RequiredExp.HasValue ? "rp-editable" : "")} {(isSelected ? "node-selected" : "")}");
@@ -536,7 +603,7 @@
          __builder.OpenElement(seq++, "div");
          __builder.AddAttribute(seq++, "class", "node-icon");
          __builder.AddAttribute(seq++, "style", $"background-image:url('{node.ImageUrl}')");
-         __builder.CloseElement(); 
+         __builder.CloseElement();
 
          __builder.OpenElement(seq++, "div");
          __builder.AddAttribute(seq++, "class", "node-info");
@@ -544,7 +611,7 @@
          __builder.OpenElement(seq++, "div");
          __builder.AddAttribute(seq++, "class", "node-name");
          __builder.AddContent(seq++, node.Name);
-         __builder.CloseElement(); 
+         __builder.CloseElement();
 
          __builder.OpenElement(seq++, "div");
          __builder.AddAttribute(seq++, "class", "node-details");
@@ -554,7 +621,7 @@
              __builder.OpenElement(seq++, "div");
              __builder.AddAttribute(seq++, "class", "node-detail-item node-br");
              __builder.AddContent(seq++, $"БР: {node.Br}");
-             __builder.CloseElement(); 
+             __builder.CloseElement();
          }
 
          __builder.OpenElement(seq++, "div");
@@ -564,11 +631,12 @@
              __builder.AddContent(seq++, "ОИ: ");
              __builder.OpenElement(seq++, "input");
              __builder.AddAttribute(seq++, "type", "number");
-             __builder.AddAttribute(seq++, "class", "rp-input");
+             __builder.AddAttribute(seq++, "class", $"rp-input {(isRpModified ? "rp-modified" : "")}");
              __builder.AddAttribute(seq++, "min", "0");
-             __builder.AddAttribute(seq++, "value", BindConverter.FormatValue(node.RequiredExp)); 
-             __builder.AddAttribute(seq++, "onchange", EventCallback.Factory.CreateBinder<int?>(this, 
-             v => { node.RequiredExp = v; StateHasChanged();}, node.RequiredExp));
+             __builder.AddAttribute(seq++, "value", BindConverter.FormatValue(node.RequiredExp));
+             __builder.AddAttribute(seq++, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this,
+                 e => OnRpValueChanged(node, e)));
+             __builder.AddAttribute(seq++, "onclick", "event.stopPropagation();");
              __builder.AddElementReferenceCapture(seq++, capturedRef => { });
              __builder.CloseElement();
          }
@@ -596,7 +664,6 @@
         }
         catch
         {
-            
         }
     }
 }

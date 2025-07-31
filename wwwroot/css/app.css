@@ -419,7 +419,7 @@ h3 {
     text-align: left;
     -moz-appearance: textfield;
     outline: none;
-    transition: border-color 0.1s ease-in-out, background-color 0.1s ease-in-out;
+    transition: border-color 0.2s ease-in-out, background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
     .rp-input::-webkit-outer-spin-button,
@@ -439,6 +439,24 @@ h3 {
         border: 1px solid #007bff;
         border-radius: 3px;
     }
+
+    /* Подсветка измененных значений RP */
+    .rp-input.rp-modified {
+        background-color: rgba(100, 200, 255, 0.15) !important;
+        border-bottom-color: #64c8ff !important;
+        box-shadow: 0 0 4px rgba(100, 200, 255, 0.4);
+    }
+
+        .rp-input.rp-modified:hover {
+            background-color: rgba(100, 200, 255, 0.25) !important;
+            border-bottom-color: #7dd3ff !important;
+        }
+
+        .rp-input.rp-modified:focus {
+            background-color: rgba(100, 200, 255, 0.2) !important;
+            border: 1px solid #64c8ff !important;
+            box-shadow: 0 0 6px rgba(100, 200, 255, 0.6);
+        }
 
 /* ==================== СОЕДИНИТЕЛЬНЫЕ ЛИНИИ ==================== */
 .tree-connections-overlay {
