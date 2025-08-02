@@ -12,80 +12,110 @@
 
 @if (isLoading)
 {
-        <p><em>Загрузка данных…</em></p>
+            <p><em>Загрузка данных…</em></p>
 }
 else if (loadingError != null)
 {
-        <div class="alert alert-danger" style="background-color: #5a1e1e; border-color: #721c24; color: #f8d7d7;">
-            <p>Ошибка загрузки: @loadingError</p>
-            <button class="btn btn-primary" @onclick="RetryLoad">Повторить</button>
-        </div>
+            <div class="alert alert-danger" style="background-color: #5a1e1e; border-color: #721c24; color: #f8d7d7;">
+                <p>Ошибка загрузки: @loadingError</p>
+                <button class="btn btn-primary" @onclick="RetryLoad">Повторить</button>
+            </div>
 }
 else if (vehicleTypes == null || !vehicleTypes.Any())
 {
-        <p><em>Нет доступных типов техники для данной нации.</em></p>
+            <p><em>Нет доступных типов техники для данной нации.</em></p>
 }
 else
 {
-        <ul class="nav nav-tabs">
+            <ul class="nav nav-tabs">
         @foreach (var vt in vehicleTypes)
         {
-                    <li class="nav-item">
-                        <a class="nav-link @(vt.Slug == activeTypeSlug ? "active" : "")"
-                           href="/tree/@NationSlug/@vt.Slug">
+                            <li class="nav-item">
+                                <a class="nav-link @(vt.Slug == activeTypeSlug ? "active" : "")"
+                                   href="/tree/@NationSlug/@vt.Slug">
                     @vt.DisplayName
-                        </a>
-                    </li>
+                                </a>
+                            </li>
         }
-        </ul>
+            </ul>
 
-        <div class="tab-content mt-3">
+            <div class="tab-content mt-3">
         @if (activeTypeId != null && activeNationId != null)
         {
-                    <TechTree NationId="activeNationId.Value" TypeId="activeTypeId.Value" OnTotalsUpdated="HandleTotalsUpdate" />
+                            <TechTree @ref="techTreeRef" 
+                                      NationId="activeNationId.Value" 
+                                      TypeId="activeTypeId.Value" 
+                                      OnTotalsUpdated="HandleTotalsUpdate"
+                                      OnSelectedRanksChanged="HandleSelectedRanksChanged" />
         }
-        </div>
-
-        <div id="summary-container">
-            <div id="summary-panel">
-                <span class="summary-item summary-rp">
-                    <span>ОИ:</span> @currentTotalRp.ToString("N0")
-                </span>
-                <span class="summary-item summary-sl">
-                    <span>СЛ:</span> @currentTotalSl.ToString("N0")
-                </span>
             </div>
 
-            <div id="selected-names-container">
-                <div id="selected-names-panel">
+            <div id="summary-container">
+                <div id="summary-panel">
+                    <span class="summary-item summary-rp">
+                        <span>ОИ:</span> @currentTotalRp.ToString("N0")
+                    </span>
+                    <span class="summary-item summary-sl">
+                        <span>СЛ:</span> @currentTotalSl.ToString("N0")
+                    </span>
+                </div>
+
+                <div id="selected-names-container">
+                    <div id="selected-names-panel">
                 @if (!string.IsNullOrEmpty(selectedVehicleNames))
                 {
-                            <span title="@selectedVehicleNames">
-                                Выбрано: @selectedVehicleNames
-                            </span>
+                                    <span title="@selectedVehicleNames">
+                                        Выбрано: @selectedVehicleNames
+                                    </span>
                 }
                 else
                 {
-                            <span>&nbsp;</span>
+                                    <span>&nbsp;</span>
                 }
-                </div>
+                    </div>
             @if (!string.IsNullOrEmpty(selectedVehicleNames))
             {
-                        <button class="btn btn-sm btn-secondary copy-button" title="Копировать список" @onclick="CopyNamesToClipboard">
-                            <i class="bi bi-clipboard"></i>
-                        </button>
-                        <button class="btn btn-sm btn-info copy-button" title="Копировать ссылку" @onclick="CopyUrlToClipboard" style="margin-left: 5px;">
-                            <i class="bi bi-link-45deg"></i>
-                        </button>
+                                <button class="btn btn-sm btn-secondary copy-button" title="Копировать список" @onclick="CopyNamesToClipboard">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                                <button class="btn btn-sm btn-info copy-button" title="Копировать ссылку" @onclick="CopyUrlToClipboard" style="margin-left: 5px;">
+                                    <i class="bi bi-link-45deg"></i>
+                                </button>
+                                <button class="btn btn-sm copy-button screenshot-button" 
+                                        title="@GetScreenshotButtonTitle()" 
+                                        @onclick="CopyScreenshotToClipboard" 
+                                        disabled="@(!hasSelectedRanks || isScreenshotInProgress)"
+                                        style="margin-left: 5px;">
+                                    <i class="bi bi-camera"></i>
+                                </button>
+                                <button class="btn btn-sm copy-button screenshot-button" 
+                                        title="Скачать скриншот" 
+                                        @onclick="DownloadScreenshot" 
+                                        disabled="@(!hasSelectedRanks || isScreenshotInProgress)"
+                                        style="margin-left: 5px;">
+                                    <i class="bi bi-download"></i>
+                                </button>
             }
+                </div>
             </div>
-        </div>
+}
+
+@* Индикатор загрузки скриншота *@
+@if (isScreenshotInProgress)
+{
+            <div class="screenshot-loading-overlay">
+                <div class="screenshot-loading-content">
+                    <div class="screenshot-loading-spinner"></div>
+                    <div>@screenshotProgressMessage</div>
+                </div>
+            </div>
 }
 
 @code {
     [Parameter] public string NationSlug { get; set; } = string.Empty;
     [Parameter] public string? TypeSlug { get; set; }
 
+    private TechTree? techTreeRef;
     private List<VehicleType>? vehicleTypes;
     private string? activeTypeSlug;
     private int? activeTypeId;
@@ -97,6 +127,11 @@ else
     private string formattedVehicleText = ""; // Новая переменная для отформатированного текста
     private bool isLoading = false;
     private string? loadingError = null;
+
+    // Переменные для скриншотов
+    private bool hasSelectedRanks = false;
+    private bool isScreenshotInProgress = false;
+    private string screenshotProgressMessage = "";
 
     protected override async Task OnParametersSetAsync()
     {
@@ -166,6 +201,7 @@ else
             formattedVehicleText = "";
             currentTotalRp = 0;
             currentTotalSl = 0;
+            hasSelectedRanks = false;
         }
         catch (Exception ex)
         {
@@ -211,6 +247,56 @@ else
         }
     }
 
+    private async Task CopyScreenshotToClipboard()
+    {
+        if (techTreeRef == null || !hasSelectedRanks || isScreenshotInProgress) return;
+
+        try
+        {
+            isScreenshotInProgress = true;
+            screenshotProgressMessage = "Подготовка скриншота...";
+            StateHasChanged();
+
+            await techTreeRef.CopyScreenshotToClipboard();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error copying screenshot: {ex.Message}");
+            screenshotProgressMessage = "Ошибка создания скриншота";
+            await Task.Delay(2000);
+        }
+        finally
+        {
+            isScreenshotInProgress = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DownloadScreenshot()
+    {
+        if (techTreeRef == null || !hasSelectedRanks || isScreenshotInProgress) return;
+
+        try
+        {
+            isScreenshotInProgress = true;
+            screenshotProgressMessage = "Подготовка скриншота...";
+            StateHasChanged();
+
+            await techTreeRef.DownloadScreenshot();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error downloading screenshot: {ex.Message}");
+            screenshotProgressMessage = "Ошибка создания скриншота";
+            await Task.Delay(2000);
+        }
+        finally
+        {
+            isScreenshotInProgress = false;
+            StateHasChanged();
+        }
+    }
+
     private void HandleTotalsUpdate(WTExpCalc.Shared.TechTree.TotalsUpdateEventArgs args)
     {
         currentTotalRp = args.TotalRp;
@@ -220,14 +306,45 @@ else
         StateHasChanged(); // Обновляем UI после получения новых данных
     }
 
-    // Убираем дублирующийся класс, используем тот что в TechTree
-    /*
-    public class TotalsUpdateEventArgs : EventArgs
-        {
-        public long TotalRp { get; set; }
-        public long TotalSl { get; set; }
-        public string SelectedNames { get; set; } = string.Empty;
-        public string FormattedText { get; set; } = string.Empty;
+    private void HandleSelectedRanksChanged(List<int> selectedRanks)
+    {
+        hasSelectedRanks = selectedRanks != null && selectedRanks.Any();
+        StateHasChanged();
     }
-    */
+
+    private string GetScreenshotButtonTitle()
+    {
+        // Проверяем протокол - для HTTP буфер обмена недоступен
+        var uri = new Uri(Navigation.Uri);
+        if (uri.Scheme == "http")
+        {
+            return "Сохранить скриншот (буфер обмена недоступен на HTTP)";
+        }
+        return "Скопировать скриншот в буфер обмена";
+    }
+
+    // Методы для обработки callback'ов из JavaScript
+    [JSInvokable]
+    public void OnScreenshotProgress(string message)
+    {
+        screenshotProgressMessage = message;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void OnScreenshotComplete(bool success, string message)
+    {
+        screenshotProgressMessage = message;
+        StateHasChanged();
+
+        // Скрываем индикатор через 2 секунды
+        Task.Delay(2000).ContinueWith(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                isScreenshotInProgress = false;
+                StateHasChanged();
+            });
+        });
+    }
 }

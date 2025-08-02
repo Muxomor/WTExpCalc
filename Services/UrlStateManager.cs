@@ -142,6 +142,40 @@ namespace WTExpCalc.Services
             }
         }
 
+        public async Task DownloadScreenshotAsync(int minRank, int maxRank)
+        {
+            try
+            {
+                var currentUrl = _navigationManager.Uri;
+                var fileName = await _jsRuntime.InvokeAsync<string>("techTreeFunctions.generateScreenshotFileName", currentUrl, minRank, maxRank);
+
+                await _jsRuntime.InvokeVoidAsync("techTreeFunctions.downloadScreenshot", minRank, maxRank, fileName);
+                Console.WriteLine($"Screenshot download initiated for ranks {minRank}-{maxRank}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error downloading screenshot: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task CopyScreenshotToClipboardAsync(int minRank, int maxRank)
+        {
+            try
+            {
+                var currentUrl = _navigationManager.Uri;
+                var fileName = await _jsRuntime.InvokeAsync<string>("techTreeFunctions.generateScreenshotFileName", currentUrl, minRank, maxRank);
+
+                await _jsRuntime.InvokeVoidAsync("techTreeFunctions.copyScreenshotToClipboard", minRank, maxRank, fileName);
+                Console.WriteLine($"Screenshot copied to clipboard for ranks {minRank}-{maxRank}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error copying screenshot to clipboard: {ex.Message}");
+                throw;
+            }
+        }
+
         private string GetBaseUri()
         {
             var uri = new Uri(_navigationManager.Uri);

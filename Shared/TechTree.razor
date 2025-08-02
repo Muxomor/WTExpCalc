@@ -8,7 +8,7 @@
 <div class="tech-tree-container @LoadingState" id="tech-tree-container-id">
     @if (GridNodes.Any())
     {
-            <div class="tree-grid" style="@GridStyles">
+                <div class="tree-grid" style="@GridStyles">
             @{
                 var activeRanks = GetActiveRanks();
                 var cumulativeRowsBefore = new Dictionary<int, int>();
@@ -34,21 +34,21 @@
                     int requiredCount = requirement?.RequiredUnits ?? 0;
                     int selectedCount = AllNodesFlat.Count(n => n.Rank == rank && n.Type == "vehicle" && selectedNodeIds.Contains(n.Id)); 
 
-                                <div class="rank-label" style="@rankLabelStyle">
-                                    <span>Ранг @rank</span>
+                                            <div class="rank-label" style="@rankLabelStyle">
+                                                <span>Ранг @rank</span>
                         @if (requirement != null)
                         {
-                                            <span class="rank-requirement-counter @(selectedCount >= requiredCount ? "req-met" : "req-not-met")">
+                                                            <span class="rank-requirement-counter @(selectedCount >= requiredCount ? "req-met" : "req-not-met")">
                                 @selectedCount / @requiredCount
-                                            </span>
+                                                            </span>
                         }
-                                </div>
+                                            </div>
                 }
             }
 
             @foreach (var node in GridNodes)
             {
-                        <div @key="node.Id" class="@GetNodeCssClass(node)" style="@GetNodeGridStyle(node)" id="node-container-@node.Id">
+                                <div @key="node.Id" class="@GetNodeCssClass(node)" style="@GetNodeGridStyle(node)" id="node-container-@node.Id">
                     @if (node.Type == "folder")
                     {
                         @RenderFolderNode(node)
@@ -57,28 +57,28 @@
                     {
                         @RenderVehicleNode(node)
                     }
-                        </div>
+                                </div>
             }
 
-                <svg class="tree-connections-overlay" width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0;">
+                    <svg class="tree-connections-overlay" width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0;">
                 @if (Dependencies != null)
                 {
                     @foreach (var dep in Dependencies)
                     {
-                                    <line id="dep-@dep.NodeId-@dep.PrerequisiteNodeId"
-                                    x1="0" y1="0" x2="0" y2="0"
-                                    stroke="#cccccc" stroke-width="2"
-                                    marker-end="url(#arrowhead)"
-                                    visibility="hidden" />
+                                                <line id="dep-@dep.NodeId-@dep.PrerequisiteNodeId"
+                                                x1="0" y1="0" x2="0" y2="0"
+                                                stroke="#cccccc" stroke-width="2"
+                                                marker-end="url(#arrowhead)"
+                                                visibility="hidden" />
                     }
-                            <defs>
-                                <marker id="arrowhead" markerWidth="10" markerHeight="7"
-                                refX="10" refY="3.5" orient="auto">
-                                    <polygon points="0 0, 10 3.5, 0 7" fill="#cccccc" />
-                                </marker>
-                            </defs>
+                                    <defs>
+                                        <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                                        refX="10" refY="3.5" orient="auto">
+                                            <polygon points="0 0, 10 3.5, 0 7" fill="#cccccc" />
+                                        </marker>
+                                    </defs>
                 }
-                </svg>
+                    </svg>
             @{
                 var ranksForDividers = GetActiveRanks();
                 var standardNodes = AllNodesFlat.Where(n => n.TechCategory == "standard");
@@ -93,7 +93,7 @@
                 if (premiumNodesExist && standardColumnCount > 0)
                 {
                     string premiumDividerStyle = $"grid-column: {premiumDividerColumn}; grid-row: 2 / {lastDataRow + 1};";
-                                <div class="premium-divider-v" style="@premiumDividerStyle"></div>
+                                            <div class="premium-divider-v" style="@premiumDividerStyle"></div>
                 }
 
                 //Горизонтальные разделители (только между активными рангами)
@@ -105,45 +105,45 @@
                     int endGridRowCurrentRank = startGridRowCurrentRank + rowsInThisRank - 1;
 
                     string rankDividerStyle = $"grid-column: 2 / -1; grid-row: {endGridRowCurrentRank + 1};";
-                                <div class="rank-divider-h" style="@rankDividerStyle"></div>
+                                            <div class="rank-divider-h" style="@rankDividerStyle"></div>
                 }
             }
 
-            </div>
+                </div>
         @if (currentlyExpandedFolder != null)
         {
-                    <div class="folder-popup-overlay" @onclick="CloseFolderPopup"></div>
+                            <div class="folder-popup-overlay" @onclick="CloseFolderPopup"></div>
         }
 
         @if (currentlyExpandedFolder != null)
         {
-                    <div class="folder-popup" id="folder-popup-@currentlyExpandedFolder.Id" style="position:absolute; visibility: hidden;" @key="currentlyExpandedFolder.Id" @onclick:stopPropagation="true">
-                        <div class="folder-popup-content">
+                            <div class="folder-popup" id="folder-popup-@currentlyExpandedFolder.Id" style="position:absolute; visibility: hidden;" @key="currentlyExpandedFolder.Id" @onclick:stopPropagation="true">
+                                <div class="folder-popup-content">
                     @foreach (var child in GetVisualNodesInFolderSequence(currentlyExpandedFolder))
                     {
                         if (child.Type == "vehicle")
                         {
-                                            <div class="folder-popup-item">
+                                                            <div class="folder-popup-item">
                                 @RenderVehicleNode(child)
-                                            </div>
+                                                            </div>
                         }
                     }
-                        </div>
-                    </div>
+                                </div>
+                            </div>
         }
     }
     else if (LoadingState != "loading")
     {
-            <p>Нет данных для отображения.</p>
+                <p>Нет данных для отображения.</p>
     }
 
     @if (LoadingState == "loading")
     {
-            <p>Загрузка...</p>
+                <p>Загрузка...</p>
     }
     @if (LoadingState == "error")
     {
-            <p style="color: red;">Ошибка загрузки данных!</p>
+                <p style="color: red;">Ошибка загрузки данных!</p>
     }
 </div>
 
@@ -151,6 +151,7 @@
     [Parameter] public int NationId { get; set; }
     [Parameter] public int TypeId { get; set; }
     [Parameter] public EventCallback<TotalsUpdateEventArgs> OnTotalsUpdated { get; set; }
+    [Parameter] public EventCallback<List<int>> OnSelectedRanksChanged { get; set; }
 
     private List<Node> AllNodesFlat = new();
     private Dictionary<int, Node> NodeLookup = new();
@@ -342,6 +343,13 @@
                     SelectedNames = namesString,
                     FormattedText = formattedText
                 });
+        }
+
+        // Уведомляем родительский компонент об изменении выбранных рангов
+        if (OnSelectedRanksChanged.HasDelegate)
+        {
+            var selectedRanks = GetSelectedRanks();
+            await OnSelectedRanksChanged.InvokeAsync(selectedRanks);
         }
     }
 
@@ -742,5 +750,82 @@
         catch
         {
         }
+    }
+
+    // Публичные методы для скриншотов
+    public async Task CopyScreenshotToClipboard()
+    {
+        try
+        {
+            var selectedRanks = GetSelectedRanks();
+            if (!selectedRanks.Any())
+            {
+                Console.WriteLine("No ranks selected for screenshot");
+                return;
+            }
+
+            var progressCallback = DotNetObjectReference.Create(this);
+            var completeCallback = DotNetObjectReference.Create(this);
+
+            await JSRuntime.InvokeVoidAsync("techTreeFunctions.copyScreenshotToClipboard",
+                selectedRanks.ToArray(),
+                progressCallback,
+                completeCallback);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error copying screenshot to clipboard: {ex.Message}");
+        }
+    }
+
+    public async Task DownloadScreenshot()
+    {
+        try
+        {
+            var selectedRanks = GetSelectedRanks();
+            if (!selectedRanks.Any())
+            {
+                Console.WriteLine("No ranks selected for screenshot");
+                return;
+            }
+
+            var filename = await JSRuntime.InvokeAsync<string>("techTreeFunctions.generateScreenshotFilename");
+            var progressCallback = DotNetObjectReference.Create(this);
+            var completeCallback = DotNetObjectReference.Create(this);
+
+            await JSRuntime.InvokeVoidAsync("techTreeFunctions.downloadScreenshot",
+                selectedRanks.ToArray(),
+                filename,
+                progressCallback,
+                completeCallback);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error downloading screenshot: {ex.Message}");
+        }
+    }
+
+    private List<int> GetSelectedRanks()
+    {
+        return selectedNodeIds
+            .Select(id => NodeLookup.TryGetValue(id, out var node) ? node?.Rank : null)
+            .Where(rank => rank.HasValue)
+            .Select(rank => rank!.Value)
+            .Distinct()
+            .OrderBy(rank => rank)
+            .ToList();
+    }
+
+    [JSInvokable]
+    public void OnScreenshotProgress(string message)
+    {
+        // Этот метод может быть вызван из JavaScript для обновления прогресса
+        Console.WriteLine($"Screenshot progress: {message}");
+    }
+
+    [JSInvokable]
+    public void OnScreenshotComplete(bool success, string message)
+    {
+        Console.WriteLine($"Screenshot complete: {success} - {message}");
     }
 }

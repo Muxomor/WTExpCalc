@@ -18,11 +18,28 @@ namespace WTExpCalc.Services
         /// Копирует текущий URL в буфер обмена
         /// </summary>
         Task CopyCurrentUrlToClipboardAsync();
+
+        /// <summary>
+        /// Создает скриншот выбранных рангов и скачивает его как файл
+        /// </summary>
+        Task DownloadScreenshotAsync(int minRank, int maxRank);
+
+        /// <summary>
+        /// Создает скриншот выбранных рангов и копирует в буфер обмена
+        /// </summary>
+        Task CopyScreenshotToClipboardAsync(int minRank, int maxRank);
     }
 
     public class UrlSelectionState
     {
         public HashSet<int> SelectedNodeIds { get; set; } = new();
         public Dictionary<int, int> ModifiedRpValues { get; set; } = new();
+    }
+
+    public class ScreenshotRankRange
+    {
+        public int MinRank { get; set; }
+        public int MaxRank { get; set; }
+        public bool IsValid => MinRank > 0 && MaxRank > 0 && MinRank <= MaxRank;
     }
 }
