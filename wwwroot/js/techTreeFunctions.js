@@ -163,7 +163,83 @@
             });
         });
     },
+    findRankElements: function () {
+        const allRankLabels = document.querySelectorAll('.rank-label');
+        const foundRanks = [];
+        const rankElementMap = new Map();
 
+        console.log(`Found ${allRankLabels.length} rank labels total`);
+
+        allRankLabels.forEach(label => {
+            const rankText = label.textContent.trim();
+            console.log(`Checking rank label: "${rankText}"`);
+
+            // ИСПРАВЛЕНО: Новые паттерны для реального формата рангов
+            const rankPatterns = [
+                // Русский формат: "Ранг 1", "Ранг 2" и т.д.
+                /^Ранг\s+(\d+)(?:\s|$)/i,
+
+                // Английский формат: "Rank 1", "Rank 2" и т.д.  
+                /^Rank\s+(\d+)(?:\s|$)/i,
+
+                // ДОБАВЛЕНО: Формат с дополнительной информацией: "Rank 12 / 6" -> извлекаем первую цифру
+                /^Rank\s+(\d)(\d+)/i,  // "Rank 12" -> возьмем "1"
+                /^Ранг\s+(\d)(\d+)/i,  // "Ранг 12" -> возьмем "1"
+
+                // ДОБАВЛЕНО: Еще один паттерн для составных чисел
+                /(?:Rank|Ранг)\s+(\d+)/i  // Любой формат, потом обработаем логикой
+            ];
+
+            let rank = null;
+
+            // Пробуем каждый паттерн
+            for (const pattern of rankPatterns) {
+                const match = rankText.match(pattern);
+                if (match) {
+                    let foundNumber = parseInt(match[1]);
+
+                    // СПЕЦИАЛЬНАЯ ЛОГИКА: если число больше 8, берем первую цифру
+                    if (foundNumber > 8) {
+                        const firstDigit = parseInt(foundNumber.toString()[0]);
+                        if (firstDigit >= 1 && firstDigit <= 8) {
+                            rank = firstDigit;
+                            console.log(`Extracted rank ${rank} from compound number ${foundNumber} in: "${rankText}"`);
+                            break;
+                        }
+                    } else if (foundNumber >= 1 && foundNumber <= 8) {
+                        rank = foundNumber;
+                        console.log(`Found direct rank ${rank} in: "${rankText}"`);
+                        break;
+                    }
+                }
+            }
+
+            if (rank && rank >= 1 && rank <= 8) {
+                // Проверяем, не добавили ли мы уже этот ранг
+                if (!rankElementMap.has(rank)) {
+                    foundRanks.push(rank);
+                    rankElementMap.set(rank, label);
+                    console.log(`✅ Successfully mapped rank ${rank} to element with text: "${rankText}"`);
+                } else {
+                    console.log(`⚠️ Rank ${rank} already mapped, skipping duplicate from: "${rankText}"`);
+                }
+            } else {
+                console.log(`❌ No valid rank found in: "${rankText}"`);
+            }
+        });
+
+        // Сортируем найденные ранги
+        foundRanks.sort((a, b) => a - b);
+
+        console.log(`📊 Final result: Found ranks [${foundRanks.join(', ')}]`);
+        console.log('📋 Rank mappings:');
+        foundRanks.forEach(rank => {
+            const element = rankElementMap.get(rank);
+            console.log(`  Rank ${rank}: "${element.textContent.trim()}"`);
+        });
+
+        return { foundRanks, rankElementMap };
+    },
     // Альтернативная функция поиска области по узлам техники
     calculateScreenshotAreaByNodes: function (selectedRanks) {
         console.log('=== USING ALTERNATIVE METHOD BY NODES ===');
@@ -328,9 +404,9 @@
         return area;
     },
 
-    // Новая функция для определения области скриншота по рангам (вся область, исключая премиумную)
+    // ОБНОВЛЕНО: Новая функция для определения области скриншота по рангам с поддержкой локализации
     calculateScreenshotAreaByRanks: function (selectedRanks) {
-        console.log('=== CALCULATE SCREENSHOT AREA BY RANKS (FULL AREA) ===');
+        console.log('=== CALCULATE SCREENSHOT AREA BY RANKS (LOCALIZED) ===');
         const treeGrid = document.querySelector('.tree-grid');
         if (!treeGrid) {
             console.error('Tree grid not found');
@@ -347,49 +423,8 @@
 
         console.log(`Screenshot area for full ranks ${minRank} to ${maxRank} (excluding premium)`);
 
-        // Находим элементы рангов - ищем более точно
-        const allRankLabels = document.querySelectorAll('.rank-label');
-        console.log(`Found ${allRankLabels.length} rank labels total`);
-
-        let topElement = null;
-        let bottomElement = null;
-        const foundRanks = [];
-        const rankElementMap = new Map(); // Карта ранг -> элемент
-
-        allRankLabels.forEach(label => {
-            const rankText = label.textContent.trim();
-            console.log(`Checking rank label: "${rankText}"`);
-
-            // Более умный парсинг - ищем "Ранг" потом первое число от 1 до 8
-            const rankMatch = rankText.match(/Ранг\s+(\d+)/);
-            if (rankMatch) {
-                const rank = parseInt(rankMatch[1]);
-
-                // Проверяем что это реальный ранг War Thunder (1-8)
-                if (rank >= 1 && rank <= 8) {
-                    foundRanks.push(rank);
-                    rankElementMap.set(rank, label);
-                    console.log(`Found valid rank ${rank} in text: "${rankText}"`);
-                } else {
-                    // Проверяем, может это составное число - например "12" = "1" + "2"
-                    const rankStr = rankMatch[1];
-                    if (rankStr.length === 2) {
-                        const firstDigit = parseInt(rankStr[0]);
-                        if (firstDigit >= 1 && firstDigit <= 8) {
-                            foundRanks.push(firstDigit);
-                            rankElementMap.set(firstDigit, label);
-                            console.log(`Found valid rank ${firstDigit} from compound number ${rank} in text: "${rankText}"`);
-                        } else {
-                            console.log(`Skipped invalid compound rank ${rank} (first digit ${firstDigit} not in range 1-8)`);
-                        }
-                    } else {
-                        console.log(`Skipped invalid rank ${rank} (not in range 1-8)`);
-                    }
-                }
-            } else {
-                console.log(`No rank pattern found in: "${rankText}"`);
-            }
-        });
+        // ИСПРАВЛЕНО: Используем новую функцию поиска рангов
+        const { foundRanks, rankElementMap } = this.findRankElements();
 
         console.log(`Available ranks: [${foundRanks.join(', ')}]`);
         console.log(`Looking for ranks: ${minRank} to ${maxRank}`);
@@ -402,7 +437,10 @@
             console.log(`  Rank ${rank}: "${elementText}"`);
         });
 
-        // СТРОГО ищем только нужные ранги - НЕ ИСПОЛЬЗУЕМ FALLBACK
+        let topElement = null;
+        let bottomElement = null;
+
+        // СТРОГО ищем только нужные ранги
         if (rankElementMap.has(minRank)) {
             topElement = rankElementMap.get(minRank);
             console.log(`Found top element for rank ${minRank}`);
@@ -421,7 +459,6 @@
 
         // Если диапазон рангов, но найден только один из концов - попробуем расширить до доступных рангов
         if (!topElement && bottomElement && foundRanks.length > 0) {
-            // Если нет начального ранга, найдем ближайший меньший доступный ранг
             const availableLowerRanks = foundRanks.filter(r => r <= maxRank).sort((a, b) => b - a);
             if (availableLowerRanks.length > 0) {
                 const nearestLowerRank = availableLowerRanks[0];
@@ -431,7 +468,6 @@
         }
 
         if (!bottomElement && topElement && foundRanks.length > 0) {
-            // Если нет конечного ранга, найдем ближайший больший доступный ранг
             const availableHigherRanks = foundRanks.filter(r => r >= minRank).sort((a, b) => a - b);
             if (availableHigherRanks.length > 0) {
                 const nearestHigherRank = availableHigherRanks[0];
@@ -513,13 +549,11 @@
         return area;
     },
 
-    // УСТАРЕВШАЯ функция - оставлена для совместимости
     calculateScreenshotArea: function (selectedRanks) {
         console.log('=== USING DEPRECATED calculateScreenshotArea - redirecting to new function ===');
         return this.calculateScreenshotAreaByRanks(selectedRanks);
     },
 
-    // Функция создания скриншота
     createScreenshot: async function (selectedRanks, filename, onProgress) {
         try {
             console.log('Starting screenshot creation for ranks:', selectedRanks);
@@ -624,7 +658,6 @@
 
             if (onProgress) onProgress('Обработка изображения...');
 
-            // Получаем область для обрезки по рангам (без премиумной части)
             const screenshotArea = this.calculateScreenshotAreaByRanks(selectedRanks);
             if (!screenshotArea) {
                 console.error('CRITICAL: Cannot create screenshot - required ranks not found!');
