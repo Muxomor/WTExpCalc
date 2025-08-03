@@ -415,7 +415,10 @@
             result.Add(rankLine);
         }
 
-        return string.Join("\n\n", result);
+        // НОВОЕ: Добавляем общее количество опыта в конец
+        string totalRpText = $"\n{Localization.GetText("TotalRP")}: {totalSelectedRp:N0}";
+
+        return string.Join("\n\n", result) + totalRpText;
     }
 
     private string ToRomanNumeral(int number)

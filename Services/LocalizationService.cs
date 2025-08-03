@@ -44,6 +44,7 @@ namespace WTExpCalc.Services
                 ["CopyScreenshot"] = "Скопировать скриншот в буфер обмена",
                 ["DownloadScreenshot"] = "Скачать скриншот",
                 ["PageNotFound"] = "Страница не найдена",
+                ["TotalRP"] = "Сумма опыта",
                 ["ReturnToHome"] = "Вернуться на главную"
             },
             ["en"] = new Dictionary<string, string>
@@ -65,6 +66,7 @@ namespace WTExpCalc.Services
                 ["CopyScreenshot"] = "Copy Screenshot to Clipboard",
                 ["DownloadScreenshot"] = "Download Screenshot",
                 ["PageNotFound"] = "Page Not Found",
+                ["TotalRP"] = "Total RP",
                 ["ReturnToHome"] = "Return to Home"
             }
         };
