@@ -1,4 +1,4 @@
-/* Обновленный NavMenu.razor.css с версией */
+/* Исправленный NavMenu.razor.css с отступом для нижней панели */
 
 .nav-scrollable {
     flex-grow: 1;
@@ -72,16 +72,18 @@
     display: none !important;
 }
 
-/* ============ СТИЛИ ДЛЯ ОБЕСПЕЧЕНИЯ ПРАВИЛЬНОГО РАЗМЕЩЕНИЯ ============ */
+/* ============ ИСПРАВЛЕНО: Навбар с отступом для нижней панели ============ */
 
-/* Убеждаемся что nav занимает всю высоту */
 nav.flex-column {
     height: 100%;
     display: flex;
     flex-direction: column;
+    /* ДОБАВЛЕНО: Отступ снизу для панели итогов */
+    padding-bottom: 120px; /* Достаточно места для панели итогов */
+    box-sizing: border-box;
 }
 
-/* ============ ДОБАВЛЕНО: Стили для версии ============ */
+/* ============ СТИЛИ ДЛЯ ВЕРСИИ ============ */
 
 .version-info {
     padding: 6px 8px;
@@ -104,14 +106,38 @@ nav.flex-column {
 /* Переключатель языков */
 ::deep .language-toggle {
     flex-shrink: 0;
-    margin-top: 0; /* Убираем margin-top так как версия теперь margin-top: auto */
+    margin-top: 0;
 }
 
 /* ============ АДАПТИВНОСТЬ ДЛЯ МОБИЛЬНЫХ ============ */
 
 @media (max-width: 768px) {
+    nav.flex-column {
+        /* На мобильных отступ может быть больше из-за высоты панели */
+        padding-bottom: 140px;
+    }
+
     .version-info {
         font-size: 0.6em;
         padding: 4px 6px;
     }
+}
+
+/* ============ ДОПОЛНИТЕЛЬНО: Исправления для основного контейнера сайдбара ============ */
+
+/* Убеждаемся что сайдбар корректно позиционируется */
+body .page .sidebar {
+    width: 70px !important;
+    min-width: 70px !important;
+    position: static !important;
+    padding-top: 0.5rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex-shrink: 0 !important;
+    height: 100vh !important;
+    overflow: visible !important;
+    background-color: #2a2a2a;
+    /* ДОБАВЛЕНО: Z-index чтобы сайдбар был поверх панели итогов */
+    z-index: 10;
+    position: relative !important;
 }
