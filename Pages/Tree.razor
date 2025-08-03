@@ -7,108 +7,113 @@
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 @inject IUrlStateManager UrlStateManager
+@inject ILocalizationService Localization
+@implements IDisposable
 
-<h3>Ветка прокачки для нации @(currentNation?.DisplayName ?? "Загрузка...")</h3>
+<h3>@Localization.GetText("TechTreeFor") @GetNationDisplayName()</h3>
 
 @if (isLoading)
 {
-            <p><em>Загрузка данных…</em></p>
+        <p><em>@Localization.GetText("LoadingData")</em></p>
 }
 else if (loadingError != null)
 {
-            <div class="alert alert-danger" style="background-color: #5a1e1e; border-color: #721c24; color: #f8d7d7;">
-                <p>Ошибка загрузки: @loadingError</p>
-                <button class="btn btn-primary" @onclick="RetryLoad">Повторить</button>
-            </div>
+        <div class="alert alert-danger" style="background-color: #5a1e1e; border-color: #721c24; color: #f8d7d7;">
+            <p>@Localization.GetText("Error"): @loadingError</p>
+            <button class="btn btn-primary" @onclick="RetryLoad">@Localization.GetText("Retry")</button>
+        </div>
 }
 else if (vehicleTypes == null || !vehicleTypes.Any())
 {
-            <p><em>Нет доступных типов техники для данной нации.</em></p>
+        <p><em>@Localization.GetText("NoVehicleTypes")</em></p>
 }
 else
 {
-            <ul class="nav nav-tabs">
+        <ul class="nav nav-tabs">
         @foreach (var vt in vehicleTypes)
         {
-                            <li class="nav-item">
-                                <a class="nav-link @(vt.Slug == activeTypeSlug ? "active" : "")"
-                                   href="/tree/@NationSlug/@vt.Slug">
-                    @vt.DisplayName
-                                </a>
-                            </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(vt.Slug == activeTypeSlug ? "active" : "")"
+                           href="/tree/@NationSlug/@vt.Slug">
+                    @GetVehicleTypeDisplayName(vt)
+                        </a>
+                    </li>
         }
-            </ul>
+        </ul>
 
-            <div class="tab-content mt-3">
+        <div class="tab-content mt-3">
         @if (activeTypeId != null && activeNationId != null)
         {
-                            <TechTree @ref="techTreeRef" 
-                                      NationId="activeNationId.Value" 
-                                      TypeId="activeTypeId.Value" 
-                                      OnTotalsUpdated="HandleTotalsUpdate"
-                                      OnSelectedRanksChanged="HandleSelectedRanksChanged" />
+                    <TechTree @ref="techTreeRef" 
+                              NationId="activeNationId.Value" 
+                              TypeId="activeTypeId.Value" 
+                              OnTotalsUpdated="HandleTotalsUpdate"
+                              OnSelectedRanksChanged="HandleSelectedRanksChanged" />
         }
+        </div>
+
+        <div id="summary-container">
+            <div id="summary-panel">
+                <span class="summary-item summary-rp">
+                    <span>@Localization.GetText("RP"):</span> @currentTotalRp.ToString("N0")
+                </span>
+                <span class="summary-item summary-sl">
+                    <span>@Localization.GetText("SL"):</span> @currentTotalSl.ToString("N0")
+                </span>
             </div>
 
-            <div id="summary-container">
-                <div id="summary-panel">
-                    <span class="summary-item summary-rp">
-                        <span>ОИ:</span> @currentTotalRp.ToString("N0")
-                    </span>
-                    <span class="summary-item summary-sl">
-                        <span>СЛ:</span> @currentTotalSl.ToString("N0")
-                    </span>
-                </div>
-
-                <div id="selected-names-container">
-                    <div id="selected-names-panel">
+            <div id="selected-names-container">
+                <div id="selected-names-panel">
                 @if (!string.IsNullOrEmpty(selectedVehicleNames))
                 {
-                                    <span title="@selectedVehicleNames">
-                                        Выбрано: @selectedVehicleNames
-                                    </span>
+                            <span title="@selectedVehicleNames">
+                        @Localization.GetText("Selected"): @selectedVehicleNames
+                            </span>
                 }
                 else
                 {
-                                    <span>&nbsp;</span>
+                            <span>&nbsp;</span>
                 }
-                    </div>
+                </div>
             @if (!string.IsNullOrEmpty(selectedVehicleNames))
             {
-                                <button class="btn btn-sm btn-secondary copy-button" title="Копировать список" @onclick="CopyNamesToClipboard">
-                                    <i class="bi bi-clipboard"></i>
-                                </button>
-                                <button class="btn btn-sm btn-info copy-button" title="Копировать ссылку" @onclick="CopyUrlToClipboard" style="margin-left: 5px;">
-                                    <i class="bi bi-link-45deg"></i>
-                                </button>
-                                <button class="btn btn-sm copy-button screenshot-button" 
-                                        title="@GetScreenshotButtonTitle()" 
-                                        @onclick="CopyScreenshotToClipboard" 
-                                        disabled="@(!hasSelectedRanks || isScreenshotInProgress)"
-                                        style="margin-left: 5px;">
-                                    <i class="bi bi-camera"></i>
-                                </button>
-                                <button class="btn btn-sm copy-button screenshot-button" 
-                                        title="Скачать скриншот" 
-                                        @onclick="DownloadScreenshot" 
-                                        disabled="@(!hasSelectedRanks || isScreenshotInProgress)"
-                                        style="margin-left: 5px;">
-                                    <i class="bi bi-download"></i>
-                                </button>
+                        <button class="btn btn-sm btn-secondary copy-button" 
+                                title="@Localization.GetText("CopyList")" 
+                                @onclick="CopyNamesToClipboard">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                        <button class="btn btn-sm btn-info copy-button" 
+                                title="@Localization.GetText("CopyUrl")" 
+                                @onclick="CopyUrlToClipboard" 
+                                style="margin-left: 5px;">
+                            <i class="bi bi-link-45deg"></i>
+                        </button>
+                        <button class="btn btn-sm copy-button screenshot-button" 
+                                title="@GetScreenshotButtonTitle()" 
+                                @onclick="CopyScreenshotToClipboard" 
+                                disabled="@(!hasSelectedRanks || isScreenshotInProgress)"
+                                style="margin-left: 5px;">
+                            <i class="bi bi-camera"></i>
+                        </button>
+                        <button class="btn btn-sm copy-button screenshot-button" 
+                                title="@Localization.GetText("DownloadScreenshot")" 
+                                @onclick="DownloadScreenshot" 
+                                disabled="@(!hasSelectedRanks || isScreenshotInProgress)"
+                                style="margin-left: 5px;">
+                            <i class="bi bi-download"></i>
+                        </button>
             }
-                </div>
             </div>
+        </div>
 }
-
-@* Индикатор загрузки скриншота *@
 @if (isScreenshotInProgress)
 {
-            <div class="screenshot-loading-overlay">
-                <div class="screenshot-loading-content">
-                    <div class="screenshot-loading-spinner"></div>
-                    <div>@screenshotProgressMessage</div>
-                </div>
+        <div class="screenshot-loading-overlay">
+            <div class="screenshot-loading-content">
+                <div class="screenshot-loading-spinner"></div>
+                <div>@screenshotProgressMessage</div>
             </div>
+        </div>
 }
 
 @code {
@@ -124,11 +129,10 @@ else
     private long currentTotalRp = 0;
     private long currentTotalSl = 0;
     private string selectedVehicleNames = "";
-    private string formattedVehicleText = ""; // Новая переменная для отформатированного текста
+    private string formattedVehicleText = "";
     private bool isLoading = false;
     private string? loadingError = null;
 
-    // Переменные для скриншотов
     private bool hasSelectedRanks = false;
     private bool isScreenshotInProgress = false;
     private string screenshotProgressMessage = "";
@@ -137,15 +141,49 @@ else
     {
         await LoadPageData();
     }
+    protected override async Task OnInitializedAsync()
+    {
+        var savedLang = await Localization.LoadSavedLanguageAsync();
+        await Localization.SetLanguageAsync(savedLang);
+
+        Localization.LanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string GetVehicleTypeDisplayName(VehicleType vt)
+    {
+        return SimpleGameLocalization.GetVehicleTypeName(vt.Name, vt.NameEnglish, Localization.IsEnglish);
+    }
+
+    private string GetNationDisplayName()
+    {
+        return currentNation != null ?
+               SimpleGameLocalization.GetNationName(currentNation.Name, Localization.IsEnglish, currentNation.Id) :
+               Localization.GetText("Loading");
+    }
+
+    private string GetScreenshotButtonTitle()
+    {
+        var uri = new Uri(Navigation.Uri);
+        if (uri.Scheme == "http")
+        {
+            return Localization.GetText("CopyScreenshot") + " (HTTP)";
+        }
+        return Localization.GetText("CopyScreenshot");
+    }
 
     private async Task LoadPageData()
     {
-        isLoading = true;
-        loadingError = null;
-        StateHasChanged();
-
         try
         {
+            isLoading = true;
+            loadingError = null;
+            StateHasChanged();
+
             // Загружаем нацию по slug
             currentNation = await Api.GetNationBySlugAsync(NationSlug);
             if (currentNation == null)
@@ -312,17 +350,6 @@ else
         StateHasChanged();
     }
 
-    private string GetScreenshotButtonTitle()
-    {
-        // Проверяем протокол - для HTTP буфер обмена недоступен
-        var uri = new Uri(Navigation.Uri);
-        if (uri.Scheme == "http")
-        {
-            return "Сохранить скриншот (буфер обмена недоступен на HTTP)";
-        }
-        return "Скопировать скриншот в буфер обмена";
-    }
-
     // Методы для обработки callback'ов из JavaScript
     [JSInvokable]
     public void OnScreenshotProgress(string message)
@@ -346,5 +373,10 @@ else
                 StateHasChanged();
             });
         });
+    }
+
+    public void Dispose()
+    {
+        Localization.LanguageChanged -= OnLanguageChanged;
     }
 }

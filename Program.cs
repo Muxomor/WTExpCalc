@@ -36,6 +36,7 @@ builder.Services.AddScoped(sp => {
 builder.Services.AddScoped<IExperienceApi, ExperienceApiService>();
 builder.Services.AddScoped<IUrlHelperService, UrlHelperService>();
 builder.Services.AddScoped<IUrlStateManager, UrlStateManager>();
+builder.Services.AddScoped<ILocalizationService, LocalizationService>();
 
 builder.Services.Configure<JsonSerializerOptions>(options =>
 {

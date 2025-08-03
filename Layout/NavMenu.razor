@@ -3,44 +3,72 @@
 @using WTExpCalc.Shared
 @inject IExperienceApi Api
 @inject NavigationManager Nav
+@inject ILocalizationService Localization
 @implements IDisposable
 
 <nav class="flex-column">
-    @if (nations == null)
+    <div class="nav-scrollable">
+        @if (nations == null)
+        {
+                    <div class="nav-item px-1 py-2 text-center">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    </div>
+        }
+        else
+        {
+            @foreach (var nation in nations)
+            {
+                                <div class="nav-item">
+                                    <a class="nav-link py-2 px-0 d-flex justify-content-center align-items-center @GetActiveCssClass(nation.Slug)"
+                                       href="@GetNationUrl(nation.Slug)"
+                                       title="@GetNationDisplayName(nation)">
+                                        <img src="@nation.ImageUrl"
+                                             alt="@GetNationDisplayName(nation)" class="nation-flag-icon" />
+                                    </a>
+                                </div>
+            }
+        }
+    </div>
+    @if (!string.IsNullOrEmpty(currentVersion))
     {
-                <div class="nav-item px-1 py-2 text-center">
-                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <div class="version-info">
+            @currentVersion
                 </div>
     }
-    else
-    {
-        @foreach (var nation in nations)
-        {
-                            <div class="nav-item">
-                                <a class="nav-link py-2 px-0 d-flex justify-content-center align-items-center @GetActiveCssClass(nation.Slug)"
-                                   href="@GetNationUrl(nation.Slug)"
-                                   title="@nation.DisplayName">
-                                    <img src="@nation.ImageUrl"
-                                         alt="@nation.DisplayName" class="nation-flag-icon" />
-                                </a>
-                            </div>
-        }
-    }
+
+    <LanguageToggle />
 </nav>
 
 @code {
     private List<Nation>? nations;
     private List<VehicleType>? vehicleTypes;
     private string currentUrl = "";
+    private string currentVersion = "";
 
     protected override async Task OnInitializedAsync()
     {
         nations = await Api.GetNationsAsync();
         vehicleTypes = await Api.GetVehicleTypesAsync();
+        
+        await LoadVersionAsync();
 
-        // Подписываемся на изменения URL
         Nav.LocationChanged += OnLocationChanged;
         currentUrl = Nav.Uri;
+        Localization.LanguageChanged += OnLanguageChanged;
+    }
+
+    private async Task LoadVersionAsync()
+    {
+        try
+        {
+            var version = await Api.GetCurrentVersionAsync();
+            currentVersion = version?.VersionNumber ?? "";
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading version: {ex.Message}");
+            currentVersion = "";
+        }
     }
 
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
@@ -49,13 +77,21 @@
         StateHasChanged();
     }
 
+    private void OnLanguageChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string GetNationDisplayName(Nation nation)
+    {
+        return SimpleGameLocalization.GetNationName(nation.Name, Localization.IsEnglish, nation.Id);
+    }
+
     private string GetActiveCssClass(string nationSlug)
     {
-        // Извлекаем текущий slug нации из URL
         var uri = new Uri(currentUrl);
         var segments = uri.LocalPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
-        // URL должен быть вида: /tree/{nationSlug}/{typeSlug}
         if (segments.Length >= 2 && segments[0] == "tree" && segments[1] == nationSlug)
         {
             return "active";
@@ -77,5 +113,6 @@
     public void Dispose()
     {
         Nav.LocationChanged -= OnLocationChanged;
+        Localization.LanguageChanged -= OnLanguageChanged;
     }
 }

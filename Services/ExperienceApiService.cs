@@ -172,5 +172,20 @@ namespace WTExpCalc.Services
             var url = $"api/rank_requirements?nation_id=eq.{nationId}&vehicle_type_id=eq.{vehicleTypeId}";
             return await _http.GetFromJsonAsync<List<RankRequirement>>(url, _jsonOptions) ?? new();
         }
+        public async Task<Models.Version?> GetCurrentVersionAsync()
+        {
+            try
+            {
+                var url = "api/version?order=created_at.desc&limit=1";
+                var versions = await _http.GetFromJsonAsync<List<Models.Version>>(url, _jsonOptions);
+
+                return versions?.FirstOrDefault();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching version: {ex.Message}");
+                return null;
+            }
+        }
     }
 }

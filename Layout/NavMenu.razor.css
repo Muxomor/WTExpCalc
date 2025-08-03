@@ -1,7 +1,9 @@
+/* Обновленный NavMenu.razor.css с версией */
+
 .nav-scrollable {
     flex-grow: 1;
     overflow-y: auto;
-    padding-top: 0.5rem; 
+    padding-top: 0.5rem;
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.2) transparent;
 }
@@ -25,12 +27,12 @@
 
 .nav-item {
     width: 100%;
-    margin-bottom: 12px; 
+    margin-bottom: 12px;
     padding: 0;
 }
 
 ::deep a.nav-link {
-    display: flex !important; 
+    display: flex !important;
     justify-content: center;
     align-items: center;
     padding: 0.5rem 0 !important;
@@ -49,12 +51,12 @@
     ::deep a.nav-link.active {
         background-color: rgba(255,255,255,0.25) !important;
         color: white !important;
-        outline: 2px solid rgba(0, 0, 255, 0.6) !important; 
-        outline-offset: -2px; 
+        outline: 2px solid rgba(0, 0, 255, 0.6) !important;
+        outline-offset: -2px;
     }
 
 .nation-flag-icon {
-    width: 50px; 
+    width: 50px;
     height: auto;
     max-width: 100%;
     object-fit: contain;
@@ -68,4 +70,48 @@
 
 .navbar-toggler, .top-row, .navbar-brand, .bi {
     display: none !important;
+}
+
+/* ============ СТИЛИ ДЛЯ ОБЕСПЕЧЕНИЯ ПРАВИЛЬНОГО РАЗМЕЩЕНИЯ ============ */
+
+/* Убеждаемся что nav занимает всю высоту */
+nav.flex-column {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ============ ДОБАВЛЕНО: Стили для версии ============ */
+
+.version-info {
+    padding: 6px 8px;
+    text-align: center;
+    font-size: 0.65em;
+    color: rgba(255, 255, 255, 0.4);
+    border-top: 1px solid #333;
+    background-color: rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+    margin-top: auto;
+}
+
+    .version-info:hover {
+        color: rgba(255, 255, 255, 0.6);
+        background-color: rgba(0, 0, 0, 0.2);
+    }
+
+/* Переключатель языков */
+::deep .language-toggle {
+    flex-shrink: 0;
+    margin-top: 0; /* Убираем margin-top так как версия теперь margin-top: auto */
+}
+
+/* ============ АДАПТИВНОСТЬ ДЛЯ МОБИЛЬНЫХ ============ */
+
+@media (max-width: 768px) {
+    .version-info {
+        font-size: 0.6em;
+        padding: 4px 6px;
+    }
 }

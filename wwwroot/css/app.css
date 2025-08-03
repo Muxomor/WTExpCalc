@@ -121,7 +121,7 @@ h3 {
     }
 
     .tech-tree-container.loading::before {
-        content: 'Загрузка...';
+        content: 'Loading...';
         position: absolute;
         top: 50%;
         left: 50%;

@@ -1,16 +1,21 @@
-﻿<Router AppAssembly="@typeof(App).Assembly">
+﻿@using WTExpCalc.Services
+@inject ILocalizationService Localization
+
+<Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
     <NotFound>
-        <PageTitle>Страница не найдена</PageTitle>
+        <PageTitle>@Localization.GetText("PageNotFound")</PageTitle>
         <LayoutView Layout="@typeof(MainLayout)">
             <div style="text-align: center; padding: 2rem;">
-                <h3>Страница не найдена</h3>
+                <h3>@Localization.GetText("PageNotFound")</h3>
                 <p>К сожалению, запрашиваемая страница не существует.</p>
                 <p>
-                    <a href="/" class="btn btn-primary">Вернуться на главную</a>
+                    <a href="/" class="btn btn-primary">
+                        @Localization.GetText("ReturnToHome")
+                    </a>
                 </p>
             </div>
         </LayoutView>

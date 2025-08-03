@@ -13,6 +13,9 @@ namespace WTExpCalc.Models
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
 
+        [JsonPropertyName("name_eng")]
+        public string? NameEnglish { get; set; }
+
         [JsonPropertyName("type")]
         public string Type { get; set; } = "vehicle";
 

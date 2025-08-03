@@ -1,0 +1,168 @@
+﻿@using WTExpCalc.Services
+@inject ILocalizationService Localization
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<div class="language-toggle">
+    <button class="lang-btn @(!Localization.IsEnglish ? "active" : "")" 
+            @onclick="@(() => SwitchLanguage("ru"))">
+        🇷🇺
+    </button>
+    <button class="lang-btn @(Localization.IsEnglish ? "active" : "")" 
+            @onclick="@(() => SwitchLanguage("en"))">
+        🇺🇸
+    </button>
+</div>
+
+@code
+{
+
+
+    protected
+
+    override
+
+    void
+
+    OnInitialized
+    (
+    )
+
+
+    {
+
+        Localization
+    .
+    LanguageChanged
+    +=
+     OnLanguageChanged
+    ;
+
+
+    }
+
+
+
+    private
+
+    async
+
+    Task
+
+    SwitchLanguage
+    (
+    string
+     lang
+    )
+
+
+    {
+
+
+        await
+         Localization
+        .
+        SetLanguageAsync
+        (
+        lang
+        )
+        ;
+
+
+        StateHasChanged
+        (
+        )
+        ;
+
+
+    }
+
+
+
+    private
+
+    void
+
+    OnLanguageChanged
+    (
+    )
+
+
+    {
+
+
+        InvokeAsync
+        (
+        StateHasChanged
+        )
+        ;
+
+
+    }
+
+
+
+    public
+
+    void
+
+    Dispose
+    (
+    )
+
+
+    {
+
+        Localization
+    .
+    LanguageChanged
+    -=
+     OnLanguageChanged
+    ;
+
+
+    }
+
+}
+
+
+<style>
+    .language-toggle {
+        display: flex;
+        gap: 2px;
+        margin-top: auto;
+        padding: 8px 4px;
+        border-top: 1px solid #444;
+        flex-shrink: 0;
+    }
+
+    .lang-btn {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: rgba(255, 255, 255, 0.7);
+        padding: 6px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.7em;
+        transition: all 0.2s;
+        flex: 1;
+        text-align: center;
+        min-width: 28px;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+    .lang-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        text-decoration: none;
+    }
+
+    .lang-btn.active {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+        border-color: rgba(255, 255, 255, 0.4);
+        font-weight: 500;
+    }
+
+</style>

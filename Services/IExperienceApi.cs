@@ -13,5 +13,6 @@ namespace WTExpCalc.Services
         Task<List<Node>> GetAllNodesFlatAsync(int nationId, int vehicleTypeId);
         Task<List<NodeDependency>> GetAllDependenciesAsync(int nationId, int vehicleTypeId);
         Task<List<RankRequirement>> GetRankRequirementsAsync(int nationId, int vehicleTypeId);
+        Task<Models.Version?> GetCurrentVersionAsync();
     }
 }
