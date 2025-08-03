@@ -402,10 +402,7 @@
 
         console.log('Alternative screenshot area by node estimation (standard only):', area);
         return area;
-    },
-
-    // ОБНОВЛЕНО: Новая функция для определения области скриншота по рангам с поддержкой локализации
-    calculateScreenshotAreaByRanks: function (selectedRanks) {
+    }, calculateScreenshotAreaByRanks: function (selectedRanks) {
         console.log('=== CALCULATE SCREENSHOT AREA BY RANKS (LOCALIZED) ===');
         const treeGrid = document.querySelector('.tree-grid');
         if (!treeGrid) {
@@ -423,24 +420,14 @@
 
         console.log(`Screenshot area for full ranks ${minRank} to ${maxRank} (excluding premium)`);
 
-        // ИСПРАВЛЕНО: Используем новую функцию поиска рангов
         const { foundRanks, rankElementMap } = this.findRankElements();
 
         console.log(`Available ranks: [${foundRanks.join(', ')}]`);
         console.log(`Looking for ranks: ${minRank} to ${maxRank}`);
 
-        // Дополнительная отладочная информация
-        console.log('Rank element mapping:');
-        foundRanks.forEach(rank => {
-            const element = rankElementMap.get(rank);
-            const elementText = element ? element.textContent.trim() : 'NOT FOUND';
-            console.log(`  Rank ${rank}: "${elementText}"`);
-        });
-
         let topElement = null;
         let bottomElement = null;
 
-        // СТРОГО ищем только нужные ранги
         if (rankElementMap.has(minRank)) {
             topElement = rankElementMap.get(minRank);
             console.log(`Found top element for rank ${minRank}`);
@@ -451,13 +438,11 @@
             console.log(`Found bottom element for rank ${maxRank}`);
         }
 
-        // Если это один и тот же ранг, используем один элемент для обеих границ
         if (minRank === maxRank && topElement) {
             bottomElement = topElement;
             console.log(`Single rank ${minRank} - using same element for both boundaries`);
         }
 
-        // Если диапазон рангов, но найден только один из концов - попробуем расширить до доступных рангов
         if (!topElement && bottomElement && foundRanks.length > 0) {
             const availableLowerRanks = foundRanks.filter(r => r <= maxRank).sort((a, b) => b - a);
             if (availableLowerRanks.length > 0) {
@@ -476,15 +461,8 @@
             }
         }
 
-        // КРИТИЧЕСКИ ВАЖНО: если не найдены нужные ранги, возвращаем null
         if (!topElement || !bottomElement) {
             console.error(`CRITICAL: Could not find required rank elements!`);
-            console.error(`Requested ranks: ${minRank} to ${maxRank}`);
-            console.error(`Available ranks: [${foundRanks.join(', ')}]`);
-            console.error(`Top element found: ${!!topElement} (for rank ${minRank})`);
-            console.error(`Bottom element found: ${!!bottomElement} (for rank ${maxRank})`);
-
-            // Если доступен хотя бы один ранг из диапазона, используем его
             const availableInRange = foundRanks.filter(r => r >= minRank && r <= maxRank);
             if (availableInRange.length > 0) {
                 console.log(`Found ${availableInRange.length} ranks in requested range: [${availableInRange.join(', ')}]`);
@@ -497,7 +475,6 @@
                 }
             }
 
-            // Если все еще ничего не найдено - возвращаем null
             if (!topElement || !bottomElement) {
                 return null;
             }
@@ -511,18 +488,15 @@
         console.log('Top element rect:', topRect);
         console.log('Bottom element rect:', bottomRect);
 
-        // Определяем правильную границу стандартной техники
         let width = treeRect.width;
         const premiumDivider = document.querySelector('.premium-divider-v');
 
         if (premiumDivider) {
             const dividerRect = premiumDivider.getBoundingClientRect();
             const dividerPosition = dividerRect.left - treeRect.left;
-            // Добавляем небольшой отступ чтобы не обрезать последний столбец стандартной техники
             width = Math.max(200, dividerPosition - 10);
             console.log('Limited screenshot width to exclude premium area:', width, 'divider at:', dividerPosition);
         } else {
-            // Если нет разделителя, попробуем найти границу по классам техники
             const standardNodes = document.querySelectorAll('.tree-grid-item.tech-cat-standard');
             const premiumNodes = document.querySelectorAll('.tree-grid-item.tech-cat-premium, .tree-grid-item.tech-cat-event');
 
@@ -532,35 +506,30 @@
                     return rect.right - treeRect.left;
                 });
                 const maxStandardRight = Math.max(...standardRights);
-                width = maxStandardRight + 20; // Небольшой отступ
+                width = maxStandardRight + 20;
                 console.log('No divider found, calculated width by nodes:', width);
             }
         }
 
-        // Вычисляем координаты области для обрезки
         const area = {
-            x: 0, // Начинаем с левого края сетки
-            y: Math.max(0, topRect.top - treeRect.top - 10), // Небольшой отступ сверху
-            width: Math.min(width, treeRect.width), // Ограничиваем шириной сетки
-            height: Math.max(50, (bottomRect.bottom - topRect.top) + 20) // Отступ снизу
+            x: 0,
+            y: Math.max(0, topRect.top - treeRect.top - 10),
+            width: Math.min(width, treeRect.width),
+            height: Math.max(50, (bottomRect.bottom - topRect.top) + 20)
         };
 
         console.log(`SUCCESS: Calculated screenshot area for ranks ${minRank}-${maxRank}:`, area);
         return area;
     },
-
     calculateScreenshotArea: function (selectedRanks) {
         console.log('=== USING DEPRECATED calculateScreenshotArea - redirecting to new function ===');
         return this.calculateScreenshotAreaByRanks(selectedRanks);
-    },
-
-    createScreenshot: async function (selectedRanks, filename, onProgress) {
+    }, createScreenshot: async function (selectedRanks, filename, onProgress) {
         try {
             console.log('Starting screenshot creation for ranks:', selectedRanks);
 
             if (onProgress) onProgress('Подготовка области...');
 
-            // Находим контейнер и панель итогов
             const treeContainer = document.getElementById('tech-tree-container-id');
             const summaryContainer = document.getElementById('summary-container');
 
@@ -570,6 +539,52 @@
 
             console.log('Tree container found:', treeContainer);
             console.log('Summary container found:', summaryContainer);
+
+            // Определяем стратегию
+            const baseScreenshotArea = this.calculateScreenshotAreaByRanks(selectedRanks);
+            if (!baseScreenshotArea) {
+                throw new Error(`Не удалось найти ранги ${selectedRanks.join(', ')} на странице.`);
+            }
+
+            // Определяем стратегию динамически на основе реально доступных рангов
+            const { foundRanks } = this.findRankElements();
+
+            if (foundRanks.length === 0) {
+                throw new Error('No ranks found on the page');
+            }
+
+            const maxAvailableRank = Math.max(...foundRanks); // Максимальный РЕАЛЬНО доступный ранг
+            const maxSelectedRank = Math.max(...selectedRanks);
+            const treeGridRect = document.querySelector('.tree-grid').getBoundingClientRect();
+
+            // ИСПРАВЛЕНО: Используем реальную позицию панели итогов для определения стратегии
+            const summaryRect = summaryContainer ? summaryContainer.getBoundingClientRect() : null;
+            const viewportHeight = window.innerHeight;
+
+            // Проверяем, находится ли выбранная область близко к панели итогов
+            let distanceToSummary = Infinity;
+            if (summaryRect) {
+                const areaBottomInViewport = baseScreenshotArea.y + baseScreenshotArea.height - treeGridRect.top + treeGridRect.top;
+                distanceToSummary = Math.abs(summaryRect.top - areaBottomInViewport);
+            }
+
+            // КРИТЕРИИ для выбора стратегии (ДИНАМИЧЕСКИЕ):
+            // Старый метод только если выбран МАКСИМАЛЬНО доступный ранг для данного дерева техники
+            const isMaxAvailableRank = maxSelectedRank >= maxAvailableRank;
+            const isCloseToSummaryPanel = distanceToSummary < viewportHeight * 0.4;
+
+            const useOldMethod = isMaxAvailableRank || isCloseToSummaryPanel;
+
+            console.log('Panel positioning strategy:', {
+                foundRanks: foundRanks,
+                maxAvailableRank: maxAvailableRank,
+                maxSelectedRank: maxSelectedRank,
+                isMaxAvailableRank: isMaxAvailableRank,
+                distanceToSummary: distanceToSummary,
+                viewportHeight: viewportHeight,
+                isCloseToSummaryPanel: isCloseToSummaryPanel,
+                useOldMethod: useOldMethod ? 'OLD (extend area)' : 'NEW (relocate panel)'
+            });
 
             // Создаем временный контейнер для скриншота
             const tempContainer = document.createElement('div');
@@ -586,51 +601,127 @@
             treeClone.style.position = 'relative';
             tempContainer.appendChild(treeClone);
 
-            // Если есть панель итогов, добавляем ее
-            if (summaryContainer) {
-                const summaryClone = summaryContainer.cloneNode(true);
+            let finalScreenshotArea;
 
-                // Убираем ненужные элементы из клона панели
-                const cloneNamesContainer = summaryClone.querySelector('#selected-names-container');
-                const cloneButtons = summaryClone.querySelectorAll('button');
+            if (useOldMethod) {
+                // СТАРЫЙ МЕТОД: Расширяем область и добавляем панель внизу
+                console.log('Using OLD method: extending area to include existing panel');
 
-                if (cloneNamesContainer) {
-                    cloneNamesContainer.remove();
-                    console.log('Removed names container from summary clone');
+                if (summaryContainer) {
+                    const summaryClone = summaryContainer.cloneNode(true);
+
+                    // Убираем ненужные элементы
+                    const cloneNamesContainer = summaryClone.querySelector('#selected-names-container');
+                    const cloneButtons = summaryClone.querySelectorAll('button');
+
+                    if (cloneNamesContainer) {
+                        cloneNamesContainer.remove();
+                    }
+                    cloneButtons.forEach(btn => btn.remove());
+
+                    // Настраиваем стили для панели внизу
+                    summaryClone.style.position = 'relative';
+                    summaryClone.style.background = 'rgba(40, 40, 40, 0.95)';
+                    summaryClone.style.backdropFilter = 'blur(3px)';
+                    summaryClone.style.borderTop = '1px solid #666';
+                    summaryClone.style.marginTop = '20px'; // УВЕЛИЧИВАЕМ отступ
+                    summaryClone.style.padding = '12px 20px'; // УВЕЛИЧИВАЕМ padding
+                    summaryClone.style.display = 'flex';
+                    summaryClone.style.flexDirection = 'column';
+                    summaryClone.style.alignItems = 'center';
+                    summaryClone.style.gap = '8px';
+                    summaryClone.style.width = treeContainer.scrollWidth + 'px';
+
+                    tempContainer.appendChild(summaryClone);
+                    console.log('Added summary panel using OLD method (at bottom)');
                 }
 
-                cloneButtons.forEach(btn => {
-                    btn.remove();
-                    console.log('Removed button from summary clone');
+                // ИСПРАВЛЕНО: Более щедрое расширение области скриншота
+                const realSummaryHeight = summaryContainer ? summaryContainer.getBoundingClientRect().height : 80;
+                const additionalPadding = 50; // Дополнительный отступ для безопасности
+                const panelHeight = realSummaryHeight + additionalPadding;
+
+                finalScreenshotArea = {
+                    x: baseScreenshotArea.x,
+                    y: baseScreenshotArea.y,
+                    width: baseScreenshotArea.width,
+                    height: baseScreenshotArea.height + panelHeight
+                };
+
+                console.log('OLD method area expansion:', {
+                    originalHeight: baseScreenshotArea.height,
+                    realSummaryHeight,
+                    additionalPadding,
+                    finalHeight: finalScreenshotArea.height
                 });
 
-                // Настраиваем стили панели для скриншота
-                summaryClone.style.position = 'relative';
-                summaryClone.style.background = 'rgba(40, 40, 40, 0.95)';
-                summaryClone.style.backdropFilter = 'blur(3px)';
-                summaryClone.style.borderTop = '1px solid #666';
-                summaryClone.style.marginTop = '10px';
-                summaryClone.style.padding = '8px 20px';
-                summaryClone.style.display = 'flex';
-                summaryClone.style.flexDirection = 'column';
-                summaryClone.style.alignItems = 'center';
-                summaryClone.style.gap = '8px';
-                summaryClone.style.width = treeContainer.scrollWidth + 'px';
+            } else {
+                // НОВЫЙ МЕТОД: Перемещаем панель к области скриншота
+                console.log('Using NEW method: relocating panel to screenshot area');
 
-                tempContainer.appendChild(summaryClone);
-                console.log('Added summary panel to temp container');
+                if (summaryContainer) {
+                    const summaryClone = summaryContainer.cloneNode(true);
+
+                    // Убираем ненужные элементы
+                    const cloneNamesContainer = summaryClone.querySelector('#selected-names-container');
+                    const cloneButtons = summaryClone.querySelectorAll('button');
+
+                    if (cloneNamesContainer) {
+                        cloneNamesContainer.remove();
+                    }
+                    cloneButtons.forEach(btn => btn.remove());
+
+                    // Настраиваем стили для перемещенной панели
+                    summaryClone.style.position = 'absolute';
+                    summaryClone.style.background = 'rgba(40, 40, 40, 0.95)';
+                    summaryClone.style.backdropFilter = 'blur(3px)';
+                    summaryClone.style.border = '1px solid #666';
+                    summaryClone.style.borderRadius = '8px';
+                    summaryClone.style.padding = '12px 20px';
+                    summaryClone.style.display = 'flex';
+                    summaryClone.style.flexDirection = 'column';
+                    summaryClone.style.alignItems = 'center';
+                    summaryClone.style.gap = '8px';
+                    summaryClone.style.zIndex = '1000';
+                    summaryClone.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
+
+                    // Позиционируем панель
+                    const panelWidth = 300;
+                    const panelHeight = 80;
+                    const margin = 20;
+
+                    const panelX = Math.max(baseScreenshotArea.x + baseScreenshotArea.width - panelWidth - margin, baseScreenshotArea.x + margin);
+                    const panelY = baseScreenshotArea.y + baseScreenshotArea.height + margin;
+
+                    summaryClone.style.left = panelX + 'px';
+                    summaryClone.style.top = panelY + 'px';
+                    summaryClone.style.width = panelWidth + 'px';
+
+                    treeClone.appendChild(summaryClone);
+                    console.log('Added relocated summary panel to tree clone');
+                }
+
+                // Расширяем область для перемещенной панели
+                const panelHeight = 100;
+                const panelMargin = 30;
+                finalScreenshotArea = {
+                    x: baseScreenshotArea.x,
+                    y: baseScreenshotArea.y,
+                    width: baseScreenshotArea.width,
+                    height: baseScreenshotArea.height + panelHeight + panelMargin
+                };
             }
 
             // Добавляем временный контейнер в документ
             document.body.appendChild(tempContainer);
             console.log('Temp container added to document');
 
-            // Ждем немного чтобы браузер отрендерил элементы
+            // Ждем рендеринга
             await new Promise(resolve => setTimeout(resolve, 100));
 
             if (onProgress) onProgress('Создание скриншота...');
 
-            // Создаем скриншот временного контейнера
+            // Создаем скриншот
             const canvas = await html2canvas(tempContainer, {
                 scale: 3,
                 useCORS: true,
@@ -652,54 +743,36 @@
             if (tempContainer && tempContainer.parentNode) {
                 document.body.removeChild(tempContainer);
                 console.log('Temp container removed');
-            } else {
-                console.log('Temp container already removed or not found');
             }
 
             if (onProgress) onProgress('Обработка изображения...');
 
-            const screenshotArea = this.calculateScreenshotAreaByRanks(selectedRanks);
-            if (!screenshotArea) {
-                console.error('CRITICAL: Cannot create screenshot - required ranks not found!');
-                console.error('Selected ranks:', selectedRanks);
+            console.log('Screenshot area to crop:', finalScreenshotArea);
 
-                // Удаляем временный контейнер при ошибке
-                if (tempContainer && tempContainer.parentNode) {
-                    document.body.removeChild(tempContainer);
-                }
-
-                throw new Error(`Не удалось найти ранги ${selectedRanks.join(', ')} на странице. Доступные ранги: проверьте консоль для подробностей.`);
-            }
-
-            console.log('Screenshot area to crop:', screenshotArea);
-
-            // Проверяем размер области - если слишком большая, ограничиваем
+            // Ограничиваем размер если нужно
             const maxWidth = 4000;
             const maxHeight = 6000;
 
-            if (screenshotArea.width > maxWidth || screenshotArea.height > maxHeight) {
-                console.warn(`Screenshot area too large: ${screenshotArea.width}x${screenshotArea.height}, limiting to ${maxWidth}x${maxHeight}`);
-                screenshotArea.width = Math.min(screenshotArea.width, maxWidth);
-                screenshotArea.height = Math.min(screenshotArea.height, maxHeight);
+            if (finalScreenshotArea.width > maxWidth || finalScreenshotArea.height > maxHeight) {
+                console.warn(`Screenshot area too large, limiting size`);
+                finalScreenshotArea.width = Math.min(finalScreenshotArea.width, maxWidth);
+                finalScreenshotArea.height = Math.min(finalScreenshotArea.height, maxHeight);
             }
 
-            // Создаем новый canvas для обрезанного изображения
+            // Создаем обрезанный canvas
             const croppedCanvas = document.createElement('canvas');
             const ctx = croppedCanvas.getContext('2d');
 
-            // Учитываем масштаб при обрезке и добавляем место для панели итогов
             const scale = 3;
-            const summaryPanelHeight = summaryContainer ? 60 : 0; // Примерная высота панели
+            const cropX = Math.max(0, finalScreenshotArea.x * scale);
+            const cropY = Math.max(0, finalScreenshotArea.y * scale);
+            const cropWidth = Math.min(canvas.width - cropX, finalScreenshotArea.width * scale);
+            const cropHeight = Math.min(canvas.height - cropY, finalScreenshotArea.height * scale);
 
-            const cropX = Math.max(0, screenshotArea.x * scale);
-            const cropY = Math.max(0, screenshotArea.y * scale);
-            const cropWidth = Math.min(canvas.width - cropX, screenshotArea.width * scale);
-            const cropHeight = Math.min(canvas.height - cropY, (screenshotArea.height + summaryPanelHeight) * scale);
-
-            // Проверяем финальный размер canvas
-            const maxCanvasSize = 16384; // Максимальный размер canvas в большинстве браузеров
+            // Проверяем размер canvas
+            const maxCanvasSize = 16384;
             if (cropWidth > maxCanvasSize || cropHeight > maxCanvasSize) {
-                console.warn(`Final canvas size too large: ${cropWidth}x${cropHeight}, reducing scale`);
+                console.warn(`Final canvas size too large, reducing scale`);
                 const scaleReduction = Math.min(maxCanvasSize / cropWidth, maxCanvasSize / cropHeight, 1);
                 croppedCanvas.width = Math.floor(cropWidth * scaleReduction);
                 croppedCanvas.height = Math.floor(cropHeight * scaleReduction);
@@ -714,16 +787,14 @@
                 cropY,
                 cropWidth,
                 cropHeight,
-                summaryPanelHeight,
                 finalCanvasSize: {
                     width: croppedCanvas.width,
                     height: croppedCanvas.height
                 }
             });
 
-            // Обрезаем изображение с учетом возможного масштабирования
+            // Обрезаем изображение
             if (croppedCanvas.width < cropWidth || croppedCanvas.height < cropHeight) {
-                // Если размер был уменьшен, масштабируем изображение
                 ctx.drawImage(
                     canvas,
                     cropX, cropY, cropWidth, cropHeight,
@@ -731,7 +802,6 @@
                 );
                 console.log('Screenshot scaled down due to size limitations');
             } else {
-                // Обычная обрезка без масштабирования
                 ctx.drawImage(
                     canvas,
                     cropX, cropY, cropWidth, cropHeight,
@@ -745,20 +815,18 @@
         } catch (error) {
             console.error('Error creating screenshot:', error);
 
-            // Безопасно удаляем временный контейнер при ошибке
             try {
                 if (tempContainer && tempContainer.parentNode) {
                     document.body.removeChild(tempContainer);
                     console.log('Temp container removed in error handler');
                 }
             } catch (cleanupError) {
-                console.log('Temp container was already removed or not found during cleanup');
+                console.log('Temp container cleanup failed or already removed');
             }
 
             throw error;
         }
     },
-
     // Функция копирования скриншота в буфер обмена с поддержкой HTTP
     copyScreenshotToClipboard: async function (selectedRanks, progressCallbackRef, completeCallbackRef) {
         try {
