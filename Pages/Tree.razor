@@ -102,6 +102,13 @@ else
                                 style="margin-left: 5px;">
                             <i class="bi bi-download"></i>
                         </button>
+                <button class="btn btn-sm copy-button screenshot-button"
+                        title="Скриншот 4000x4000 (4K)"
+                        @onclick="DownloadScreenshot4K"
+                        disabled="@(!hasSelectedRanks || isScreenshotInProgress)"
+                        style="margin-left: 5px;">
+                    <i class="bi bi-crop"></i>
+                </button>
             }
             </div>
         </div>
@@ -334,7 +341,30 @@ else
             StateHasChanged();
         }
     }
+    private async Task DownloadScreenshot4K()
+    {
+        if (techTreeRef == null || !hasSelectedRanks || isScreenshotInProgress) return;
 
+        try
+        {
+            isScreenshotInProgress = true;
+            screenshotProgressMessage = "Подготовка 4K скриншота...";
+            StateHasChanged();
+
+            await techTreeRef.DownloadScreenshot4K();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error downloading 4K screenshot: {ex.Message}");
+            screenshotProgressMessage = "Ошибка создания 4K скриншота";
+            await Task.Delay(2000);
+        }
+        finally
+        {
+            isScreenshotInProgress = false;
+            StateHasChanged();
+        }
+    }
     private void HandleTotalsUpdate(WTExpCalc.Shared.TechTree.TotalsUpdateEventArgs args)
     {
         currentTotalRp = args.TotalRp;

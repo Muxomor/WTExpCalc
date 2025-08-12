@@ -882,7 +882,32 @@
             Console.WriteLine($"Error downloading screenshot: {ex.Message}");
         }
     }
+    public async Task DownloadScreenshot4K()
+    {
+        try
+        {
+            var selectedRanks = GetSelectedRanks();
+            if (!selectedRanks.Any())
+            {
+                Console.WriteLine("No ranks selected for 4K screenshot");
+                return;
+            }
 
+            var filename = await JSRuntime.InvokeAsync<string>("techTreeFunctions.generateScreenshotFilename4K");
+            var progressCallback = DotNetObjectReference.Create(this);
+            var completeCallback = DotNetObjectReference.Create(this);
+
+            await JSRuntime.InvokeVoidAsync("techTreeFunctions.downloadScreenshot4K",
+                selectedRanks.ToArray(),
+                filename,
+                progressCallback,
+                completeCallback);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error downloading 4K screenshot: {ex.Message}");
+        }
+    }
     private List<int> GetSelectedRanks()
     {
         return selectedNodeIds

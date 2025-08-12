@@ -98,7 +98,298 @@
             alert("Ошибка при копировании текста (fallback).");
         }
     },
+    // Добавить эти функции в объект window.techTreeFunctions:
 
+    // Создание 4K скриншота с ограничением разрешения
+    createScreenshot4K: async function (selectedRanks, filename, onProgress) {
+        try {
+            console.log('Starting 4K screenshot creation for ranks:', selectedRanks);
+
+            if (onProgress) onProgress('Подготовка 4K области...');
+
+            const treeContainer = document.getElementById('tech-tree-container-id');
+            const summaryContainer = document.getElementById('summary-container');
+
+            if (!treeContainer) {
+                throw new Error('Tech tree container not found');
+            }
+
+            console.log('Tree container found for 4K screenshot');
+
+            // Используем существующую логику определения области
+            const baseScreenshotArea = this.calculateScreenshotAreaByRanks(selectedRanks);
+            if (!baseScreenshotArea) {
+                throw new Error(`Не удалось найти ранги ${selectedRanks.join(', ')} на странице.`);
+            }
+
+            // Определяем стратегию (используем ту же логику)
+            const { foundRanks } = this.findRankElements();
+            const maxAvailableRank = Math.max(...foundRanks);
+            const maxSelectedRank = Math.max(...selectedRanks);
+            const treeGridRect = document.querySelector('.tree-grid').getBoundingClientRect();
+
+            const summaryRect = summaryContainer ? summaryContainer.getBoundingClientRect() : null;
+            const viewportHeight = window.innerHeight;
+
+            let distanceToSummary = Infinity;
+            if (summaryRect) {
+                const areaBottomInViewport = baseScreenshotArea.y + baseScreenshotArea.height - treeGridRect.top + treeGridRect.top;
+                distanceToSummary = Math.abs(summaryRect.top - areaBottomInViewport);
+            }
+
+            const isMaxAvailableRank = maxSelectedRank >= maxAvailableRank;
+            const isCloseToSummaryPanel = distanceToSummary < viewportHeight * 0.4;
+            const useOldMethod = isMaxAvailableRank || isCloseToSummaryPanel;
+
+            // Создаем временный контейнер
+            const tempContainer = document.createElement('div');
+            tempContainer.style.position = 'absolute';
+            tempContainer.style.top = '-10000px';
+            tempContainer.style.left = '-10000px';
+            tempContainer.style.background = '#1a1a1a';
+            tempContainer.style.width = treeContainer.scrollWidth + 'px';
+            tempContainer.style.overflow = 'visible';
+
+            const treeClone = treeContainer.cloneNode(true);
+            treeClone.style.paddingBottom = '10px';
+            treeClone.style.position = 'relative';
+            tempContainer.appendChild(treeClone);
+
+            let finalScreenshotArea;
+
+            // Используем ту же логику позиционирования панели
+            if (useOldMethod) {
+                if (summaryContainer) {
+                    const summaryClone = summaryContainer.cloneNode(true);
+                    const cloneNamesContainer = summaryClone.querySelector('#selected-names-container');
+                    const cloneButtons = summaryClone.querySelectorAll('button');
+
+                    if (cloneNamesContainer) cloneNamesContainer.remove();
+                    cloneButtons.forEach(btn => btn.remove());
+
+                    summaryClone.style.position = 'relative';
+                    summaryClone.style.background = 'rgba(40, 40, 40, 0.95)';
+                    summaryClone.style.backdropFilter = 'blur(3px)';
+                    summaryClone.style.borderTop = '1px solid #666';
+                    summaryClone.style.marginTop = '20px';
+                    summaryClone.style.padding = '12px 20px';
+                    summaryClone.style.display = 'flex';
+                    summaryClone.style.flexDirection = 'column';
+                    summaryClone.style.alignItems = 'center';
+                    summaryClone.style.gap = '8px';
+                    summaryClone.style.width = treeContainer.scrollWidth + 'px';
+
+                    tempContainer.appendChild(summaryClone);
+                }
+
+                const realSummaryHeight = summaryContainer ? summaryContainer.getBoundingClientRect().height : 80;
+                const additionalPadding = 50;
+                const panelHeight = realSummaryHeight + additionalPadding;
+
+                finalScreenshotArea = {
+                    x: baseScreenshotArea.x,
+                    y: baseScreenshotArea.y,
+                    width: baseScreenshotArea.width,
+                    height: baseScreenshotArea.height + panelHeight
+                };
+            } else {
+                if (summaryContainer) {
+                    const summaryClone = summaryContainer.cloneNode(true);
+                    const cloneNamesContainer = summaryClone.querySelector('#selected-names-container');
+                    const cloneButtons = summaryClone.querySelectorAll('button');
+
+                    if (cloneNamesContainer) cloneNamesContainer.remove();
+                    cloneButtons.forEach(btn => btn.remove());
+
+                    summaryClone.style.position = 'absolute';
+                    summaryClone.style.background = 'rgba(40, 40, 40, 0.95)';
+                    summaryClone.style.backdropFilter = 'blur(3px)';
+                    summaryClone.style.border = '1px solid #666';
+                    summaryClone.style.borderRadius = '8px';
+                    summaryClone.style.padding = '12px 20px';
+                    summaryClone.style.display = 'flex';
+                    summaryClone.style.flexDirection = 'column';
+                    summaryClone.style.alignItems = 'center';
+                    summaryClone.style.gap = '8px';
+                    summaryClone.style.zIndex = '1000';
+                    summaryClone.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
+
+                    const panelWidth = 300;
+                    const panelHeight = 80;
+                    const margin = 20;
+
+                    const panelX = Math.max(baseScreenshotArea.x + baseScreenshotArea.width - panelWidth - margin, baseScreenshotArea.x + margin);
+                    const panelY = baseScreenshotArea.y + baseScreenshotArea.height + margin;
+
+                    summaryClone.style.left = panelX + 'px';
+                    summaryClone.style.top = panelY + 'px';
+                    summaryClone.style.width = panelWidth + 'px';
+
+                    treeClone.appendChild(summaryClone);
+                }
+
+                const panelHeight = 100;
+                const panelMargin = 30;
+                finalScreenshotArea = {
+                    x: baseScreenshotArea.x,
+                    y: baseScreenshotArea.y,
+                    width: baseScreenshotArea.width,
+                    height: baseScreenshotArea.height + panelHeight + panelMargin
+                };
+            }
+
+            document.body.appendChild(tempContainer);
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            if (onProgress) onProgress('Создание 4K скриншота...');
+
+            // Создаем скриншот с высоким качеством для 4K
+            const canvas = await html2canvas(tempContainer, {
+                scale: 4, // Увеличиваем scale для лучшего качества
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#1a1a1a',
+                logging: true,
+                width: tempContainer.scrollWidth,
+                height: tempContainer.scrollHeight,
+                scrollX: 0,
+                scrollY: 0
+            });
+
+            // Удаляем временный контейнер
+            if (tempContainer && tempContainer.parentNode) {
+                document.body.removeChild(tempContainer);
+            }
+
+            if (onProgress) onProgress('Обработка 4K изображения...');
+
+            // Создаем обрезанный canvas
+            const croppedCanvas = document.createElement('canvas');
+            const ctx = croppedCanvas.getContext('2d');
+
+            const scale = 4;
+            const cropX = Math.max(0, finalScreenshotArea.x * scale);
+            const cropY = Math.max(0, finalScreenshotArea.y * scale);
+            const cropWidth = Math.min(canvas.width - cropX, finalScreenshotArea.width * scale);
+            const cropHeight = Math.min(canvas.height - cropY, finalScreenshotArea.height * scale);
+
+            // ГЛАВНОЕ ОТЛИЧИЕ: Применяем ограничение 4000x4000
+            const MAX_4K_SIZE = 4000;
+            let finalWidth = cropWidth;
+            let finalHeight = cropHeight;
+
+            // Масштабируем если изображение больше 4000x4000, но сохраняем пропорции
+            if (cropWidth > MAX_4K_SIZE || cropHeight > MAX_4K_SIZE) {
+                const scaleDown = Math.min(MAX_4K_SIZE / cropWidth, MAX_4K_SIZE / cropHeight);
+                finalWidth = Math.floor(cropWidth * scaleDown);
+                finalHeight = Math.floor(cropHeight * scaleDown);
+                console.log(`4K limit applied: scaled from ${cropWidth}x${cropHeight} to ${finalWidth}x${finalHeight}`);
+            } else {
+                console.log(`4K limit not needed: image is ${cropWidth}x${cropHeight}`);
+            }
+
+            croppedCanvas.width = finalWidth;
+            croppedCanvas.height = finalHeight;
+
+            // Рисуем с масштабированием если нужно
+            ctx.drawImage(
+                canvas,
+                cropX, cropY, cropWidth, cropHeight,
+                0, 0, finalWidth, finalHeight
+            );
+
+            console.log(`4K screenshot created: ${finalWidth}x${finalHeight}`);
+            return croppedCanvas;
+
+        } catch (error) {
+            console.error('Error creating 4K screenshot:', error);
+
+            try {
+                if (tempContainer && tempContainer.parentNode) {
+                    document.body.removeChild(tempContainer);
+                }
+            } catch (cleanupError) {
+                console.log('Temp container cleanup failed or already removed');
+            }
+
+            throw error;
+        }
+    },
+
+    // Функция скачивания 4K скриншота
+    downloadScreenshot4K: async function (selectedRanks, filename, progressCallbackRef, completeCallbackRef) {
+        try {
+            const canvas = await this.createScreenshot4K(selectedRanks, filename, (message) => {
+                if (progressCallbackRef) {
+                    progressCallbackRef.invokeMethodAsync('OnScreenshotProgress', message);
+                }
+            });
+
+            if (progressCallbackRef) {
+                progressCallbackRef.invokeMethodAsync('OnScreenshotProgress', 'Подготовка 4K загрузки...');
+            }
+
+            canvas.toBlob((blob) => {
+                try {
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.download = filename || 'screenshot-4k.png';
+                    link.href = url;
+
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+                    console.log('4K screenshot download initiated successfully');
+                    if (completeCallbackRef) {
+                        completeCallbackRef.invokeMethodAsync('OnScreenshotComplete', true, '4K скриншот сохранен');
+                    }
+                } catch (err) {
+                    console.error('Error downloading 4K screenshot:', err);
+                    if (completeCallbackRef) {
+                        completeCallbackRef.invokeMethodAsync('OnScreenshotComplete', false, 'Ошибка загрузки 4K: ' + err.message);
+                    }
+                }
+            }, 'image/png');
+
+        } catch (error) {
+            console.error('Error in downloadScreenshot4K:', error);
+            if (completeCallbackRef) {
+                completeCallbackRef.invokeMethodAsync('OnScreenshotComplete', false, 'Ошибка создания 4K скриншота: ' + error.message);
+            }
+        }
+    },
+
+    // Функция для генерации имени 4K файла
+    generateScreenshotFilename4K: function () {
+        try {
+            const url = new URL(window.location.href);
+            const pathParts = url.pathname.split('/').filter(p => p);
+
+            let filename = 'screenshot-4k';
+            if (pathParts.length >= 3 && pathParts[0] === 'tree') {
+                const nation = pathParts[1];
+                const vehicleType = pathParts[2];
+                filename = `tree-${nation}-${vehicleType}-4k`;
+            }
+
+            const params = url.searchParams;
+            const selected = params.get('selected');
+            if (selected) {
+                filename += '-selected';
+            }
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            filename += `-${timestamp}.png`;
+
+            return filename;
+        } catch (error) {
+            console.error('Error generating 4K filename:', error);
+            return `screenshot-4k-${Date.now()}.png`;
+        }
+    },
     drawConnections: function (connectionData) {
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
