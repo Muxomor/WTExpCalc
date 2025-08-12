@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using WTExpCalc;
 using WTExpCalc.Services;
-using System.Net.Http;
 using System.Text.Json;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -17,17 +16,17 @@ builder.Services.AddScoped(sp => {
         if (string.IsNullOrEmpty(backendUrl))
         {
             backendUrl = "http://192.168.0.105:8881/";
-            Console.WriteLine($"URL Traefik для разработки не найден, используется дефолтный: {backendUrl}");
+            Console.WriteLine($"URL Traefik пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ: {backendUrl}");
         }
         else
         {
-            Console.WriteLine($"Используется URL Traefik для разработки: {backendUrl}");
+            Console.WriteLine($"пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ URL Traefik пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ: {backendUrl}");
         }
         httpClient.BaseAddress = new Uri(backendUrl);
     }
     else
     {
-        Console.WriteLine("Стандартный режим: Настройка HttpClient с относительным BaseAddress.");
+        Console.WriteLine("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ HttpClient пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ BaseAddress.");
         httpClient.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
     }
     return httpClient;

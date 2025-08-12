@@ -329,61 +329,96 @@
         }
     }
     private async Task CalculateAndUpdateTotals()
+{
+    totalSelectedRp = 0;
+    totalSelectedSl = 0;
+    var nameList = new List<string>();
+
+    // ИСПРАВЛЕНО: Получаем ВСЕ выбранные узлы типа "vehicle", не только с опытом
+    var allSelectedNodes = selectedNodeIds
+        .Select(id => NodeLookup.TryGetValue(id, out var node) ? node : null)
+        .Where(node => node != null && node.Type == "vehicle") // Убрали фильтр по RequiredExp
+        .ToList();
+
+    Console.WriteLine($"=== CalculateAndUpdateTotals DEBUG ===");
+    Console.WriteLine($"Total selected node IDs: {selectedNodeIds.Count}");
+    Console.WriteLine($"All selected vehicle nodes: {allSelectedNodes.Count}");
+
+    // Отладка: выводим все выбранные узлы
+    foreach (var node in allSelectedNodes)
     {
-        totalSelectedRp = 0;
-        totalSelectedSl = 0;
-        var nameList = new List<string>();
-
-        // Получаем выбранные узлы с опытом
-        var selectedNodes = selectedNodeIds
-            .Select(id => NodeLookup.TryGetValue(id, out var node) ? node : null)
-            .Where(node => node != null && node.RequiredExp.HasValue)
-            .ToList();
-
-        foreach (var node in selectedNodes)
-        {
-            long rpValue = node!.RequiredExp ?? 0;
-            long slValue = node.SilverCost ?? 0;
-            totalSelectedRp += rpValue;
-            totalSelectedSl += slValue;
-
-            // ИСПРАВЛЕНО: используем локализованное название для отображения
-            nameList.Add(GetNodeDisplayName(node));
-        }
-
-        string namesString = string.Join(", ", nameList);
-        // ИСПРАВЛЕНО: формируем локализованный текст для копирования
-        string formattedText = FormatVehicleListForCopy(selectedNodes!);
-
-        if (OnTotalsUpdated.HasDelegate)
-        {
-            await OnTotalsUpdated.InvokeAsync(new TotalsUpdateEventArgs
-                {
-                    TotalRp = totalSelectedRp,
-                    TotalSl = totalSelectedSl,
-                    SelectedNames = namesString,
-                    FormattedText = formattedText
-                });
-        }
-
-        // Уведомляем родительский компонент об изменении выбранных рангов
-        if (OnSelectedRanksChanged.HasDelegate)
-        {
-            var selectedRanks = GetSelectedRanks();
-            await OnSelectedRanksChanged.InvokeAsync(selectedRanks);
-        }
+        Console.WriteLine($"Selected node: {GetNodeDisplayName(node!)}, Category: '{node!.TechCategory}', HasRP: {node.RequiredExp.HasValue}");
     }
-    private string FormatVehicleListForCopy(List<Node> selectedNodes)
-    {
-        if (!selectedNodes.Any()) return "";
 
-        // Группируем по рангам и сортируем внутри каждого ранга по колонке
-        var groupedByRank = selectedNodes
+    // Подсчитываем опыт и SL только для узлов с опытом
+    var nodesWithRp = allSelectedNodes.Where(node => node!.RequiredExp.HasValue).ToList();
+
+    foreach (var node in nodesWithRp)
+    {
+        long rpValue = node!.RequiredExp ?? 0;
+        long slValue = node.SilverCost ?? 0;
+        totalSelectedRp += rpValue;
+        totalSelectedSl += slValue;
+    }
+
+    Console.WriteLine($"Nodes with RP: {nodesWithRp.Count}, Total RP: {totalSelectedRp}");
+
+    // Для отображения имен используем ВСЕ выбранные узлы
+    foreach (var node in allSelectedNodes)
+    {
+        nameList.Add(GetNodeDisplayName(node!));
+    }
+
+    string namesString = string.Join(", ", nameList);
+    
+    // ИСПРАВЛЕНО: Передаем ВСЕ выбранные узлы в форматирование, не только с RP
+    string formattedText = FormatVehicleListForCopy(allSelectedNodes!);
+
+    Console.WriteLine($"Names for display: {namesString}");
+    Console.WriteLine($"Formatted text length: {formattedText.Length}");
+
+    if (OnTotalsUpdated.HasDelegate)
+    {
+        await OnTotalsUpdated.InvokeAsync(new TotalsUpdateEventArgs
+            {
+                TotalRp = totalSelectedRp,
+                TotalSl = totalSelectedSl,
+                SelectedNames = namesString,
+                FormattedText = formattedText
+            });
+    }
+
+    // Уведомляем родительский компонент об изменении выбранных рангов
+    if (OnSelectedRanksChanged.HasDelegate)
+    {
+        var selectedRanks = GetSelectedRanks();
+        await OnSelectedRanksChanged.InvokeAsync(selectedRanks);
+    }
+}
+ private string FormatVehicleListForCopy(List<Node> selectedNodes)
+{
+    if (!selectedNodes.Any()) return "";
+
+    foreach (var node in selectedNodes)
+    {
+        Console.WriteLine($"Node: {GetNodeDisplayName(node)}, Category: '{node.TechCategory}', Type: '{node.Type}'");
+    }
+
+    // Разделяем стандартную и премиумную технику
+    var standardNodes = selectedNodes.Where(n => n.TechCategory == "standard").ToList();
+    var premiumNodes = selectedNodes.Where(n => n.TechCategory != "standard").ToList();
+
+    Console.WriteLine($"Standard nodes: {standardNodes.Count}, Premium nodes: {premiumNodes.Count}");
+
+    var result = new List<string>();
+
+    // Обрабатываем стандартную технику (группируем по рангам)
+    if (standardNodes.Any())
+    {
+        var groupedByRank = standardNodes
             .GroupBy(n => n.Rank)
             .OrderBy(g => g.Key)
             .ToList();
-
-        var result = new List<string>();
 
         foreach (var rankGroup in groupedByRank)
         {
@@ -396,10 +431,9 @@
 
             foreach (var vehicle in vehiclesInRank)
             {
-                // ИСПРАВЛЕНО: используем локализованное название
                 string vehicleName = GetNodeDisplayName(vehicle);
 
-                // Проверяем, изменено ли значение RP
+                // Проверяем, изменено ли значение RP только для стандартной техники
                 if (IsRpValueModified(vehicle))
                 {
                     var currentRp = vehicle.RequiredExp ?? 0;
@@ -410,17 +444,40 @@
                 vehicleNames.Add(vehicleName);
             }
 
-            // ИСПРАВЛЕНО: формируем строку для ранга с учетом языка
+            // Формируем строку для ранга с учетом языка
             string rankLine = $"{Localization.GetText("Rank")} {ToRomanNumeral(rankNumber)}:\n{string.Join(", ", vehicleNames)}";
             result.Add(rankLine);
         }
-
-        // НОВОЕ: Добавляем общее количество опыта в конец
-        string totalRpText = $"\n{Localization.GetText("TotalRP")}: {totalSelectedRp:N0}";
-
-        return string.Join("\n\n", result) + totalRpText;
     }
 
+    // Добавляем премиумную технику простым списком через запятую
+    if (premiumNodes.Any())
+    {
+        Console.WriteLine("=== Adding premium vehicles ===");
+        var premiumNames = new List<string>();
+
+        foreach (var vehicle in premiumNodes.OrderBy(n => n.Rank).ThenBy(n => n.ColumnIndex ?? 0))
+        {
+            // Для премиумной техники берем ТОЛЬКО локализованное имя, без RP
+            string vehicleName = GetNodeDisplayName(vehicle);
+            premiumNames.Add(vehicleName);
+            Console.WriteLine($"Added premium: {vehicleName}");
+        }
+
+        // Добавляем премиумную технику как отдельную секцию
+        string premiumText = string.Join(", ", premiumNames);
+        result.Add(premiumText);
+        Console.WriteLine($"Premium section: {premiumText}");
+    }
+
+    // Добавляем общее количество опыта в конец
+    string totalRpText = $"{Localization.GetText("TotalRP")}: {totalSelectedRp:N0}";
+
+    var finalResult = string.Join("\n\n", result) + (result.Any() ? "\n\n" + totalRpText : totalRpText);
+    Console.WriteLine($"=== Final formatted text ===\n{finalResult}");
+    
+    return finalResult;
+}
     private string ToRomanNumeral(int number)
     {
         return number switch
