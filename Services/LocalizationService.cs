@@ -45,7 +45,20 @@ namespace WTExpCalc.Services
                 ["DownloadScreenshot"] = "Скачать скриншот",
                 ["PageNotFound"] = "Страница не найдена",
                 ["TotalRP"] = "Сумма опыта",
-                ["ReturnToHome"] = "Вернуться на главную"
+                ["ReturnToHome"] = "Вернуться на главную",
+                ["RPLimit"] = "Лимит ОИ",
+                ["Unlimited"] = "Без лимита",
+                ["RPLimitExceeded"] = "Превышен лимит опыта!",
+                ["RPLimitExceededMessage"] = "Нельзя выбрать больше техники - достигнут лимит опыта",
+                ["Screenshot4KTooltip"] = "Скриншот 4K (максимум 4000×4000)",
+                ["Screenshot4KTooltipHTTP"] = "Скриншот 4K (максимум 4000×4000) (HTTP)",
+                ["Preparing4KScreenshot"] = "Подготовка 4K скриншота...",
+                ["Creating4KScreenshot"] = "Создание 4K скриншота...",
+                ["Processing4KImage"] = "Обработка 4K изображения...",
+                ["Preparing4KDownload"] = "Подготовка 4K загрузки...",
+                ["Screenshot4KSaved"] = "4K скриншот сохранен",
+                ["Error4KScreenshot"] = "Ошибка создания 4K скриншота"
+
             },
             ["en"] = new Dictionary<string, string>
             {
@@ -67,7 +80,20 @@ namespace WTExpCalc.Services
                 ["DownloadScreenshot"] = "Download Screenshot",
                 ["PageNotFound"] = "Page Not Found",
                 ["TotalRP"] = "Total RP",
-                ["ReturnToHome"] = "Return to Home"
+                ["ReturnToHome"] = "Return to Home",
+                ["RPLimit"] = "RP Limit",
+                ["Unlimited"] = "Unlimited",
+                ["RPLimitExceeded"] = "RP limit exceeded!",
+                ["RPLimitExceededMessage"] = "Cannot select more vehicles - RP limit reached",
+                ["Screenshot4KTooltip"] = "4000x4000 Screenshot (max 4000×4000)",
+                ["Screenshot4KTooltipHTTP"] = "4000x4000 Screenshot (max 4000×4000) (HTTP)",
+                ["Preparing4KScreenshot"] = "Preparing 4K screenshot...",
+                ["Creating4KScreenshot"] = "Creating 4K screenshot...",
+                ["Processing4KImage"] = "Processing 4K image...",
+                ["Preparing4KDownload"] = "Preparing 4K download...",
+                ["Screenshot4KSaved"] = "4K screenshot saved",
+                ["Error4KScreenshot"] = "4K screenshot creation error"
+
             }
         };
 

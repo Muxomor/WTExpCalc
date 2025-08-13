@@ -53,15 +53,31 @@ else
         </div>
 
         <div id="summary-container">
-            <div id="summary-panel">
-                <span class="summary-item summary-rp">
-                    <span>@Localization.GetText("RP"):</span> @currentTotalRp.ToString("N0")
-                </span>
-                <span class="summary-item summary-sl">
-                    <span>@Localization.GetText("SL"):</span> @currentTotalSl.ToString("N0")
-                </span>
+        <div id="summary-panel">
+            <span class="summary-item summary-rp">
+                <span>@Localization.GetText("RP"):</span> @currentTotalRp.ToString("N0")
+            </span>
+            <span class="summary-item summary-sl">
+                <span>@Localization.GetText("SL"):</span> @currentTotalSl.ToString("N0")
+            </span>
+            <span class="summary-item summary-limit">
+                <span>@Localization.GetText("RPLimit"):</span>
+                <input type="number"
+                       class="rp-limit-input"
+                       min="1"
+                       placeholder="@Localization.GetText("Unlimited")"
+                       @bind="maxRpLimitK"
+                       @oninput="OnRpLimitChanged" />
+                <span class="limit-suffix">K</span>
+            </span>
+        </div>
+        @if (showLimitExceededWarning)
+        {
+            <div class="rp-limit-warning">
+                <i class="bi bi-exclamation-triangle"></i>
+                <span>@Localization.GetText("RPLimitExceeded")</span>
             </div>
-
+        }
             <div id="selected-names-container">
                 <div id="selected-names-panel">
                 @if (!string.IsNullOrEmpty(selectedVehicleNames))
@@ -103,7 +119,7 @@ else
                             <i class="bi bi-download"></i>
                         </button>
                 <button class="btn btn-sm copy-button screenshot-button"
-                        title="Скриншот 4000x4000 (4K)"
+                        title="@GetScreenshot4KButtonTitle()"
                         @onclick="DownloadScreenshot4K"
                         disabled="@(!hasSelectedRanks || isScreenshotInProgress)"
                         style="margin-left: 5px;">
@@ -144,6 +160,9 @@ else
     private bool isScreenshotInProgress = false;
     private string screenshotProgressMessage = "";
 
+    private int? maxRpLimitK = null; 
+    private bool showLimitExceededWarning = false;
+
     protected override async Task OnParametersSetAsync()
     {
         await LoadPageData();
@@ -172,7 +191,54 @@ else
                SimpleGameLocalization.GetNationName(currentNation.Name, Localization.IsEnglish, currentNation.Id) :
                Localization.GetText("Loading");
     }
+    private string GetScreenshot4KButtonTitle()
+    {
+        var uri = new Uri(Navigation.Uri);
+        if (uri.Scheme == "http")
+        {
+            return Localization.GetText("Screenshot4KTooltipHTTP");
+        }
+        return Localization.GetText("Screenshot4KTooltip");
+    }
+    private async Task OnRpLimitChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int limitK) && limitK >= 1)
+        {
+            maxRpLimitK = limitK;
+            await ApplyRpLimit();
+        }
+        else if (string.IsNullOrEmpty(e.Value?.ToString()))
+        {
+            maxRpLimitK = null;
+            StateHasChanged();
+        }
+    }
 
+    private async Task ApplyRpLimit()
+    {
+        if (techTreeRef != null && maxRpLimitK.HasValue)
+        {
+            long maxRpLimit = maxRpLimitK.Value * 1000L;
+            await techTreeRef.ApplyRpLimit(maxRpLimit);
+            StateHasChanged();
+        }
+    }
+
+    private void OnRpLimitWarningShown()
+    {
+        showLimitExceededWarning = true;
+        StateHasChanged();
+
+        // Скрываем предупреждение через 3 секунды
+        Task.Delay(3000).ContinueWith(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                showLimitExceededWarning = false;
+                StateHasChanged();
+            });
+        });
+    }
     private string GetScreenshotButtonTitle()
     {
         var uri = new Uri(Navigation.Uri);
@@ -348,7 +414,7 @@ else
         try
         {
             isScreenshotInProgress = true;
-            screenshotProgressMessage = "Подготовка 4K скриншота...";
+            screenshotProgressMessage = Localization.GetText("Preparing4KScreenshot");
             StateHasChanged();
 
             await techTreeRef.DownloadScreenshot4K();
@@ -356,7 +422,7 @@ else
         catch (Exception ex)
         {
             Console.WriteLine($"Error downloading 4K screenshot: {ex.Message}");
-            screenshotProgressMessage = "Ошибка создания 4K скриншота";
+            screenshotProgressMessage = Localization.GetText("Error4KScreenshot");
             await Task.Delay(2000);
         }
         finally

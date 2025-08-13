@@ -9,7 +9,7 @@
 <div class="tech-tree-container @LoadingState" id="tech-tree-container-id">
     @if (GridNodes.Any())
     {
-                                <div class="tree-grid" style="@GridStyles">
+        <div class="tree-grid" style="@GridStyles">
             @{
                 var activeRanks = GetActiveRanks();
                 var cumulativeRowsBefore = new Dictionary<int, int>();
@@ -33,23 +33,23 @@
                     string rankLabelStyle = $"grid-column: 1; grid-row: {startGridRow} / span {rowsInThisRank};";
                     var requirement = rankRequirements.FirstOrDefault(r => r.PreviousRank == rank);
                     int requiredCount = requirement?.RequiredUnits ?? 0;
-                    int selectedCount = AllNodesFlat.Count(n => n.Rank == rank && n.Type == "vehicle" && selectedNodeIds.Contains(n.Id)); 
+                    int selectedCount = AllNodesFlat.Count(n => n.Rank == rank && n.Type == "vehicle" && selectedNodeIds.Contains(n.Id));
 
-                                                                                            <div class="rank-label" style="@rankLabelStyle">
-                                                                                                      <span>@Localization.GetText("Rank") @rank</span>
+                    <div class="rank-label" style="@rankLabelStyle">
+                        <span>@Localization.GetText("Rank") @rank</span>
                         @if (requirement != null)
                         {
-                                                                                                                            <span class="rank-requirement-counter @(selectedCount >= requiredCount ? "req-met" : "req-not-met")">
+                            <span class="rank-requirement-counter @(selectedCount >= requiredCount ? "req-met" : "req-not-met")">
                                 @selectedCount / @requiredCount
-                                                                                                                            </span>
+                            </span>
                         }
-                                                                                            </div>
+                    </div>
                 }
             }
 
             @foreach (var node in GridNodes)
             {
-                                                                <div @key="node.Id" class="@GetNodeCssClass(node)" style="@GetNodeGridStyle(node)" id="node-container-@node.Id">
+                <div @key="node.Id" class="@GetNodeCssClass(node)" style="@GetNodeGridStyle(node)" id="node-container-@node.Id">
                     @if (node.Type == "folder")
                     {
                         @RenderFolderNode(node)
@@ -58,28 +58,28 @@
                     {
                         @RenderVehicleNode(node)
                     }
-                                                                </div>
+                </div>
             }
 
-                                    <svg class="tree-connections-overlay" width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0;">
+            <svg class="tree-connections-overlay" width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0;">
                 @if (Dependencies != null)
                 {
                     @foreach (var dep in Dependencies)
                     {
-                                                                                                <line id="dep-@dep.NodeId-@dep.PrerequisiteNodeId"
-                                                                                                x1="0" y1="0" x2="0" y2="0"
-                                                                                                stroke="#cccccc" stroke-width="2"
-                                                                                                marker-end="url(#arrowhead)"
-                                                                                                visibility="hidden" />
+                        <line id="dep-@dep.NodeId-@dep.PrerequisiteNodeId"
+                              x1="0" y1="0" x2="0" y2="0"
+                              stroke="#cccccc" stroke-width="2"
+                              marker-end="url(#arrowhead)"
+                              visibility="hidden" />
                     }
-                                                                    <defs>
-                                                                        <marker id="arrowhead" markerWidth="10" markerHeight="7"
-                                                                        refX="10" refY="3.5" orient="auto">
-                                                                            <polygon points="0 0, 10 3.5, 0 7" fill="#cccccc" />
-                                                                        </marker>
-                                                                    </defs>
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                                refX="10" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#cccccc" />
+                        </marker>
+                    </defs>
                 }
-                                    </svg>
+            </svg>
             @{
                 var ranksForDividers = GetActiveRanks();
                 var standardNodes = AllNodesFlat.Where(n => n.TechCategory == "standard");
@@ -94,7 +94,7 @@
                 if (premiumNodesExist && standardColumnCount > 0)
                 {
                     string premiumDividerStyle = $"grid-column: {premiumDividerColumn}; grid-row: 2 / {lastDataRow + 1};";
-                                                                                            <div class="premium-divider-v" style="@premiumDividerStyle"></div>
+                    <div class="premium-divider-v" style="@premiumDividerStyle"></div>
                 }
 
                 //Горизонтальные разделители (только между активными рангами)
@@ -106,45 +106,45 @@
                     int endGridRowCurrentRank = startGridRowCurrentRank + rowsInThisRank - 1;
 
                     string rankDividerStyle = $"grid-column: 2 / -1; grid-row: {endGridRowCurrentRank + 1};";
-                                                                                            <div class="rank-divider-h" style="@rankDividerStyle"></div>
+                    <div class="rank-divider-h" style="@rankDividerStyle"></div>
                 }
             }
 
-                                </div>
+        </div>
         @if (currentlyExpandedFolder != null)
         {
-                                                            <div class="folder-popup-overlay" @onclick="CloseFolderPopup"></div>
+            <div class="folder-popup-overlay" @onclick="CloseFolderPopup"></div>
         }
 
         @if (currentlyExpandedFolder != null)
         {
-                                                            <div class="folder-popup" id="folder-popup-@currentlyExpandedFolder.Id" style="position:absolute; visibility: hidden;" @key="currentlyExpandedFolder.Id" @onclick:stopPropagation="true">
-                                                                <div class="folder-popup-content">
+            <div class="folder-popup" id="folder-popup-@currentlyExpandedFolder.Id" style="position:absolute; visibility: hidden;" @key="currentlyExpandedFolder.Id" @onclick:stopPropagation="true">
+                <div class="folder-popup-content">
                     @foreach (var child in GetVisualNodesInFolderSequence(currentlyExpandedFolder))
                     {
                         if (child.Type == "vehicle")
                         {
-                                                                                                                            <div class="folder-popup-item">
+                            <div class="folder-popup-item">
                                 @RenderVehicleNode(child)
-                                                                                                                            </div>
+                            </div>
                         }
                     }
-                                                                </div>
-                                                            </div>
+                </div>
+            </div>
         }
     }
     else if (LoadingState != "loading")
     {
-                                    <p>@Localization.GetText("NoVehicleTypes")</p>
+        <p>@Localization.GetText("NoVehicleTypes")</p>
     }
 
     @if (LoadingState == "loading")
     {
-                                <p>@Localization.GetText("Loading")</p>
+        <p>@Localization.GetText("Loading")</p>
     }
     @if (LoadingState == "error")
     {
-                                <p style="color: red;">@Localization.GetText("Error")</p>
+        <p style="color: red;">@Localization.GetText("Error")</p>
     }
 </div>
 
@@ -177,6 +177,8 @@
     private int _previousNationId = -1;
     private int _previousTypeId = -1;
     private bool _isFirstLoad = true;
+
+    private long? maxRpLimit = null;
 
     public class TotalsUpdateEventArgs : EventArgs
     {
@@ -211,6 +213,45 @@
             await LoadData();
         }
     }
+    public async Task ApplyRpLimit(long limit)
+    {
+        maxRpLimit = limit;
+
+        // Если текущий опыт превышает лимит, снимаем выбор с последних узлов
+        if (totalSelectedRp > limit)
+        {
+            await RemoveExcessSelection(limit);
+        }
+
+        StateHasChanged();
+    }
+
+    // Метод для снятия выбора с последних узлов до достижения лимита:
+    private async Task RemoveExcessSelection(long limit)
+    {
+        var selectedNodesList = selectedNodeIds
+            .Select(id => NodeLookup.TryGetValue(id, out var node) ? node : null)
+            .Where(node => node != null && node.RequiredExp.HasValue)
+            .OrderByDescending(node => node!.Rank) // Снимаем с самых высоких рангов
+            .ThenByDescending(node => node!.ColumnIndex ?? 0)
+            .ToList();
+
+        long currentTotal = totalSelectedRp;
+
+        foreach (var node in selectedNodesList)
+        {
+            if (currentTotal <= limit) break;
+
+            long nodeRp = node!.RequiredExp ?? 0;
+            selectedNodeIds.Remove(node.Id);
+            currentTotal -= nodeRp;
+
+            Console.WriteLine($"Removed node {GetNodeDisplayName(node)} ({nodeRp:N0} RP) due to limit");
+        }
+
+        await CalculateAndUpdateTotals();
+    }
+
     private void OnLanguageChanged()
     {
         // ВАЖНО: Пересчитываем итоги при смене языка для корректного копирования
@@ -329,155 +370,167 @@
         }
     }
     private async Task CalculateAndUpdateTotals()
-{
-    totalSelectedRp = 0;
-    totalSelectedSl = 0;
-    var nameList = new List<string>();
-
-    // ИСПРАВЛЕНО: Получаем ВСЕ выбранные узлы типа "vehicle", не только с опытом
-    var allSelectedNodes = selectedNodeIds
-        .Select(id => NodeLookup.TryGetValue(id, out var node) ? node : null)
-        .Where(node => node != null && node.Type == "vehicle") // Убрали фильтр по RequiredExp
-        .ToList();
-
-    Console.WriteLine($"=== CalculateAndUpdateTotals DEBUG ===");
-    Console.WriteLine($"Total selected node IDs: {selectedNodeIds.Count}");
-    Console.WriteLine($"All selected vehicle nodes: {allSelectedNodes.Count}");
-
-    // Отладка: выводим все выбранные узлы
-    foreach (var node in allSelectedNodes)
     {
-        Console.WriteLine($"Selected node: {GetNodeDisplayName(node!)}, Category: '{node!.TechCategory}', HasRP: {node.RequiredExp.HasValue}");
-    }
+        totalSelectedRp = 0;
+        totalSelectedSl = 0;
+        var nameList = new List<string>();
 
-    // Подсчитываем опыт и SL только для узлов с опытом
-    var nodesWithRp = allSelectedNodes.Where(node => node!.RequiredExp.HasValue).ToList();
-
-    foreach (var node in nodesWithRp)
-    {
-        long rpValue = node!.RequiredExp ?? 0;
-        long slValue = node.SilverCost ?? 0;
-        totalSelectedRp += rpValue;
-        totalSelectedSl += slValue;
-    }
-
-    Console.WriteLine($"Nodes with RP: {nodesWithRp.Count}, Total RP: {totalSelectedRp}");
-
-    // Для отображения имен используем ВСЕ выбранные узлы
-    foreach (var node in allSelectedNodes)
-    {
-        nameList.Add(GetNodeDisplayName(node!));
-    }
-
-    string namesString = string.Join(", ", nameList);
-    
-    // ИСПРАВЛЕНО: Передаем ВСЕ выбранные узлы в форматирование, не только с RP
-    string formattedText = FormatVehicleListForCopy(allSelectedNodes!);
-
-    Console.WriteLine($"Names for display: {namesString}");
-    Console.WriteLine($"Formatted text length: {formattedText.Length}");
-
-    if (OnTotalsUpdated.HasDelegate)
-    {
-        await OnTotalsUpdated.InvokeAsync(new TotalsUpdateEventArgs
-            {
-                TotalRp = totalSelectedRp,
-                TotalSl = totalSelectedSl,
-                SelectedNames = namesString,
-                FormattedText = formattedText
-            });
-    }
-
-    // Уведомляем родительский компонент об изменении выбранных рангов
-    if (OnSelectedRanksChanged.HasDelegate)
-    {
-        var selectedRanks = GetSelectedRanks();
-        await OnSelectedRanksChanged.InvokeAsync(selectedRanks);
-    }
-}
- private string FormatVehicleListForCopy(List<Node> selectedNodes)
-{
-    if (!selectedNodes.Any()) return "";
-
-    foreach (var node in selectedNodes)
-    {
-        Console.WriteLine($"Node: {GetNodeDisplayName(node)}, Category: '{node.TechCategory}', Type: '{node.Type}'");
-    }
-
-    // Разделяем стандартную и премиумную технику
-    var standardNodes = selectedNodes.Where(n => n.TechCategory == "standard").ToList();
-    var premiumNodes = selectedNodes.Where(n => n.TechCategory != "standard").ToList();
-
-    Console.WriteLine($"Standard nodes: {standardNodes.Count}, Premium nodes: {premiumNodes.Count}");
-
-    var result = new List<string>();
-
-    // Обрабатываем стандартную технику (группируем по рангам)
-    if (standardNodes.Any())
-    {
-        var groupedByRank = standardNodes
-            .GroupBy(n => n.Rank)
-            .OrderBy(g => g.Key)
+        // ИСПРАВЛЕНО: Получаем ВСЕ выбранные узлы типа "vehicle", не только с опытом
+        var allSelectedNodes = selectedNodeIds
+            .Select(id => NodeLookup.TryGetValue(id, out var node) ? node : null)
+            .Where(node => node != null && node.Type == "vehicle") // Убрали фильтр по RequiredExp
             .ToList();
 
-        foreach (var rankGroup in groupedByRank)
+        Console.WriteLine($"=== CalculateAndUpdateTotals DEBUG ===");
+        Console.WriteLine($"Total selected node IDs: {selectedNodeIds.Count}");
+        Console.WriteLine($"All selected vehicle nodes: {allSelectedNodes.Count}");
+
+        // Отладка: выводим все выбранные узлы
+        foreach (var node in allSelectedNodes)
         {
-            var rankNumber = rankGroup.Key;
-            var vehiclesInRank = rankGroup
-                .OrderBy(n => n.ColumnIndex ?? 0)
+            Console.WriteLine($"Selected node: {GetNodeDisplayName(node!)}, Category: '{node!.TechCategory}', HasRP: {node.RequiredExp.HasValue}");
+        }
+
+        // Подсчитываем опыт и SL только для узлов с опытом
+        var nodesWithRp = allSelectedNodes.Where(node => node!.RequiredExp.HasValue).ToList();
+
+        foreach (var node in nodesWithRp)
+        {
+            long rpValue = node!.RequiredExp ?? 0;
+            long slValue = node.SilverCost ?? 0;
+            totalSelectedRp += rpValue;
+            totalSelectedSl += slValue;
+        }
+
+        Console.WriteLine($"Nodes with RP: {nodesWithRp.Count}, Total RP: {totalSelectedRp}");
+
+        // Для отображения имен используем ВСЕ выбранные узлы
+        foreach (var node in allSelectedNodes)
+        {
+            nameList.Add(GetNodeDisplayName(node!));
+        }
+
+        string namesString = string.Join(", ", nameList);
+
+        // ИСПРАВЛЕНО: Передаем ВСЕ выбранные узлы в форматирование, не только с RP
+        string formattedText = FormatVehicleListForCopy(allSelectedNodes!);
+
+        Console.WriteLine($"Names for display: {namesString}");
+        Console.WriteLine($"Formatted text length: {formattedText.Length}");
+
+        if (OnTotalsUpdated.HasDelegate)
+        {
+            await OnTotalsUpdated.InvokeAsync(new TotalsUpdateEventArgs
+                {
+                    TotalRp = totalSelectedRp,
+                    TotalSl = totalSelectedSl,
+                    SelectedNames = namesString,
+                    FormattedText = formattedText
+                });
+        }
+
+        // Уведомляем родительский компонент об изменении выбранных рангов
+        if (OnSelectedRanksChanged.HasDelegate)
+        {
+            var selectedRanks = GetSelectedRanks();
+            await OnSelectedRanksChanged.InvokeAsync(selectedRanks);
+        }
+        if (JSRuntime != null && maxRpLimit.HasValue)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("techTreeFunctions.updateNodesLimitState",
+                    maxRpLimit.Value, totalSelectedRp);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to update nodes limit state: {ex.Message}");
+            }
+        }
+    }
+    private string FormatVehicleListForCopy(List<Node> selectedNodes)
+    {
+        if (!selectedNodes.Any()) return "";
+
+        foreach (var node in selectedNodes)
+        {
+            Console.WriteLine($"Node: {GetNodeDisplayName(node)}, Category: '{node.TechCategory}', Type: '{node.Type}'");
+        }
+
+        // Разделяем стандартную и премиумную технику
+        var standardNodes = selectedNodes.Where(n => n.TechCategory == "standard").ToList();
+        var premiumNodes = selectedNodes.Where(n => n.TechCategory != "standard").ToList();
+
+        Console.WriteLine($"Standard nodes: {standardNodes.Count}, Premium nodes: {premiumNodes.Count}");
+
+        var result = new List<string>();
+
+        // Обрабатываем стандартную технику (группируем по рангам)
+        if (standardNodes.Any())
+        {
+            var groupedByRank = standardNodes
+                .GroupBy(n => n.Rank)
+                .OrderBy(g => g.Key)
                 .ToList();
 
-            var vehicleNames = new List<string>();
-
-            foreach (var vehicle in vehiclesInRank)
+            foreach (var rankGroup in groupedByRank)
             {
-                string vehicleName = GetNodeDisplayName(vehicle);
+                var rankNumber = rankGroup.Key;
+                var vehiclesInRank = rankGroup
+                    .OrderBy(n => n.ColumnIndex ?? 0)
+                    .ToList();
 
-                // Проверяем, изменено ли значение RP только для стандартной техники
-                if (IsRpValueModified(vehicle))
+                var vehicleNames = new List<string>();
+
+                foreach (var vehicle in vehiclesInRank)
                 {
-                    var currentRp = vehicle.RequiredExp ?? 0;
-                    var originalRp = originalRpValues.TryGetValue(vehicle.Id, out var orig) ? orig ?? 0 : 0;
-                    vehicleName += $" ({currentRp} / {originalRp})";
+                    string vehicleName = GetNodeDisplayName(vehicle);
+
+                    // Проверяем, изменено ли значение RP только для стандартной техники
+                    if (IsRpValueModified(vehicle))
+                    {
+                        var currentRp = vehicle.RequiredExp ?? 0;
+                        var originalRp = originalRpValues.TryGetValue(vehicle.Id, out var orig) ? orig ?? 0 : 0;
+                        vehicleName += $" ({currentRp} / {originalRp})";
+                    }
+
+                    vehicleNames.Add(vehicleName);
                 }
 
-                vehicleNames.Add(vehicleName);
+                // Формируем строку для ранга с учетом языка
+                string rankLine = $"{Localization.GetText("Rank")} {ToRomanNumeral(rankNumber)}:\n{string.Join(", ", vehicleNames)}";
+                result.Add(rankLine);
+            }
+        }
+
+        // Добавляем премиумную технику простым списком через запятую
+        if (premiumNodes.Any())
+        {
+            Console.WriteLine("=== Adding premium vehicles ===");
+            var premiumNames = new List<string>();
+
+            foreach (var vehicle in premiumNodes.OrderBy(n => n.Rank).ThenBy(n => n.ColumnIndex ?? 0))
+            {
+                // Для премиумной техники берем ТОЛЬКО локализованное имя, без RP
+                string vehicleName = GetNodeDisplayName(vehicle);
+                premiumNames.Add(vehicleName);
+                Console.WriteLine($"Added premium: {vehicleName}");
             }
 
-            // Формируем строку для ранга с учетом языка
-            string rankLine = $"{Localization.GetText("Rank")} {ToRomanNumeral(rankNumber)}:\n{string.Join(", ", vehicleNames)}";
-            result.Add(rankLine);
-        }
-    }
-
-    // Добавляем премиумную технику простым списком через запятую
-    if (premiumNodes.Any())
-    {
-        Console.WriteLine("=== Adding premium vehicles ===");
-        var premiumNames = new List<string>();
-
-        foreach (var vehicle in premiumNodes.OrderBy(n => n.Rank).ThenBy(n => n.ColumnIndex ?? 0))
-        {
-            // Для премиумной техники берем ТОЛЬКО локализованное имя, без RP
-            string vehicleName = GetNodeDisplayName(vehicle);
-            premiumNames.Add(vehicleName);
-            Console.WriteLine($"Added premium: {vehicleName}");
+            // Добавляем премиумную технику как отдельную секцию
+            string premiumText = string.Join(", ", premiumNames);
+            result.Add(premiumText);
+            Console.WriteLine($"Premium section: {premiumText}");
         }
 
-        // Добавляем премиумную технику как отдельную секцию
-        string premiumText = string.Join(", ", premiumNames);
-        result.Add(premiumText);
-        Console.WriteLine($"Premium section: {premiumText}");
+        // Добавляем общее количество опыта в конец
+        string totalRpText = $"{Localization.GetText("TotalRP")}: {totalSelectedRp:N0}";
+
+        var finalResult = string.Join("\n\n", result) + (result.Any() ? "\n\n" + totalRpText : totalRpText);
+        Console.WriteLine($"=== Final formatted text ===\n{finalResult}");
+
+        return finalResult;
     }
-
-    // Добавляем общее количество опыта в конец
-    string totalRpText = $"{Localization.GetText("TotalRP")}: {totalSelectedRp:N0}";
-
-    var finalResult = string.Join("\n\n", result) + (result.Any() ? "\n\n" + totalRpText : totalRpText);
-    Console.WriteLine($"=== Final formatted text ===\n{finalResult}");
-    
-    return finalResult;
-}
     private string ToRomanNumeral(int number)
     {
         return number switch
@@ -651,19 +704,83 @@
 
         if (isSelected)
         {
+            // Снятие выбора всегда разрешено
             selectedNodeIds.Remove(node.Id);
+
+            // Восстанавливаем оригинальное значение RP при снятии выбора
+            if (originalRpValues.TryGetValue(node.Id, out var originalRp))
+            {
+                node.RequiredExp = originalRp;
+            }
         }
         else
         {
-            selectedNodeIds.Add(node.Id);
+            // Проверяем лимит при выборе
+            if (maxRpLimit.HasValue && CanSelectNodeWithLimit(node))
+            {
+                long nodeRp = node.RequiredExp ?? 0;
+                long potentialTotal = totalSelectedRp + nodeRp;
+
+                if (potentialTotal > maxRpLimit.Value)
+                {
+                    // Автоподгонка: уменьшаем RP узла до разности
+                    long allowedRp = maxRpLimit.Value - totalSelectedRp;
+                    if (allowedRp > 0)
+                    {
+                        node.RequiredExp = (int)allowedRp;
+                        selectedNodeIds.Add(node.Id);
+                        Console.WriteLine($"Auto-adjusted node {GetNodeDisplayName(node)} RP from {nodeRp:N0} to {allowedRp:N0}");
+                    }
+                    else
+                    {
+                        // Лимит уже достигнут, показываем предупреждение
+                        await NotifyLimitExceeded();
+                        return;
+                    }
+                }
+                else
+                {
+                    selectedNodeIds.Add(node.Id);
+                }
+            }
+            else if (!maxRpLimit.HasValue)
+            {
+                // Нет лимита, выбираем как обычно
+                selectedNodeIds.Add(node.Id);
+            }
+            else
+            {
+                // Лимит не позволяет выбрать узел
+                await NotifyLimitExceeded();
+                return;
+            }
         }
 
-        // ИСПРАВЛЕНО: пересчитываем итоги с учетом текущего языка
         await CalculateAndUpdateTotals();
         await UpdateUrlState();
         StateHasChanged();
     }
+    private bool CanSelectNodeWithLimit(Node node)
+    {
+        if (!maxRpLimit.HasValue) return true;
 
+        long nodeRp = node.RequiredExp ?? 0;
+        return totalSelectedRp < maxRpLimit.Value; // Можно выбрать если лимит не достигнут
+    }
+
+    // Уведомление о превышении лимита:
+    private async Task NotifyLimitExceeded()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("techTreeFunctions.showRpLimitWarning",
+                Localization.GetText("RPLimitExceededMessage"));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to show limit warning: {ex.Message}");
+        }
+    }
     private bool IsFolderSelected(Node folderNode)
     {
         var children = GetVisualNodesInFolderSequence(folderNode);
