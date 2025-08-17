@@ -839,6 +839,7 @@
             .Where(n =>
                 n.Rank == folderNode.Rank
                 && n.ColumnIndex == folderNode.ColumnIndex
+                && n.TechCategory == folderNode.TechCategory 
                 && n.RowIndex == folderNode.RowIndex
                 && n.OrderInFolder.HasValue)
             .OrderBy(n => n.OrderInFolder!.Value)
