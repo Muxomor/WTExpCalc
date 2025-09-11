@@ -88,7 +88,7 @@ nav.flex-column {
 .version-info {
     padding: 6px 8px;
     text-align: center;
-    font-size: 0.65em;
+    font-size: 0.55em;
     color: rgba(255, 255, 255, 0.4);
     border-top: 1px solid #333;
     background-color: rgba(0, 0, 0, 0.1);
@@ -118,7 +118,7 @@ nav.flex-column {
     }
 
     .version-info {
-        font-size: 0.55em;
+        font-size: 0.45em;
         padding: 4px 6px;
     }
 }
