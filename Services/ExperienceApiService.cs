@@ -85,7 +85,6 @@ namespace WTExpCalc.Services
         {
             try
             {
-                // Ищем нацию по английскому названию (slug)
                 var url = $"api/nations?name=eq.{Uri.EscapeDataString(slug)}&select=*&limit=1";
                 var nationsList = await _http.GetFromJsonAsync<List<Nation>>(url, _jsonOptions);
 
@@ -102,7 +101,6 @@ namespace WTExpCalc.Services
         {
             try
             {
-                // Получаем все типы и ищем по slug
                 var allTypes = await GetVehicleTypesAsync();
                 return allTypes.FirstOrDefault(vt => vt.Slug.Equals(slug, StringComparison.OrdinalIgnoreCase));
             }

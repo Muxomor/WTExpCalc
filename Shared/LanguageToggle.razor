@@ -4,11 +4,11 @@
 @implements IDisposable
 
 <div class="language-toggle">
-    <button class="lang-btn @(!Localization.IsEnglish ? "active" : "")" 
+    <button class="lang-btn @(!Localization.IsEnglish ? "active" : "")"
             @onclick="@(() => SwitchLanguage("ru"))">
         🇷🇺
     </button>
-    <button class="lang-btn @(Localization.IsEnglish ? "active" : "")" 
+    <button class="lang-btn @(Localization.IsEnglish ? "active" : "")"
             @onclick="@(() => SwitchLanguage("en"))">
         🇺🇸
     </button>
@@ -16,115 +16,27 @@
 
 @code
 {
-
-
-    protected
-
-    override
-
-    void
-
-    OnInitialized
-    (
-    )
-
-
+    protected override void OnInitialized()
     {
-
-        Localization
-    .
-    LanguageChanged
-    +=
-     OnLanguageChanged
-    ;
-
-
+        Localization.LanguageChanged += OnLanguageChanged;
     }
 
-
-
-    private
-
-    async
-
-    Task
-
-    SwitchLanguage
-    (
-    string
-     lang
-    )
-
-
+    private async Task SwitchLanguage(string lang)
     {
-
-
-        await
-         Localization
-        .
-        SetLanguageAsync
-        (
-        lang
-        )
-        ;
-
-
-        StateHasChanged
-        (
-        )
-        ;
-
-
+        await Localization.SetLanguageAsync(lang);
+        StateHasChanged();
     }
 
-
-
-    private
-
-    void
-
-    OnLanguageChanged
-    (
-    )
-
-
+    private void OnLanguageChanged()
     {
-
-
-        InvokeAsync
-        (
-        StateHasChanged
-        )
-        ;
-
-
+        InvokeAsync(StateHasChanged);
     }
 
-
-
-    public
-
-    void
-
-    Dispose
-    (
-    )
-
-
+    public void Dispose()
     {
-
-        Localization
-    .
-    LanguageChanged
-    -=
-     OnLanguageChanged
-    ;
-
-
+        Localization.LanguageChanged -= OnLanguageChanged;
     }
-
 }
-
 
 <style>
     .language-toggle {
@@ -152,17 +64,16 @@
         overflow: hidden;
     }
 
-    .lang-btn:hover {
-        background: rgba(255, 255, 255, 0.2);
-        color: white;
-        text-decoration: none;
-    }
+        .lang-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+        }
 
-    .lang-btn.active {
-        background: rgba(255, 255, 255, 0.3);
-        color: white;
-        border-color: rgba(255, 255, 255, 0.4);
-        font-weight: 500;
-    }
-
+        .lang-btn.active {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.4);
+            font-weight: 500;
+        }
 </style>

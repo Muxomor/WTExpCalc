@@ -254,7 +254,6 @@
 
     private void OnLanguageChanged()
     {
-        // ВАЖНО: Пересчитываем итоги при смене языка для корректного копирования
         InvokeAsync(async () =>
         {
             await CalculateAndUpdateTotals();
@@ -375,7 +374,6 @@
         totalSelectedSl = 0;
         var nameList = new List<string>();
 
-        // ИСПРАВЛЕНО: Получаем ВСЕ выбранные узлы типа "vehicle", не только с опытом
         var allSelectedNodes = selectedNodeIds
             .Select(id => NodeLookup.TryGetValue(id, out var node) ? node : null)
             .Where(node => node != null && node.Type == "vehicle") // Убрали фильтр по RequiredExp
@@ -412,7 +410,6 @@
 
         string namesString = string.Join(", ", nameList);
 
-        // ИСПРАВЛЕНО: Передаем ВСЕ выбранные узлы в форматирование, не только с RP
         string formattedText = FormatVehicleListForCopy(allSelectedNodes!);
 
         Console.WriteLine($"Names for display: {namesString}");
@@ -810,7 +807,6 @@
         builder.AddAttribute(seq++, "style", $"background-image:url('{node.ImageUrl}')");
         builder.CloseElement();
 
-        // ИСПРАВЛЕНО: название папки с локализацией
         builder.OpenElement(seq++, "div");
         builder.AddAttribute(seq++, "class", "node-name");
         builder.AddContent(seq++, GetNodeDisplayName(node));
@@ -890,7 +886,6 @@
 
         __builder.OpenElement(seq++, "div");
         __builder.AddAttribute(seq++, "class", "node-name");
-        // ИСПРАВЛЕНО: используем локализованное название
         __builder.AddContent(seq++, GetNodeDisplayName(node));
         __builder.CloseElement();
 
@@ -910,7 +905,6 @@
         __builder.AddAttribute(seq++, "class", "node-detail-item node-exp");
         if (node.RequiredExp.HasValue)
         {
-            // ИСПРАВЛЕНО: используем локализованную метку ОИ/RP
             __builder.AddContent(seq++, $"{Localization.GetText("RP")}: ");
             __builder.OpenElement(seq++, "input");
             __builder.AddAttribute(seq++, "type", "number");
@@ -1040,7 +1034,6 @@
     [JSInvokable]
     public void OnScreenshotProgress(string message)
     {
-        // Этот метод может быть вызван из JavaScript для обновления прогресса
         Console.WriteLine($"Screenshot progress: {message}");
     }
 

@@ -10,30 +10,30 @@
     <div class="nav-scrollable">
         @if (nations == null)
         {
-                    <div class="nav-item px-1 py-2 text-center">
-                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                    </div>
+           <div class="nav-item px-1 py-2 text-center">
+               <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+           </div>
         }
         else
         {
             @foreach (var nation in nations)
             {
-                                <div class="nav-item">
-                                    <a class="nav-link py-2 px-0 d-flex justify-content-center align-items-center @GetActiveCssClass(nation.Slug)"
-                                       href="@GetNationUrl(nation.Slug)"
-                                       title="@GetNationDisplayName(nation)">
-                                        <img src="@nation.ImageUrl"
-                                             alt="@GetNationDisplayName(nation)" class="nation-flag-icon" />
-                                    </a>
-                                </div>
+                <div class="nav-item">
+                    <a class="nav-link py-2 px-0 d-flex justify-content-center align-items-center @GetActiveCssClass(nation.Slug)"
+                       href="@GetNationUrl(nation.Slug)"
+                       title="@GetNationDisplayName(nation)">
+                        <img src="@nation.ImageUrl"
+                             alt="@GetNationDisplayName(nation)" class="nation-flag-icon" />
+                    </a>
+                </div>
             }
         }
     </div>
     @if (!string.IsNullOrEmpty(currentVersion))
     {
-                <div class="version-info">
+        <div class="version-info">
             @currentVersion
-                </div>
+        </div>
     }
 
     <LanguageToggle />
