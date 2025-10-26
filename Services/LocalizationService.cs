@@ -101,7 +101,10 @@ namespace WTExpCalc.Services
         {
             _jsRuntime = jsRuntime;
         }
-
+        public LocalizationService()
+        {
+            _jsRuntime = null;
+        }
         public string GetText(string key)
         {
             if (_translations.TryGetValue(_currentLanguage, out var languageDict) &&
@@ -110,7 +113,6 @@ namespace WTExpCalc.Services
                 return translation;
             }
 
-            // Fallback к русскому
             if (_currentLanguage != "ru" &&
                 _translations.TryGetValue("ru", out var ruDict) &&
                 ruDict.TryGetValue(key, out var ruTranslation))
@@ -130,11 +132,14 @@ namespace WTExpCalc.Services
             {
                 _currentLanguage = language;
 
-                try
+                if (_jsRuntime != null)
                 {
-                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "selectedLanguage", language);
+                    try
+                    {
+                        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "selectedLanguage", language);
+                    }
+                    catch { }
                 }
-                catch { }
 
                 LanguageChanged?.Invoke();
             }
@@ -142,6 +147,9 @@ namespace WTExpCalc.Services
 
         public async Task<string> LoadSavedLanguageAsync()
         {
+            if (_jsRuntime == null)
+                return "ru";
+            
             try
             {
                 var saved = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "selectedLanguage");
