@@ -100,7 +100,7 @@ If you are using Caddy as a reverse proxy, the following `Caddyfile` provides a 
 
 ```
 # Caddyfile Example
-wtmeta.ru {
+example.com {
     handle_path /api/* {
         reverse_proxy localhost:3000 # PostgREST API
     }
@@ -118,7 +118,7 @@ wtmeta.ru {
     }
 }
 
-www.wtmeta.ru {
+www.example.com {
     redir https://wtmeta.ru{uri} permanent
 }
 ```
