@@ -119,7 +119,7 @@ example.com {
 }
 
 www.example.com {
-    redir https://wtmeta.ru{uri} permanent
+    redir https://example.com{uri} permanent
 }
 ```
 
