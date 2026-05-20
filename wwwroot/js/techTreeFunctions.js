@@ -98,207 +98,258 @@
             alert("Ошибка при копировании текста (fallback).");
         }
     },
+    _publicApiMethods: Object.freeze([
+        'positionFolderPopup',
+        'updateNodesLimitState',
+        'showRpLimitWarning',
+        'drawConnections',
+        'copyTextToClipboard_fallback',
+        'copyScreenshotToClipboard',
+        'downloadScreenshot',
+        'generateScreenshotFilename',
+        'downloadScreenshot4K',
+        'generateScreenshotFilename4K'
+    ]),
+    _invokeCallback: function (callbackRef, methodName, ...args) {
+        if (!callbackRef) return;
+        try {
+            callbackRef.invokeMethodAsync(methodName, ...args);
+        } catch (error) {
+            console.error(`Error invoking callback ${methodName}:`, error);
+        }
+    },
+    _reportProgress: function (onProgress, message) {
+        if (onProgress) onProgress(message);
+    },
+    _removeElement: function (element) {
+        if (element && element.parentNode) {
+            element.parentNode.removeChild(element);
+        }
+    },
+    _createTempContainer: function (treeContainer) {
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.top = '-10000px';
+        tempContainer.style.left = '-10000px';
+        tempContainer.style.background = '#1a1a1a';
+        tempContainer.style.width = treeContainer.scrollWidth + 'px';
+        tempContainer.style.overflow = 'visible';
+        return tempContainer;
+    },
+    _createTreeClone: function (treeContainer) {
+        const treeClone = treeContainer.cloneNode(true);
+        treeClone.style.paddingBottom = '10px';
+        treeClone.style.position = 'relative';
+        return treeClone;
+    },
+    _createSummaryClone: function (summaryContainer) {
+        if (!summaryContainer) return null;
+        const summaryClone = summaryContainer.cloneNode(true);
+        const cloneNamesContainer = summaryClone.querySelector('#selected-names-container');
+        const cloneButtons = summaryClone.querySelectorAll('button');
+        if (cloneNamesContainer) cloneNamesContainer.remove();
+        cloneButtons.forEach(btn => btn.remove());
+
+        summaryClone.style.background = 'rgba(40, 40, 40, 0.95)';
+        summaryClone.style.backdropFilter = 'blur(3px)';
+        summaryClone.style.borderTop = '1px solid #666';
+        summaryClone.style.padding = '12px 20px';
+        summaryClone.style.display = 'flex';
+        summaryClone.style.flexDirection = 'column';
+        summaryClone.style.alignItems = 'center';
+        summaryClone.style.gap = '8px';
+        return summaryClone;
+    },
+    _getSummaryPanelHeight: function (summaryContainer) {
+        const summaryPanelElement = summaryContainer ? summaryContainer.querySelector('#summary-panel') : null;
+        return summaryPanelElement ? summaryPanelElement.getBoundingClientRect().height + 44 : 80;
+    },
+    _buildConnectionDataFromDom: function () {
+        const svg = document.querySelector('.tree-connections-overlay');
+        if (!svg) return [];
+
+        const lines = svg.querySelectorAll('line[id^="dep-"]');
+        const connectionData = [];
+
+        lines.forEach(line => {
+            const match = /^dep-(\d+)-(\d+)$/.exec(line.id);
+            if (!match) return;
+
+            const targetNodeId = match[1];
+            const sourceNodeId = match[2];
+
+            connectionData.push({
+                lineId: line.id,
+                sourceElementId: `node-${sourceNodeId}`,
+                targetElementId: `node-${targetNodeId}`
+            });
+        });
+
+        return connectionData;
+    },
+    _refreshConnectionsBeforeScreenshot: async function () {
+        const connectionData = this._buildConnectionDataFromDom();
+        if (!connectionData.length) return;
+
+        this.drawConnections(connectionData);
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    },
+    _resolveScreenshotContext: function (selectedRanks) {
+        const treeContainer = document.getElementById('tech-tree-container-id');
+        const summaryContainer = document.getElementById('summary-container');
+        if (!treeContainer) {
+            throw new Error('Tech tree container not found');
+        }
+
+        const baseScreenshotArea = this.calculateScreenshotAreaByRanks(selectedRanks);
+        if (!baseScreenshotArea) {
+            throw new Error(`Не удалось найти ранги ${selectedRanks.join(', ')} на странице.`);
+        }
+
+        const { foundRanks } = this.findRankElements();
+        if (!foundRanks || foundRanks.length === 0) {
+            throw new Error('No ranks found on the page');
+        }
+
+        const maxAvailableRank = Math.max(...foundRanks);
+        const maxSelectedRank = Math.max(...selectedRanks);
+        return {
+            treeContainer,
+            summaryContainer,
+            baseScreenshotArea,
+            useOldMethod: maxSelectedRank >= maxAvailableRank
+        };
+    },
+    _buildScreenshotScene: function (treeContainer, summaryContainer, baseScreenshotArea, useOldMethod) {
+        const tempContainer = this._createTempContainer(treeContainer);
+        const treeClone = this._createTreeClone(treeContainer);
+        tempContainer.appendChild(treeClone);
+
+        const summaryClone = this._createSummaryClone(summaryContainer);
+        if (summaryClone) {
+            if (useOldMethod) {
+                summaryClone.style.position = 'relative';
+                summaryClone.style.marginTop = '20px';
+                summaryClone.style.width = treeContainer.scrollWidth + 'px';
+                tempContainer.appendChild(summaryClone);
+            } else {
+                summaryClone.style.position = 'absolute';
+                summaryClone.style.zIndex = '1000';
+                summaryClone.style.left = baseScreenshotArea.x + 'px';
+                summaryClone.style.top = (baseScreenshotArea.y + baseScreenshotArea.height + 20) + 'px';
+                summaryClone.style.width = baseScreenshotArea.width + 'px';
+                treeClone.appendChild(summaryClone);
+            }
+        }
+
+        const panelHeight = this._getSummaryPanelHeight(summaryContainer);
+        const finalScreenshotArea = {
+            x: baseScreenshotArea.x,
+            y: baseScreenshotArea.y,
+            width: baseScreenshotArea.width,
+            height: baseScreenshotArea.height + panelHeight
+        };
+
+        return { tempContainer, finalScreenshotArea };
+    },
+    _renderScreenshotCanvas: async function (tempContainer, screenshotArea, scale) {
+        document.body.appendChild(tempContainer);
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        return html2canvas(tempContainer, {
+            scale: scale,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#1a1a1a',
+            logging: false,
+            x: screenshotArea.x,
+            y: screenshotArea.y,
+            width: screenshotArea.width,
+            height: screenshotArea.height,
+            windowWidth: tempContainer.scrollWidth,
+            windowHeight: tempContainer.scrollHeight,
+            scrollX: tempContainer.scrollLeft,
+            scrollY: tempContainer.scrollTop
+        });
+    },
+    _limitCanvasSize: function (canvas, maxSize, modeName) {
+        if (canvas.width <= maxSize && canvas.height <= maxSize) {
+            return canvas;
+        }
+
+        const scaleDown = Math.min(maxSize / canvas.width, maxSize / canvas.height);
+        const finalWidth = Math.floor(canvas.width * scaleDown);
+        const finalHeight = Math.floor(canvas.height * scaleDown);
+
+        const scaledCanvas = document.createElement('canvas');
+        scaledCanvas.width = finalWidth;
+        scaledCanvas.height = finalHeight;
+        const ctx = scaledCanvas.getContext('2d');
+        ctx.drawImage(canvas, 0, 0, finalWidth, finalHeight);
+        console.warn(`${modeName} canvas was downscaled from ${canvas.width}x${canvas.height} to ${finalWidth}x${finalHeight}`);
+        return scaledCanvas;
+    },
+    _createScreenshotInternal: async function (selectedRanks, options, onProgress) {
+        let tempContainer = null;
+        try {
+            this._reportProgress(onProgress, options.preparingMessage);
+            // Recalculate arrows once right before screenshot to avoid stale positions after zoom.
+            await this._refreshConnectionsBeforeScreenshot();
+            const context = this._resolveScreenshotContext(selectedRanks);
+            const scene = this._buildScreenshotScene(
+                context.treeContainer,
+                context.summaryContainer,
+                context.baseScreenshotArea,
+                context.useOldMethod
+            );
+            tempContainer = scene.tempContainer;
+
+            this._reportProgress(onProgress, options.renderMessage);
+            const canvas = await this._renderScreenshotCanvas(tempContainer, scene.finalScreenshotArea, options.scale);
+
+            this._reportProgress(onProgress, options.processMessage);
+            return this._limitCanvasSize(canvas, options.maxCanvasSize, options.modeName);
+        } finally {
+            this._removeElement(tempContainer);
+        }
+    },
+    _canvasToBlob: function (canvas) {
+        return new Promise((resolve, reject) => {
+            canvas.toBlob((blob) => {
+                if (!blob) {
+                    reject(new Error('Canvas blob creation failed'));
+                    return;
+                }
+                resolve(blob);
+            }, 'image/png');
+        });
+    },
+    _downloadBlob: function (blob, filename) {
+        const url = URL.createObjectURL(blob);
+        try {
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = url;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } finally {
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+    },
     createScreenshot4K: async function (selectedRanks, filename, onProgress) {
         try {
-            console.log('Starting 4K screenshot creation for ranks:', selectedRanks);
-
-            if (onProgress) onProgress('Подготовка 4K области...');
-
-            const treeContainer = document.getElementById('tech-tree-container-id');
-            const summaryContainer = document.getElementById('summary-container');
-
-            if (!treeContainer) {
-                throw new Error('Tech tree container not found');
-            }
-
-            console.log('Tree container found for 4K screenshot');
-
-            const baseScreenshotArea = this.calculateScreenshotAreaByRanks(selectedRanks);
-            if (!baseScreenshotArea) {
-                throw new Error(`Не удалось найти ранги ${selectedRanks.join(', ')} на странице.`);
-            }
-
-            const { foundRanks } = this.findRankElements();
-            const maxAvailableRank = Math.max(...foundRanks);
-            const maxSelectedRank = Math.max(...selectedRanks);
-            const treeGridRect = document.querySelector('.tree-grid').getBoundingClientRect();
-
-            const summaryRect = summaryContainer ? summaryContainer.getBoundingClientRect() : null;
-            const viewportHeight = window.innerHeight;
-
-            let distanceToSummary = Infinity;
-            if (summaryRect) {
-                const areaBottomInViewport = baseScreenshotArea.y + baseScreenshotArea.height - treeGridRect.top + treeGridRect.top;
-                distanceToSummary = Math.abs(summaryRect.top - areaBottomInViewport);
-            }
-
-            const isMaxAvailableRank = maxSelectedRank >= maxAvailableRank;
-            const isCloseToSummaryPanel = distanceToSummary < viewportHeight * 0.4;
-            const useOldMethod = isMaxAvailableRank || isCloseToSummaryPanel;
-
-            const tempContainer = document.createElement('div');
-            tempContainer.style.position = 'absolute';
-            tempContainer.style.top = '-10000px';
-            tempContainer.style.left = '-10000px';
-            tempContainer.style.background = '#1a1a1a';
-            tempContainer.style.width = treeContainer.scrollWidth + 'px';
-            tempContainer.style.overflow = 'visible';
-
-            const treeClone = treeContainer.cloneNode(true);
-            treeClone.style.paddingBottom = '10px';
-            treeClone.style.position = 'relative';
-            tempContainer.appendChild(treeClone);
-
-            let finalScreenshotArea;
-
-            if (useOldMethod) {
-                if (summaryContainer) {
-                    const summaryClone = summaryContainer.cloneNode(true);
-                    const cloneNamesContainer = summaryClone.querySelector('#selected-names-container');
-                    const cloneButtons = summaryClone.querySelectorAll('button');
-
-                    if (cloneNamesContainer) cloneNamesContainer.remove();
-                    cloneButtons.forEach(btn => btn.remove());
-
-                    summaryClone.style.position = 'relative';
-                    summaryClone.style.background = 'rgba(40, 40, 40, 0.95)';
-                    summaryClone.style.backdropFilter = 'blur(3px)';
-                    summaryClone.style.borderTop = '1px solid #666';
-                    summaryClone.style.marginTop = '20px';
-                    summaryClone.style.padding = '12px 20px';
-                    summaryClone.style.display = 'flex';
-                    summaryClone.style.flexDirection = 'column';
-                    summaryClone.style.alignItems = 'center';
-                    summaryClone.style.gap = '8px';
-                    summaryClone.style.width = treeContainer.scrollWidth + 'px';
-
-                    tempContainer.appendChild(summaryClone);
-                }
-
-                const realSummaryHeight = summaryContainer ? summaryContainer.getBoundingClientRect().height : 80;
-                const additionalPadding = 50;
-                const panelHeight = realSummaryHeight + additionalPadding;
-
-                finalScreenshotArea = {
-                    x: baseScreenshotArea.x,
-                    y: baseScreenshotArea.y,
-                    width: baseScreenshotArea.width,
-                    height: baseScreenshotArea.height + panelHeight
-                };
-            } else {
-                if (summaryContainer) {
-                    const summaryClone = summaryContainer.cloneNode(true);
-                    const cloneNamesContainer = summaryClone.querySelector('#selected-names-container');
-                    const cloneButtons = summaryClone.querySelectorAll('button');
-
-                    if (cloneNamesContainer) cloneNamesContainer.remove();
-                    cloneButtons.forEach(btn => btn.remove());
-
-                    summaryClone.style.position = 'absolute';
-                    summaryClone.style.background = 'rgba(40, 40, 40, 0.95)';
-                    summaryClone.style.backdropFilter = 'blur(3px)';
-                    summaryClone.style.border = '1px solid #666';
-                    summaryClone.style.borderRadius = '8px';
-                    summaryClone.style.padding = '12px 20px';
-                    summaryClone.style.display = 'flex';
-                    summaryClone.style.flexDirection = 'column';
-                    summaryClone.style.alignItems = 'center';
-                    summaryClone.style.gap = '8px';
-                    summaryClone.style.zIndex = '1000';
-                    summaryClone.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
-
-                    const panelWidth = 300;
-                    const panelHeight = 80;
-                    const margin = 20;
-
-                    const panelX = Math.max(baseScreenshotArea.x + baseScreenshotArea.width - panelWidth - margin, baseScreenshotArea.x + margin);
-                    const panelY = baseScreenshotArea.y + baseScreenshotArea.height + margin;
-
-                    summaryClone.style.left = panelX + 'px';
-                    summaryClone.style.top = panelY + 'px';
-                    summaryClone.style.width = panelWidth + 'px';
-
-                    treeClone.appendChild(summaryClone);
-                }
-
-                const panelHeight = 100;
-                const panelMargin = 30;
-                finalScreenshotArea = {
-                    x: baseScreenshotArea.x,
-                    y: baseScreenshotArea.y,
-                    width: baseScreenshotArea.width,
-                    height: baseScreenshotArea.height + panelHeight + panelMargin
-                };
-            }
-
-            document.body.appendChild(tempContainer);
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            if (onProgress) onProgress('Создание 4K скриншота...');
-
-            const canvas = await html2canvas(tempContainer, {
-                scale: 4, // Увеличиваем scale для лучшего качества
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#1a1a1a',
-                logging: true,
-                width: tempContainer.scrollWidth,
-                height: tempContainer.scrollHeight,
-                scrollX: 0,
-                scrollY: 0
-            });
-
-            if (tempContainer && tempContainer.parentNode) {
-                document.body.removeChild(tempContainer);
-            }
-
-            if (onProgress) onProgress('Обработка 4K изображения...');
-
-            const croppedCanvas = document.createElement('canvas');
-            const ctx = croppedCanvas.getContext('2d');
-
-            const scale = 4;
-            const cropX = Math.max(0, finalScreenshotArea.x * scale);
-            const cropY = Math.max(0, finalScreenshotArea.y * scale);
-            const cropWidth = Math.min(canvas.width - cropX, finalScreenshotArea.width * scale);
-            const cropHeight = Math.min(canvas.height - cropY, finalScreenshotArea.height * scale);
-
-            const MAX_4K_SIZE = 4000;
-            let finalWidth = cropWidth;
-            let finalHeight = cropHeight;
-
-            if (cropWidth > MAX_4K_SIZE || cropHeight > MAX_4K_SIZE) {
-                const scaleDown = Math.min(MAX_4K_SIZE / cropWidth, MAX_4K_SIZE / cropHeight);
-                finalWidth = Math.floor(cropWidth * scaleDown);
-                finalHeight = Math.floor(cropHeight * scaleDown);
-                console.log(`4K limit applied: scaled from ${cropWidth}x${cropHeight} to ${finalWidth}x${finalHeight}`);
-            } else {
-                console.log(`4K limit not needed: image is ${cropWidth}x${cropHeight}`);
-            }
-
-            croppedCanvas.width = finalWidth;
-            croppedCanvas.height = finalHeight;
-
-            ctx.drawImage(
-                canvas,
-                cropX, cropY, cropWidth, cropHeight,
-                0, 0, finalWidth, finalHeight
-            );
-
-            console.log(`4K screenshot created: ${finalWidth}x${finalHeight}`);
-            return croppedCanvas;
-
+            return await this._createScreenshotInternal(selectedRanks, {
+                preparingMessage: 'Подготовка 4K области...',
+                renderMessage: 'Создание 4K скриншота...',
+                processMessage: 'Обработка 4K изображения...',
+                scale: 4,
+                // "4K" in this project means 4000x4000 limit mode, not UHD 3840x2160.
+                maxCanvasSize: 4000,
+                modeName: '4K (4000x4000 limit mode)'
+            }, onProgress);
         } catch (error) {
             console.error('Error creating 4K screenshot:', error);
-
-            try {
-                if (tempContainer && tempContainer.parentNode) {
-                    document.body.removeChild(tempContainer);
-                }
-            } catch (cleanupError) {
-                console.log('Temp container cleanup failed or already removed');
-            }
-
             throw error;
         }
     },
@@ -306,45 +357,16 @@
     downloadScreenshot4K: async function (selectedRanks, filename, progressCallbackRef, completeCallbackRef) {
         try {
             const canvas = await this.createScreenshot4K(selectedRanks, filename, (message) => {
-                if (progressCallbackRef) {
-                    progressCallbackRef.invokeMethodAsync('OnScreenshotProgress', message);
-                }
+                this._invokeCallback(progressCallbackRef, 'OnScreenshotProgress', message);
             });
 
-            if (progressCallbackRef) {
-                progressCallbackRef.invokeMethodAsync('OnScreenshotProgress', 'Подготовка 4K загрузки...');
-            }
-
-            canvas.toBlob((blob) => {
-                try {
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.download = filename || 'screenshot-4k.png';
-                    link.href = url;
-
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-
-                    setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-                    console.log('4K screenshot download initiated successfully');
-                    if (completeCallbackRef) {
-                        completeCallbackRef.invokeMethodAsync('OnScreenshotComplete', true, '4K скриншот сохранен');
-                    }
-                } catch (err) {
-                    console.error('Error downloading 4K screenshot:', err);
-                    if (completeCallbackRef) {
-                        completeCallbackRef.invokeMethodAsync('OnScreenshotComplete', false, 'Ошибка загрузки 4K: ' + err.message);
-                    }
-                }
-            }, 'image/png');
-
+            this._invokeCallback(progressCallbackRef, 'OnScreenshotProgress', 'Подготовка 4K загрузки...');
+            const blob = await this._canvasToBlob(canvas);
+            this._downloadBlob(blob, filename || 'screenshot-4k.png');
+            this._invokeCallback(completeCallbackRef, 'OnScreenshotComplete', true, '4K скриншот сохранен');
         } catch (error) {
             console.error('Error in downloadScreenshot4K:', error);
-            if (completeCallbackRef) {
-                completeCallbackRef.invokeMethodAsync('OnScreenshotComplete', false, 'Ошибка создания 4K скриншота: ' + error.message);
-            }
+            this._invokeCallback(completeCallbackRef, 'OnScreenshotComplete', false, 'Ошибка создания 4K скриншота: ' + error.message);
         }
     },
     generateScreenshotFilename4K: function () {
@@ -451,12 +473,9 @@
 
             const rankPatterns = [
                 /^Ранг\s+(\d+)(?:\s|$)/i,
-
                 /^Rank\s+(\d+)(?:\s|$)/i,
-
                 /^Rank\s+(\d)(\d+)/i, 
                 /^Ранг\s+(\d)(\d+)/i, 
-
                 /(?:Rank|Ранг)\s+(\d+)/i  
             ];
 
@@ -467,14 +486,14 @@
                 if (match) {
                     let foundNumber = parseInt(match[1]);
 
-                    if (foundNumber > 8) {
+                    if (foundNumber > 9) {
                         const firstDigit = parseInt(foundNumber.toString()[0]);
-                        if (firstDigit >= 1 && firstDigit <= 8) {
+                        if (firstDigit >= 1 && firstDigit <= 9) {
                             rank = firstDigit;
                             console.log(`Extracted rank ${rank} from compound number ${foundNumber} in: "${rankText}"`);
                             break;
                         }
-                    } else if (foundNumber >= 1 && foundNumber <= 8) {
+                    } else if (foundNumber >= 1 && foundNumber <= 9) {
                         rank = foundNumber;
                         console.log(`Found direct rank ${rank} in: "${rankText}"`);
                         break;
@@ -482,7 +501,7 @@
                 }
             }
 
-            if (rank && rank >= 1 && rank <= 8) {
+            if (rank && rank >= 1 && rank <= 9) {
                 if (!rankElementMap.has(rank)) {
                     foundRanks.push(rank);
                     rankElementMap.set(rank, label);
@@ -769,377 +788,60 @@
     },
     calculateScreenshotArea: function (selectedRanks) {
         return this.calculateScreenshotAreaByRanks(selectedRanks);
-    }, createScreenshot: async function (selectedRanks, filename, onProgress) {
+    },
+    createScreenshot: async function (selectedRanks, filename, onProgress) {
         try {
-            console.log('Starting screenshot creation for ranks:', selectedRanks);
-
-            if (onProgress) onProgress('Подготовка области...');
-
-            const treeContainer = document.getElementById('tech-tree-container-id');
-            const summaryContainer = document.getElementById('summary-container');
-
-            if (!treeContainer) {
-                throw new Error('Tech tree container not found');
-            }
-
-            console.log('Tree container found:', treeContainer);
-            console.log('Summary container found:', summaryContainer);
-
-            const baseScreenshotArea = this.calculateScreenshotAreaByRanks(selectedRanks);
-            if (!baseScreenshotArea) {
-                throw new Error(`Не удалось найти ранги ${selectedRanks.join(', ')} на странице.`);
-            }
-
-            const { foundRanks } = this.findRankElements();
-
-            if (foundRanks.length === 0) {
-                throw new Error('No ranks found on the page');
-            }
-
-            const maxAvailableRank = Math.max(...foundRanks);
-            const maxSelectedRank = Math.max(...selectedRanks);
-            const treeGridRect = document.querySelector('.tree-grid').getBoundingClientRect();
-
-            const summaryRect = summaryContainer ? summaryContainer.getBoundingClientRect() : null;
-            const viewportHeight = window.innerHeight;
-
-            let distanceToSummary = Infinity;
-            if (summaryRect) {
-                const areaBottomInViewport = baseScreenshotArea.y + baseScreenshotArea.height - treeGridRect.top + treeGridRect.top;
-                distanceToSummary = Math.abs(summaryRect.top - areaBottomInViewport);
-            }
-
-            const isMaxAvailableRank = maxSelectedRank >= maxAvailableRank;
-            const isCloseToSummaryPanel = distanceToSummary < viewportHeight * 0.4;
-
-            const useOldMethod = isMaxAvailableRank || isCloseToSummaryPanel;
-
-            console.log('Panel positioning strategy:', {
-                foundRanks: foundRanks,
-                maxAvailableRank: maxAvailableRank,
-                maxSelectedRank: maxSelectedRank,
-                isMaxAvailableRank: isMaxAvailableRank,
-                distanceToSummary: distanceToSummary,
-                viewportHeight: viewportHeight,
-                isCloseToSummaryPanel: isCloseToSummaryPanel,
-                useOldMethod: useOldMethod ? 'OLD (extend area)' : 'NEW (relocate panel)'
-            });
-
-            const tempContainer = document.createElement('div');
-            tempContainer.style.position = 'absolute';
-            tempContainer.style.top = '-10000px';
-            tempContainer.style.left = '-10000px';
-            tempContainer.style.background = '#1a1a1a';
-            tempContainer.style.width = treeContainer.scrollWidth + 'px';
-            tempContainer.style.overflow = 'visible';
-
-            const treeClone = treeContainer.cloneNode(true);
-            treeClone.style.paddingBottom = '10px';
-            treeClone.style.position = 'relative';
-            tempContainer.appendChild(treeClone);
-
-            let finalScreenshotArea;
-
-            if (useOldMethod) {
-
-                if (summaryContainer) {
-                    const summaryClone = summaryContainer.cloneNode(true);
-
-                    const cloneNamesContainer = summaryClone.querySelector('#selected-names-container');
-                    const cloneButtons = summaryClone.querySelectorAll('button');
-
-                    if (cloneNamesContainer) {
-                        cloneNamesContainer.remove();
-                    }
-                    cloneButtons.forEach(btn => btn.remove());
-
-                    summaryClone.style.position = 'relative';
-                    summaryClone.style.background = 'rgba(40, 40, 40, 0.95)';
-                    summaryClone.style.backdropFilter = 'blur(3px)';
-                    summaryClone.style.borderTop = '1px solid #666';
-                    summaryClone.style.marginTop = '20px'; 
-                    summaryClone.style.padding = '12px 20px';
-                    summaryClone.style.display = 'flex';
-                    summaryClone.style.flexDirection = 'column';
-                    summaryClone.style.alignItems = 'center';
-                    summaryClone.style.gap = '8px';
-                    summaryClone.style.width = treeContainer.scrollWidth + 'px';
-
-                    tempContainer.appendChild(summaryClone);
-                    console.log('Added summary panel using OLD method (at bottom)');
-                }
-
-                const realSummaryHeight = summaryContainer ? summaryContainer.getBoundingClientRect().height : 80;
-                const additionalPadding = 50; 
-                const panelHeight = realSummaryHeight + additionalPadding;
-
-                finalScreenshotArea = {
-                    x: baseScreenshotArea.x,
-                    y: baseScreenshotArea.y,
-                    width: baseScreenshotArea.width,
-                    height: baseScreenshotArea.height + panelHeight
-                };
-
-
-            } else {
-
-                if (summaryContainer) {
-                    const summaryClone = summaryContainer.cloneNode(true);
-
-                    const cloneNamesContainer = summaryClone.querySelector('#selected-names-container');
-                    const cloneButtons = summaryClone.querySelectorAll('button');
-
-                    if (cloneNamesContainer) {
-                        cloneNamesContainer.remove();
-                    }
-                    cloneButtons.forEach(btn => btn.remove());
-
-                    summaryClone.style.position = 'absolute';
-                    summaryClone.style.background = 'rgba(40, 40, 40, 0.95)';
-                    summaryClone.style.backdropFilter = 'blur(3px)';
-                    summaryClone.style.border = '1px solid #666';
-                    summaryClone.style.borderRadius = '8px';
-                    summaryClone.style.padding = '12px 20px';
-                    summaryClone.style.display = 'flex';
-                    summaryClone.style.flexDirection = 'column';
-                    summaryClone.style.alignItems = 'center';
-                    summaryClone.style.gap = '8px';
-                    summaryClone.style.zIndex = '1000';
-                    summaryClone.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
-
-                    const panelWidth = 300;
-                    const panelHeight = 80;
-                    const margin = 20;
-
-                    const panelX = Math.max(baseScreenshotArea.x + baseScreenshotArea.width - panelWidth - margin, baseScreenshotArea.x + margin);
-                    const panelY = baseScreenshotArea.y + baseScreenshotArea.height + margin;
-
-                    summaryClone.style.left = panelX + 'px';
-                    summaryClone.style.top = panelY + 'px';
-                    summaryClone.style.width = panelWidth + 'px';
-
-                    treeClone.appendChild(summaryClone);
-                    console.log('Added relocated summary panel to tree clone');
-                }
-
-                const panelHeight = 100;
-                const panelMargin = 30;
-                finalScreenshotArea = {
-                    x: baseScreenshotArea.x,
-                    y: baseScreenshotArea.y,
-                    width: baseScreenshotArea.width,
-                    height: baseScreenshotArea.height + panelHeight + panelMargin
-                };
-            }
-
-            document.body.appendChild(tempContainer);
-            console.log('Temp container added to document');
-
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            if (onProgress) onProgress('Создание скриншота...');
-
-            const canvas = await html2canvas(tempContainer, {
+            return await this._createScreenshotInternal(selectedRanks, {
+                preparingMessage: 'Подготовка области...',
+                renderMessage: 'Создание скриншота...',
+                processMessage: 'Обработка изображения...',
                 scale: 3,
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#1a1a1a',
-                logging: true,
-                width: tempContainer.scrollWidth,
-                height: tempContainer.scrollHeight,
-                scrollX: 0,
-                scrollY: 0
-            });
-
-            console.log('Screenshot canvas created:', {
-                width: canvas.width,
-                height: canvas.height
-            });
-
-            if (tempContainer && tempContainer.parentNode) {
-                document.body.removeChild(tempContainer);
-                console.log('Temp container removed');
-            }
-
-            if (onProgress) onProgress('Обработка изображения...');
-
-            console.log('Screenshot area to crop:', finalScreenshotArea);
-
-            const maxWidth = 4000;
-            const maxHeight = 6000;
-
-            if (finalScreenshotArea.width > maxWidth || finalScreenshotArea.height > maxHeight) {
-                console.warn(`Screenshot area too large, limiting size`);
-                finalScreenshotArea.width = Math.min(finalScreenshotArea.width, maxWidth);
-                finalScreenshotArea.height = Math.min(finalScreenshotArea.height, maxHeight);
-            }
-
-            const croppedCanvas = document.createElement('canvas');
-            const ctx = croppedCanvas.getContext('2d');
-
-            const scale = 3;
-            const cropX = Math.max(0, finalScreenshotArea.x * scale);
-            const cropY = Math.max(0, finalScreenshotArea.y * scale);
-            const cropWidth = Math.min(canvas.width - cropX, finalScreenshotArea.width * scale);
-            const cropHeight = Math.min(canvas.height - cropY, finalScreenshotArea.height * scale);
-
-            const maxCanvasSize = 16384;
-            if (cropWidth > maxCanvasSize || cropHeight > maxCanvasSize) {
-                console.warn(`Final canvas size too large, reducing scale`);
-                const scaleReduction = Math.min(maxCanvasSize / cropWidth, maxCanvasSize / cropHeight, 1);
-                croppedCanvas.width = Math.floor(cropWidth * scaleReduction);
-                croppedCanvas.height = Math.floor(cropHeight * scaleReduction);
-            } else {
-                croppedCanvas.width = cropWidth;
-                croppedCanvas.height = cropHeight;
-            }
-
-            console.log('Cropping parameters:', {
-                scale,
-                cropX,
-                cropY,
-                cropWidth,
-                cropHeight,
-                finalCanvasSize: {
-                    width: croppedCanvas.width,
-                    height: croppedCanvas.height
-                }
-            });
-
-            if (croppedCanvas.width < cropWidth || croppedCanvas.height < cropHeight) {
-                ctx.drawImage(
-                    canvas,
-                    cropX, cropY, cropWidth, cropHeight,
-                    0, 0, croppedCanvas.width, croppedCanvas.height
-                );
-                console.log('Screenshot scaled down due to size limitations');
-            } else {
-                ctx.drawImage(
-                    canvas,
-                    cropX, cropY, cropWidth, cropHeight,
-                    0, 0, cropWidth, cropHeight
-                );
-            }
-
-            console.log('Screenshot created successfully');
-            return croppedCanvas;
-
+                maxCanvasSize: 16384,
+                modeName: 'Standard screenshot'
+            }, onProgress);
         } catch (error) {
             console.error('Error creating screenshot:', error);
-
-            try {
-                if (tempContainer && tempContainer.parentNode) {
-                    document.body.removeChild(tempContainer);
-                    console.log('Temp container removed in error handler');
-                }
-            } catch (cleanupError) {
-                console.log('Temp container cleanup failed or already removed');
-            }
-
             throw error;
         }
     },
     copyScreenshotToClipboard: async function (selectedRanks, progressCallbackRef, completeCallbackRef) {
         try {
             const canvas = await this.createScreenshot(selectedRanks, null, (message) => {
-                if (progressCallbackRef) {
-                    progressCallbackRef.invokeMethodAsync('OnScreenshotProgress', message);
-                }
+                this._invokeCallback(progressCallbackRef, 'OnScreenshotProgress', message);
             });
 
-            if (progressCallbackRef) {
-                progressCallbackRef.invokeMethodAsync('OnScreenshotProgress', 'Копирование в буфер обмена...');
+            this._invokeCallback(progressCallbackRef, 'OnScreenshotProgress', 'Копирование в буфер обмена...');
+            const blob = await this._canvasToBlob(canvas);
+            if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
+                await navigator.clipboard.write([
+                    new ClipboardItem({
+                        'image/png': blob
+                    })
+                ]);
+                this._invokeCallback(completeCallbackRef, 'OnScreenshotComplete', true, 'Скриншот скопирован в буфер обмена');
+            } else {
+                this._downloadBlob(blob, this.generateScreenshotFilename());
+                this._invokeCallback(completeCallbackRef, 'OnScreenshotComplete', true, 'Скриншот сохранен (буфер обмена недоступен на HTTP)');
             }
-
-            canvas.toBlob(async (blob) => {
-                try {
-                    if (navigator.clipboard && navigator.clipboard.write) {
-                        await navigator.clipboard.write([
-                            new ClipboardItem({
-                                'image/png': blob
-                            })
-                        ]);
-
-                        console.log('Screenshot copied to clipboard successfully (modern API)');
-                        if (completeCallbackRef) {
-                            completeCallbackRef.invokeMethodAsync('OnScreenshotComplete', true, 'Скриншот скопирован в буфер обмена');
-                        }
-                    } else {
-                        console.log('Clipboard API not available (HTTP), offering download instead');
-
-                        const url = URL.createObjectURL(blob);
-                        const link = document.createElement('a');
-                        link.download = this.generateScreenshotFilename();
-                        link.href = url;
-
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-
-                        setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-                        if (completeCallbackRef) {
-                            completeCallbackRef.invokeMethodAsync('OnScreenshotComplete', true, 'Скриншот сохранен (буфер обмена недоступен на HTTP)');
-                        }
-                    }
-                } catch (err) {
-                    console.error('Error copying to clipboard:', err);
-                    if (completeCallbackRef) {
-                        completeCallbackRef.invokeMethodAsync('OnScreenshotComplete', false, 'Не удалось скопировать в буфер обмена: ' + err.message);
-                    }
-                }
-            }, 'image/png');
-
         } catch (error) {
             console.error('Error in copyScreenshotToClipboard:', error);
-            if (completeCallbackRef) {
-                completeCallbackRef.invokeMethodAsync('OnScreenshotComplete', false, 'Ошибка создания скриншота: ' + error.message);
-            }
+            this._invokeCallback(completeCallbackRef, 'OnScreenshotComplete', false, 'Ошибка создания скриншота: ' + error.message);
         }
     },
 
     downloadScreenshot: async function (selectedRanks, filename, progressCallbackRef, completeCallbackRef) {
         try {
             const canvas = await this.createScreenshot(selectedRanks, filename, (message) => {
-                if (progressCallbackRef) {
-                    progressCallbackRef.invokeMethodAsync('OnScreenshotProgress', message);
-                }
+                this._invokeCallback(progressCallbackRef, 'OnScreenshotProgress', message);
             });
 
-            if (progressCallbackRef) {
-                progressCallbackRef.invokeMethodAsync('OnScreenshotProgress', 'Подготовка загрузки...');
-            }
-
-            canvas.toBlob((blob) => {
-                try {
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.download = filename || 'screenshot.png';
-                    link.href = url;
-
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-
-                    setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-                    console.log('Screenshot download initiated successfully');
-                    if (completeCallbackRef) {
-                        completeCallbackRef.invokeMethodAsync('OnScreenshotComplete', true, 'Скриншот сохранен');
-                    }
-                } catch (err) {
-                    console.error('Error downloading screenshot:', err);
-                    if (completeCallbackRef) {
-                        completeCallbackRef.invokeMethodAsync('OnScreenshotComplete', false, 'Ошибка загрузки: ' + err.message);
-                    }
-                }
-            }, 'image/png');
-
+            this._invokeCallback(progressCallbackRef, 'OnScreenshotProgress', 'Подготовка загрузки...');
+            const blob = await this._canvasToBlob(canvas);
+            this._downloadBlob(blob, filename || 'screenshot.png');
+            this._invokeCallback(completeCallbackRef, 'OnScreenshotComplete', true, 'Скриншот сохранен');
         } catch (error) {
             console.error('Error in downloadScreenshot:', error);
-            if (completeCallbackRef) {
-                completeCallbackRef.invokeMethodAsync('OnScreenshotComplete', false, 'Ошибка создания скриншота: ' + error.message);
-            }
+            this._invokeCallback(completeCallbackRef, 'OnScreenshotComplete', false, 'Ошибка создания скриншота: ' + error.message);
         }
     },
 
