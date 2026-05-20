@@ -883,54 +883,6 @@
         <span>${message}</span>
     `;
 
-        toast.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 1050;
-        background-color: #856404;
-        color: #fff3cd;
-        border: 1px solid #ffeaa7;
-        border-radius: 8px;
-        padding: 12px 20px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 0.9em;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-        animation: slideInRight 0.3s ease-out, fadeOut 0.3s ease-in 2.7s forwards;
-        max-width: 350px;
-        word-wrap: break-word;
-    `;
-
-        if (!document.querySelector('#rp-limit-animations')) {
-            const style = document.createElement('style');
-            style.id = 'rp-limit-animations';
-            style.textContent = `
-            @keyframes slideInRight {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-            }
-            
-            @keyframes fadeOut {
-                from {
-                    opacity: 1;
-                }
-                to {
-                    opacity: 0;
-                    transform: translateX(100%);
-                }
-            }
-        `;
-            document.head.appendChild(style);
-        }
-
         document.body.appendChild(toast);
 
         setTimeout(() => {

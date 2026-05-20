@@ -1,6 +1,4 @@
-﻿// Создать файл: Shared/SimpleGameLocalization.cs
-
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System;
 
 namespace WTExpCalc.Shared

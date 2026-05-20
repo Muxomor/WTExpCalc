@@ -1,4 +1,4 @@
-/* ==================== ÁÀÇÎÂÛÅ ÑÒÈËÈ ==================== */
+/* ==================== Base layout ==================== */
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     height: 100%;
@@ -38,13 +38,13 @@ main {
     color: #eee;
 }
 
-/* ==================== ÇÀÃÎËÎÂÊÈ ==================== */
+/* ==================== Headings ==================== */
 h3 {
     color: #fff;
     margin-bottom: 1.5rem;
 }
 
-/* ==================== ÊÀĞÒÎ×ÊÈ ÍÀÖÈÉ ==================== */
+/* ==================== Nation cards ==================== */
 .nation-card {
     border: 2px solid #555;
     transition: border-color .2s, transform .2s;
@@ -67,7 +67,7 @@ h3 {
         color: #fff;
     }
 
-/* ==================== ÒÀÁÛ ==================== */
+/* ==================== Tab strip ==================== */
 .nav-tabs {
     border-bottom: 1px solid #555;
     margin-bottom: 1rem;
@@ -94,7 +94,7 @@ h3 {
             border-bottom: 1px solid #222;
         }
 
-/* ==================== ÊÎÍÒÅÉÍÅĞ ÄĞÅÂÀ ÒÅÕÍÎËÎÃÈÉ ==================== */
+/* ==================== Tech tree container ==================== */
 .tech-tree-container {
     overflow: auto;
     position: relative;
@@ -131,7 +131,7 @@ h3 {
     }
 
     .tech-tree-container.error::before {
-        content: 'Îøèáêà çàãğóçêè äàííûõ!';
+        content: 'Data load failed';
         position: absolute;
         top: 50%;
         left: 50%;
@@ -147,7 +147,7 @@ h3 {
     flex-direction: column;
 }
 
-/* ==================== ÑÅÒÊÀ ÄĞÅÂÀ ÒÅÕÍÎËÎÃÈÉ ==================== */
+/* ==================== Tech tree grid ==================== */
 .tree-grid {
     display: grid;
     gap: 10px 20px;
@@ -178,7 +178,7 @@ h3 {
             background-color: #4f4f4f;
         }
 
-/* ==================== ÓÇËÛ ÄĞÅÂÀ ==================== */
+/* ==================== Tree nodes ==================== */
 .node-content {
     display: flex;
     align-items: center;
@@ -193,6 +193,11 @@ h3 {
         .node-content.vehicle-node:hover {
             background-color: #4f4f4f;
         }
+
+.node-content.vehicle-node.limit-blocked {
+    opacity: 0.72;
+    cursor: default;
+}
 
 .vehicle-node.node-selected {
     outline: 2px solid #0dcaf0;
@@ -252,7 +257,7 @@ h3 {
     color: #bbb;
 }
 
-/* ==================== ÏÀÏÊÈ ==================== */
+/* ==================== Folder popups ==================== */
 .folder-child-counter {
     position: absolute;
     bottom: 3px;
@@ -323,30 +328,7 @@ h3 {
     height: 40px;
 }
 
-.folder-items-container {
-    position: absolute;
-    top: calc(100% + 5px);
-    left: 0;
-    z-index: 500;
-    background: #3a3a3a;
-    border: 1px solid #555;
-    border-radius: 4px;
-    padding: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-    min-width: 180px;
-}
-
-    .folder-items-container .vehicle-node {
-        background-color: #444;
-        border: 1px dashed #777;
-        z-index: 50;
-        padding: 5px;
-    }
-
-/* ==================== ĞÀÍÃÈ È ĞÀÇÄÅËÈÒÅËÈ ==================== */
+/* ==================== Rank labels & premium column ==================== */
 .rank-label {
     background: #555;
     color: #fff;
@@ -365,7 +347,7 @@ h3 {
     position: sticky;
     left: 0;
     z-index: 2;
-    width: 70px; /* Ôèêñèğîâàííàÿ øèğèíà */
+    width: 70px; /* ????????????? ?????? */
     min-width: 70px;
     max-width: 70px;
 }
@@ -408,7 +390,7 @@ h3 {
     border-left: 5px solid gold;
 }
 
-/* ==================== ÏÎËß ÂÂÎÄÀ ==================== */
+/* ==================== RP input (vehicle row) ==================== */
 .rp-input {
     background-color: transparent;
     color: inherit;
@@ -443,7 +425,7 @@ h3 {
         border-radius: 3px;
     }
 
-    /* Ïîäñâåòêà èçìåíåííûõ çíà÷åíèé RP */
+    /* Highlight modified RP values */
     .rp-input.rp-modified {
         background-color: rgba(100, 200, 255, 0.15) !important;
         border-bottom-color: #64c8ff !important;
@@ -461,7 +443,7 @@ h3 {
             box-shadow: 0 0 6px rgba(100, 200, 255, 0.6);
         }
 
-/* ==================== ÑÎÅÄÈÍÈÒÅËÜÍÛÅ ËÈÍÈÈ ==================== */
+/* ==================== Tree dependency lines ==================== */
 .tree-connections-overlay {
     position: absolute;
     top: 0;
@@ -484,17 +466,7 @@ h3 {
         stroke-width: 2;
     }
 
-    .tree-connections-overlay .line-researched {
-        stroke: #4CAF50;
-        stroke-width: 2.5;
-    }
-
-    .tree-connections-overlay .line-researching {
-        stroke: #2196F3;
-        stroke-width: 2.5;
-    }
-
-/* ==================== ÏÀÍÅËÜ ÈÒÎÃÎÂ ==================== */
+/* ==================== Summary bar ==================== */
 #summary-container {
     position: fixed;
     bottom: 0;
@@ -512,7 +484,7 @@ h3 {
     gap: 8px;
 }
 
-/* Èíäèêàòîğ çàãğóçêè ñêğèíøîòà */
+/* Screenshot in-progress overlay */
 .screenshot-loading-overlay {
     position: fixed;
     top: 0;
@@ -557,7 +529,6 @@ h3 {
 }
 
 #summary-panel {
-    padding: 10px 20px;
     display: flex;
     align-items: center;
     gap: 25px;
@@ -637,7 +608,7 @@ h3 {
         vertical-align: middle;
     }
 
-/* Ñïåöèàëüíûå ñòèëè äëÿ êíîïîê ñêğèíøîòà */
+/* Screenshot action buttons */
 .screenshot-button {
     background-color: #6f42c1;
     border-color: #6f42c1;
@@ -657,7 +628,7 @@ h3 {
         cursor: not-allowed;
     }
 
-/* ==================== ÊÍÎÏÊÈ ==================== */
+/* ==================== Primary buttons ==================== */
 .btn {
     background-color: #444;
     border-color: #555;
@@ -687,7 +658,7 @@ h3 {
         color: #fff;
     }
 
-/* ==================== ÑÀÉÄÁÀĞ ==================== */
+/* ==================== Sidebar (narrow rail) ==================== */
 body .page .sidebar {
     width: 70px !important;
     min-width: 70px !important;
@@ -712,7 +683,7 @@ body .page main {
     padding-left: 0 !important;
 }
 
-/* ==================== ÇÀÃĞÓÇÊÀ È ÎØÈÁÊÈ ==================== */
+/* ==================== Splash / bootstrap error UI ==================== */
 .loading-progress {
     position: relative;
     display: block;
@@ -778,7 +749,7 @@ body .page main {
         content: "An error has occurred."
     }
 
-/* ==================== ÂÀËÈÄÀÖÈß ==================== */
+/* ==================== Form validation ==================== */
 .validation-message {
     color: #ff6b6b;
 }
@@ -791,7 +762,7 @@ body .page main {
     outline: 1px solid #ff6b6b;
 }
 
-/* ==================== ÀÄÀÏÒÈÂÍÎÑÒÜ ==================== */
+/* ==================== Responsive ==================== */
 @media (max-width: 767.98px) {
     .top-row {
         justify-content: space-between;
@@ -809,7 +780,7 @@ body .page main {
         padding-right: 1.5rem !important;
     }
 }
-/* ==================== ÏÎËÅ ËÈÌÈÒÀ RP ==================== */
+/* ==================== RP limit (summary bar) ==================== */
 .summary-item.summary-limit {
     display: flex;
     align-items: center;
@@ -858,7 +829,7 @@ body .page main {
     font-weight: normal;
     margin-left: -4px;
 }
-/* ==================== ÏĞÅÄÓÏĞÅÆÄÅÍÈÅ Î ËÈÌÈÒÅ ==================== */
+/* ==================== RP limit warning (persistent banner) ==================== */
 .rp-limit-warning {
     background-color: #856404;
     color: #fff3cd;
@@ -890,4 +861,52 @@ body .page main {
         opacity: 1;
     }
 }
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+.rp-limit-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+    background-color: #856404;
+    color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9em;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    animation: slideInRight 0.3s ease-out, fadeOut 0.3s ease-in 2.7s forwards;
+    max-width: 350px;
+    word-wrap: break-word;
+}
+
+    .rp-limit-toast i {
+        font-size: 1.1em;
+        color: #ffeaa7;
+    }
 
