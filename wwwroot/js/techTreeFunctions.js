@@ -389,6 +389,30 @@
             setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
     },
+    _deliverScreenshotBlob: async function (blob, fallbackFilename, progressCallbackRef, completeCallbackRef, messages) {
+        const copyProgress = messages.copyProgress || 'Копирование в буфер обмена...';
+        this._invokeCallback(progressCallbackRef, 'OnScreenshotProgress', copyProgress);
+
+        if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
+            try {
+                await navigator.clipboard.write([
+                    new ClipboardItem({
+                        'image/png': blob
+                    })
+                ]);
+                this._invokeCallback(completeCallbackRef, 'OnScreenshotComplete', true, messages.clipboardSuccess);
+                return;
+            } catch (clipboardError) {
+                console.warn('Clipboard write failed, falling back to download:', clipboardError);
+            }
+        }
+
+        if (messages.downloadProgress) {
+            this._invokeCallback(progressCallbackRef, 'OnScreenshotProgress', messages.downloadProgress);
+        }
+        this._downloadBlob(blob, fallbackFilename);
+        this._invokeCallback(completeCallbackRef, 'OnScreenshotComplete', true, messages.downloadFallback);
+    },
     createScreenshot4K: async function (selectedRanks, filename, onProgress) {
         try {
             return await this._createScreenshotInternal(selectedRanks, {
@@ -412,10 +436,18 @@
                 this._invokeCallback(progressCallbackRef, 'OnScreenshotProgress', message);
             });
 
-            this._invokeCallback(progressCallbackRef, 'OnScreenshotProgress', 'Подготовка 4K загрузки...');
             const blob = await this._canvasToBlob(canvas);
-            this._downloadBlob(blob, filename || 'screenshot-4k.png');
-            this._invokeCallback(completeCallbackRef, 'OnScreenshotComplete', true, '4K скриншот сохранен');
+            await this._deliverScreenshotBlob(
+                blob,
+                filename || this.generateScreenshotFilename4K(),
+                progressCallbackRef,
+                completeCallbackRef,
+                {
+                    downloadProgress: 'Подготовка 4K загрузки...',
+                    clipboardSuccess: '4K скриншот скопирован в буфер обмена',
+                    downloadFallback: '4K скриншот сохранен (буфер обмена недоступен на HTTP)'
+                }
+            );
         } catch (error) {
             console.error('Error in downloadScreenshot4K:', error);
             this._invokeCallback(completeCallbackRef, 'OnScreenshotComplete', false, 'Ошибка создания 4K скриншота: ' + error.message);
@@ -850,19 +882,17 @@
                 this._invokeCallback(progressCallbackRef, 'OnScreenshotProgress', message);
             });
 
-            this._invokeCallback(progressCallbackRef, 'OnScreenshotProgress', 'Копирование в буфер обмена...');
             const blob = await this._canvasToBlob(canvas);
-            if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
-                await navigator.clipboard.write([
-                    new ClipboardItem({
-                        'image/png': blob
-                    })
-                ]);
-                this._invokeCallback(completeCallbackRef, 'OnScreenshotComplete', true, 'Скриншот скопирован в буфер обмена');
-            } else {
-                this._downloadBlob(blob, this.generateScreenshotFilename());
-                this._invokeCallback(completeCallbackRef, 'OnScreenshotComplete', true, 'Скриншот сохранен (буфер обмена недоступен на HTTP)');
-            }
+            await this._deliverScreenshotBlob(
+                blob,
+                this.generateScreenshotFilename(),
+                progressCallbackRef,
+                completeCallbackRef,
+                {
+                    clipboardSuccess: 'Скриншот скопирован в буфер обмена',
+                    downloadFallback: 'Скриншот сохранен (буфер обмена недоступен на HTTP)'
+                }
+            );
         } catch (error) {
             console.error('Error in copyScreenshotToClipboard:', error);
             this._invokeCallback(completeCallbackRef, 'OnScreenshotComplete', false, 'Ошибка создания скриншота: ' + error.message);
