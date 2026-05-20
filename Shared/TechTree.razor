@@ -5,6 +5,7 @@
 @inject IUrlStateManager UrlStateManager
 @inject NavigationManager Navigation
 @inject ILocalizationService Localization
+@implements IAsyncDisposable
 
 <div class="tech-tree-container @LoadingState" id="tech-tree-container-id">
     @if (GridNodes.Any())
@@ -180,6 +181,11 @@
 
     private long? maxRpLimit = null;
 
+    private bool _deferConnectionRedrawAfterRender;
+    private bool _deferFolderPopupPositionAfterRender;
+    private DotNetObjectReference<TechTree>? _layoutInteropRef;
+    private bool _treeLayoutListenersAttached;
+
     public class TotalsUpdateEventArgs : EventArgs
     {
         public long TotalRp { get; set; }
@@ -190,12 +196,102 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (LoadingState == "loaded" && Dependencies.Any())
+        bool wantLines = _deferConnectionRedrawAfterRender &&
+                         LoadingState == "loaded" && Dependencies.Any();
+        bool wantPopup = _deferFolderPopupPositionAfterRender &&
+                         LoadingState == "loaded" && currentlyExpandedFolder != null;
+
+        if (wantLines || wantPopup)
         {
-            await Task.Delay(50);
-            await DrawConnectionLines();
+            await WaitDomLayoutStableAsync();
+
+            if (wantLines)
+            {
+                _deferConnectionRedrawAfterRender = false;
+                await DrawConnectionLines();
+            }
+
+            if (wantPopup && currentlyExpandedFolder != null)
+            {
+                _deferFolderPopupPositionAfterRender = false;
+                try
+                {
+                    await JSRuntime.InvokeVoidAsync("techTreeFunctions.positionFolderPopup",
+                        $"folder-popup-{currentlyExpandedFolder.Id}",
+                        $"node-{currentlyExpandedFolder.Id}",
+                        "tech-tree-container-id");
+                }
+                catch
+                {
+                    /* Popup may be gone if user navigates away mid-frame */
+                }
+            }
+        }
+
+        await EnsureTreeLayoutObserversAsync();
+    }
+
+    private async Task WaitDomLayoutStableAsync()
+    {
+        if (JSRuntime == null)
+        {
+            await Task.Delay(24);
+            return;
+        }
+
+        try
+        {
+            await JSRuntime.InvokeAsync<bool>("techTreeFunctions.waitTwoAnimationFramesAsync");
+        }
+        catch
+        {
+            await Task.Delay(24);
         }
     }
+
+    /// <summary>Queues dependency-line redraw after DOM updates (opening a folder intentionally does not call this).</summary>
+    private void ScheduleConnectionRedraw()
+    {
+        if (LoadingState != "loaded" || Dependencies.Count == 0) return;
+        _deferConnectionRedrawAfterRender = true;
+    }
+
+    private async Task TeardownTreeLayoutInteropAsync()
+    {
+        _treeLayoutListenersAttached = false;
+        if (JSRuntime != null)
+        {
+            try { await JSRuntime.InvokeVoidAsync("techTreeFunctions.disconnectTechTreeLayout"); }
+            catch { /* ignore */ }
+        }
+
+        _layoutInteropRef?.Dispose();
+        _layoutInteropRef = null;
+    }
+
+    private async Task EnsureTreeLayoutObserversAsync()
+    {
+        if (_treeLayoutListenersAttached) return;
+        if (JSRuntime == null || LoadingState != "loaded" || Dependencies.Count == 0) return;
+
+        try
+        {
+            _layoutInteropRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync(
+                "techTreeFunctions.observeTechTreeLayout",
+                "tech-tree-container-id",
+                _layoutInteropRef,
+                110);
+            _treeLayoutListenersAttached = true;
+        }
+        catch
+        {
+            _treeLayoutListenersAttached = false;
+            _layoutInteropRef?.Dispose();
+            _layoutInteropRef = null;
+        }
+    }
+
     protected override async Task OnParametersSetAsync()
     {
         // Подписываемся на изменение языка только один раз
@@ -223,6 +319,7 @@
             await RemoveExcessSelection(limit);
         }
 
+        ScheduleConnectionRedraw();
         StateHasChanged();
     }
 
@@ -257,6 +354,7 @@
         InvokeAsync(async () =>
         {
             await CalculateAndUpdateTotals();
+            ScheduleConnectionRedraw();
             StateHasChanged();
         });
     }
@@ -269,6 +367,10 @@
     {
         try
         {
+            await TeardownTreeLayoutInteropAsync();
+            _deferConnectionRedrawAfterRender = false;
+            _deferFolderPopupPositionAfterRender = false;
+
             LoadingState = "loading";
             _suppressUrlUpdate = true; // Предотвращаем обновление URL во время загрузки
 
@@ -314,6 +416,7 @@
             _suppressUrlUpdate = false; // Разрешаем обновление URL
 
             await CalculateAndUpdateTotals();
+            ScheduleConnectionRedraw();
         }
         catch (Exception ex)
         {
@@ -642,34 +745,23 @@
         return $"tree-grid-item node-type-{node.Type} tech-cat-{node.TechCategory}";
     }
 
-    private async Task HandleNodeClick(Node node)
+    private void HandleNodeClick(Node node)
     {
         if (node.Type != "folder") return;
 
         if (currentlyExpandedFolder?.Id == node.Id)
         {
             currentlyExpandedFolder = null;
+            ScheduleConnectionRedraw();
+            _deferFolderPopupPositionAfterRender = false;
         }
         else
         {
             currentlyExpandedFolder = node;
+            _deferFolderPopupPositionAfterRender = true;
         }
 
         StateHasChanged();
-
-        if (currentlyExpandedFolder != null)
-        {
-            await Task.Delay(10);
-            try
-            {
-                await JSRuntime.InvokeVoidAsync("techTreeFunctions.positionFolderPopup",
-                    $"folder-popup-{currentlyExpandedFolder.Id}",
-                    $"node-{currentlyExpandedFolder.Id}",
-                    "tech-tree-container-id"
-                );
-            }
-            catch (Exception ex) { }
-        }
     }
 
     private void CloseFolderPopup()
@@ -677,6 +769,8 @@
         if (currentlyExpandedFolder != null)
         {
             currentlyExpandedFolder = null;
+            _deferFolderPopupPositionAfterRender = false;
+            ScheduleConnectionRedraw();
             StateHasChanged();
         }
     }
@@ -694,6 +788,7 @@
             if (!nodesInCurrentPopup.Contains(node.Id))
             {
                 currentlyExpandedFolder = null;
+                _deferFolderPopupPositionAfterRender = false;
             }
         }
 
@@ -755,6 +850,7 @@
 
         await CalculateAndUpdateTotals();
         await UpdateUrlState();
+        ScheduleConnectionRedraw();
         StateHasChanged();
     }
     private bool CanSelectNodeWithLimit(Node node)
@@ -861,6 +957,7 @@
             node.RequiredExp = newValue;
             await CalculateAndUpdateTotals();
             await UpdateUrlState(); // Обновляем URL после изменения RP
+            ScheduleConnectionRedraw();
             StateHasChanged();
         }
     }
@@ -1032,6 +1129,12 @@
     }
 
     [JSInvokable]
+    public Task RedrawConnectionsDebouncedAsync()
+    {
+        return DrawConnectionLines();
+    }
+
+    [JSInvokable]
     public void OnScreenshotProgress(string message)
     {
         Console.WriteLine($"Screenshot progress: {message}");
@@ -1043,8 +1146,9 @@
         Console.WriteLine($"Screenshot complete: {success} - {message}");
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         Localization.LanguageChanged -= OnLanguageChanged;
+        await TeardownTreeLayoutInteropAsync();
     }
 }

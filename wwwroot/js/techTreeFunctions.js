@@ -1,62 +1,114 @@
 ﻿window.techTreeFunctions = {
-    positionFolderPopup: function (popupId, targetNodeId, containerId) {
-        requestAnimationFrame(() => {
-            const popupElement = document.getElementById(popupId);
-            const targetNodeElement = document.getElementById(targetNodeId);
-            const containerElement = document.getElementById(containerId);
-
-            if (!popupElement || !targetNodeElement || !containerElement) {
-                console.error("Popup positioning error: Elements not found.",
-                    { popupId, targetNodeId, containerId, popupElement, targetNodeElement, containerElement });
-                if (popupElement) popupElement.style.visibility = 'hidden';
-                return;
-            }
-
-            popupElement.style.visibility = 'hidden';
-            popupElement.style.top = '-9999px';
-            popupElement.style.left = '-9999px';
-            popupElement.style.display = 'block';
-
-            const popupHeight = popupElement.offsetHeight;
-            const popupWidth = popupElement.offsetWidth;
-
-            const targetRect = targetNodeElement.getBoundingClientRect();
-            const containerRect = containerElement.getBoundingClientRect();
-            const summaryPanel = document.getElementById('summary-container');
-            const summaryPanelHeight = summaryPanel ? summaryPanel.offsetHeight : 0;
-
-            const viewportHeight = window.innerHeight;
-            const spaceBelow = viewportHeight - targetRect.bottom - summaryPanelHeight - 5;
-            const spaceAbove = targetRect.top - 5;
-
-            let top;
-            const left = targetRect.left - containerRect.left + (containerElement.scrollLeft || 0);
-
-            if (popupHeight <= spaceBelow) {
-                top = targetRect.bottom - containerRect.top + (containerElement.scrollTop || 0) + 5;
-            } else if (popupHeight <= spaceAbove) {
-                top = targetRect.top - containerRect.top + (containerElement.scrollTop || 0) - popupHeight - 5;
-            } else {
-                top = targetRect.bottom - containerRect.top + (containerElement.scrollTop || 0) + 5;
-                const availableHeight = viewportHeight - summaryPanelHeight - (targetRect.bottom + 5);
-                if (availableHeight < popupHeight && availableHeight > 50) {
-                }
-                else {
-                }
-            }
-
-            let finalLeft = left;
-            if (containerRect.left + left + popupWidth > window.innerWidth - 10) {
-                finalLeft = window.innerWidth - containerRect.left - popupWidth - 10 - (containerElement.scrollLeft || 0);
-            }
-            if (containerRect.left + finalLeft < 10) {
-                finalLeft = 10 - containerRect.left + (containerElement.scrollLeft || 0);
-            }
-
-            popupElement.style.left = `${finalLeft}px`;
-            popupElement.style.top = `${top}px`;
-            popupElement.style.visibility = 'visible';
+    /* Waits until after the next two animation frames — use after Blazor DOM updates before measuring boxes. */
+    waitTwoAnimationFramesAsync: function () {
+        return new Promise(function (resolve) {
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () { resolve(true); });
+            });
         });
+    },
+
+    disconnectTechTreeLayout: function () {
+        if (!this._techTreeLayoutTeardown) return;
+        try {
+            this._techTreeLayoutTeardown();
+        } finally {
+            this._techTreeLayoutTeardown = null;
+        }
+    },
+
+    /* Re-draw dependency lines after window resize / layout changes. Debounced. */
+    observeTechTreeLayout: function (containerId, dotnetRef, debounceMs) {
+        this.disconnectTechTreeLayout();
+        if (!dotnetRef || !containerId) return;
+
+        var el = document.getElementById(containerId);
+        if (!el) return;
+
+        var delay = typeof debounceMs === 'number' ? debounceMs : 110;
+        var timer = null;
+        function scheduleRedraw() {
+            window.clearTimeout(timer);
+            timer = window.setTimeout(function () {
+                timer = null;
+                dotnetRef.invokeMethodAsync('RedrawConnectionsDebouncedAsync').catch(function () {});
+            }, delay);
+        }
+
+        var ro = null;
+        try {
+            if (typeof ResizeObserver !== 'undefined') {
+                ro = new ResizeObserver(function () { scheduleRedraw(); });
+                ro.observe(el);
+            }
+        } catch (e) { /* ResizeObserver unsupported */ }
+
+        window.addEventListener('resize', scheduleRedraw);
+        var vv = window.visualViewport;
+        if (vv) vv.addEventListener('resize', scheduleRedraw);
+
+        this._techTreeLayoutTeardown = function () {
+            window.clearTimeout(timer);
+            timer = null;
+            if (ro) {
+                try { ro.disconnect(); } catch (e) { /* ignore */ }
+            }
+            window.removeEventListener('resize', scheduleRedraw);
+            if (vv) vv.removeEventListener('resize', scheduleRedraw);
+        };
+    },
+
+    positionFolderPopup: function (popupId, targetNodeId, containerId) {
+        var popupElement = document.getElementById(popupId);
+        var targetNodeElement = document.getElementById(targetNodeId);
+        var containerElement = document.getElementById(containerId);
+
+        if (!popupElement || !targetNodeElement || !containerElement) {
+            console.error('Popup positioning error: Elements not found.',
+                { popupId, targetNodeId, containerId, popupElement, targetNodeElement, containerElement });
+            if (popupElement) popupElement.style.visibility = 'hidden';
+            return;
+        }
+
+        popupElement.style.visibility = 'hidden';
+        popupElement.style.top = '-9999px';
+        popupElement.style.left = '-9999px';
+        popupElement.style.display = 'block';
+
+        var popupHeight = popupElement.offsetHeight;
+        var popupWidth = popupElement.offsetWidth;
+
+        var targetRect = targetNodeElement.getBoundingClientRect();
+        var containerRect = containerElement.getBoundingClientRect();
+        var summaryPanel = document.getElementById('summary-container');
+        var summaryPanelHeight = summaryPanel ? summaryPanel.offsetHeight : 0;
+
+        var viewportHeight = window.innerHeight;
+        var spaceBelow = viewportHeight - targetRect.bottom - summaryPanelHeight - 5;
+        var spaceAbove = targetRect.top - 5;
+
+        var top;
+        var left = targetRect.left - containerRect.left + (containerElement.scrollLeft || 0);
+
+        if (popupHeight <= spaceBelow) {
+            top = targetRect.bottom - containerRect.top + (containerElement.scrollTop || 0) + 5;
+        } else if (popupHeight <= spaceAbove) {
+            top = targetRect.top - containerRect.top + (containerElement.scrollTop || 0) - popupHeight - 5;
+        } else {
+            top = targetRect.bottom - containerRect.top + (containerElement.scrollTop || 0) + 5;
+        }
+
+        var finalLeft = left;
+        if (containerRect.left + left + popupWidth > window.innerWidth - 10) {
+            finalLeft = window.innerWidth - containerRect.left - popupWidth - 10 - (containerElement.scrollLeft || 0);
+        }
+        if (containerRect.left + finalLeft < 10) {
+            finalLeft = 10 - containerRect.left + (containerElement.scrollLeft || 0);
+        }
+
+        popupElement.style.left = finalLeft + 'px';
+        popupElement.style.top = top + 'px';
+        popupElement.style.visibility = 'visible';
     },
 
     copyTextToClipboard: function (text) {
@@ -397,67 +449,55 @@
         }
     },
     drawConnections: function (connectionData) {
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                console.log("Drawing connections for:", connectionData);
-                if (!connectionData || connectionData.length === 0) {
-                    console.log("No connection data provided.");
-                    return;
-                }
+        if (!connectionData || connectionData.length === 0) return;
 
-                const svg = document.querySelector('.tree-connections-overlay');
-                if (!svg) {
-                    return;
-                }
-                const svgRect = svg.getBoundingClientRect();
+        var svg = document.querySelector('.tree-connections-overlay');
+        if (!svg) return;
+        var svgRect = svg.getBoundingClientRect();
 
-                connectionData.forEach(conn => {
-                    const line = svg.querySelector(`#${conn.lineId}`);
-                    const sourceElem = document.getElementById(conn.sourceElementId);
-                    const targetElem = document.getElementById(conn.targetElementId);
+        connectionData.forEach(function (conn) {
+            var line = svg.querySelector('#' + conn.lineId);
+            var sourceElem = document.getElementById(conn.sourceElementId);
+            var targetElem = document.getElementById(conn.targetElementId);
 
-                    const isSourceVisible = sourceElem && sourceElem.offsetParent !== null;
-                    const isTargetVisible = targetElem && targetElem.offsetParent !== null;
+            var isSourceVisible = sourceElem && sourceElem.offsetParent !== null;
+            var isTargetVisible = targetElem && targetElem.offsetParent !== null;
 
-                    if (line && sourceElem && targetElem && isSourceVisible && isTargetVisible) {
-                        try {
-                            const sourceRect = sourceElem.getBoundingClientRect();
-                            const targetRect = targetElem.getBoundingClientRect();
+            if (line && sourceElem && targetElem && isSourceVisible && isTargetVisible) {
+                try {
+                    var sourceRect = sourceElem.getBoundingClientRect();
+                    var targetRect = targetElem.getBoundingClientRect();
 
-                            const sourceParentContainer = sourceElem.closest('.tree-grid-item');
-                            const targetParentContainer = targetElem.closest('.tree-grid-item');
-                            const sourceInFolder = sourceElem.closest('.folder-items-container');
-                            const targetInFolder = targetElem.closest('.folder-items-container');
+                    var sourceParentContainer = sourceElem.closest('.tree-grid-item');
+                    var targetParentContainer = targetElem.closest('.tree-grid-item');
+                    var sourceInFolder = sourceElem.closest('.folder-items-container');
+                    var targetInFolder = targetElem.closest('.folder-items-container');
 
-                            let x1, y1, x2, y2;
+                    var x1, y1, x2, y2;
 
-                            if (sourceInFolder && targetInFolder && sourceParentContainer === targetParentContainer) {
-                                x1 = sourceRect.left + sourceRect.width / 2 - svgRect.left;
-                                y1 = sourceRect.bottom - svgRect.top;
-                                x2 = targetRect.left + targetRect.width / 2 - svgRect.left;
-                                y2 = targetRect.top - svgRect.top;
-                            }
-                            else {
-                                x1 = sourceRect.left + sourceRect.width / 2 - svgRect.left;
-                                y1 = sourceRect.bottom - svgRect.top;
-                                x2 = targetRect.left + targetRect.width / 2 - svgRect.left;
-                                y2 = targetRect.top - svgRect.top;
-                            }
-
-                            line.setAttribute('x1', x1);
-                            line.setAttribute('y1', y1);
-                            line.setAttribute('x2', x2);
-                            line.setAttribute('y2', y2);
-                            line.style.visibility = 'visible';
-
-                        } catch (e) {
-                            if (line) line.style.visibility = 'hidden';
-                        }
+                    if (sourceInFolder && targetInFolder && sourceParentContainer === targetParentContainer) {
+                        x1 = sourceRect.left + sourceRect.width / 2 - svgRect.left;
+                        y1 = sourceRect.bottom - svgRect.top;
+                        x2 = targetRect.left + targetRect.width / 2 - svgRect.left;
+                        y2 = targetRect.top - svgRect.top;
                     } else {
-                        if (line) line.style.visibility = 'hidden';
+                        x1 = sourceRect.left + sourceRect.width / 2 - svgRect.left;
+                        y1 = sourceRect.bottom - svgRect.top;
+                        x2 = targetRect.left + targetRect.width / 2 - svgRect.left;
+                        y2 = targetRect.top - svgRect.top;
                     }
-                });
-            });
+
+                    line.setAttribute('x1', x1);
+                    line.setAttribute('y1', y1);
+                    line.setAttribute('x2', x2);
+                    line.setAttribute('y2', y2);
+                    line.style.visibility = 'visible';
+                } catch (e) {
+                    if (line) line.style.visibility = 'hidden';
+                }
+            } else {
+                if (line) line.style.visibility = 'hidden';
+            }
         });
     },
     findRankElements: function () {
