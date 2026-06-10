@@ -1,11 +1,11 @@
-﻿﻿version: '3.8'
+version: '3.8'
 
 services:
   blazor-app:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ${IMAGE_NAME:-my-blazor-app-default}:latest 
+    image: ${IMAGE_NAME:-my-blazor-app-default}:latest
     restart: unless-stopped
     networks:
       - proxy-net
@@ -22,9 +22,9 @@ services:
     restart: unless-stopped
     ports:
       - "8881:8880"
-      - "8090:8080" 
+      - "8090:8080"
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"      
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
     networks:
       - proxy-net
     command:
@@ -37,8 +37,6 @@ services:
       - "--log.level=DEBUG"
       - "--accesslog=true"
 
-
-
-networks: 
+networks:
   proxy-net:
     external: true
