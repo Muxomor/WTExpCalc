@@ -220,24 +220,52 @@
         const svg = document.querySelector('.tree-connections-overlay');
         if (!svg) return [];
 
-        const lines = svg.querySelectorAll('line[id^="dep-"]');
+        const paths = svg.querySelectorAll('path[id^="dep-"]');
         const connectionData = [];
 
-        lines.forEach(line => {
-            const match = /^dep-(\d+)-(\d+)$/.exec(line.id);
+        paths.forEach(path => {
+            const match = /^dep-(\d+)-(\d+)$/.exec(path.id);
             if (!match) return;
 
             const targetNodeId = match[1];
             const sourceNodeId = match[2];
 
             connectionData.push({
-                lineId: line.id,
+                lineId: path.id,
                 sourceElementId: `node-${sourceNodeId}`,
                 targetElementId: `node-${targetNodeId}`
             });
         });
 
         return connectionData;
+    },
+
+    _buildConnectionPath: function (x1, y1, x2, y2) {
+        var colThreshold = 12;
+        var rankBandThreshold = 50;
+        var dx = x2 - x1;
+        var dy = y2 - y1;
+
+        if (Math.abs(dx) < colThreshold) {
+            return 'M ' + x1 + ' ' + y1 + ' L ' + x2 + ' ' + y2;
+        }
+
+        if (Math.abs(dy) < rankBandThreshold) {
+            var routeY = y1 + Math.min(18, Math.max(8, Math.abs(dy) * 0.5 + 8));
+            return 'M ' + x1 + ' ' + y1 + ' L ' + x1 + ' ' + routeY + ' L ' + x2 + ' ' + routeY + ' L ' + x2 + ' ' + y2;
+        }
+
+        if (dy > 0) {
+            // Cross-rank: vertical down, horizontal at target rank, then into target (wiki-style elbow)
+            var elbowY = y2 - 12;
+            if (elbowY <= y1 + 16) {
+                elbowY = y1 + Math.max(24, dy * 0.45);
+            }
+            return 'M ' + x1 + ' ' + y1 + ' L ' + x1 + ' ' + elbowY + ' L ' + x2 + ' ' + elbowY + ' L ' + x2 + ' ' + y2;
+        }
+
+        var fallbackY = (y1 + y2) / 2;
+        return 'M ' + x1 + ' ' + y1 + ' L ' + x1 + ' ' + fallbackY + ' L ' + x2 + ' ' + fallbackY + ' L ' + x2 + ' ' + y2;
     },
     _refreshConnectionsBeforeScreenshot: async function () {
         const connectionData = this._buildConnectionDataFromDom();
@@ -488,47 +516,30 @@
         var svgRect = svg.getBoundingClientRect();
 
         connectionData.forEach(function (conn) {
-            var line = svg.querySelector('#' + conn.lineId);
+            var path = svg.querySelector('#' + conn.lineId);
             var sourceElem = document.getElementById(conn.sourceElementId);
             var targetElem = document.getElementById(conn.targetElementId);
 
             var isSourceVisible = sourceElem && sourceElem.offsetParent !== null;
             var isTargetVisible = targetElem && targetElem.offsetParent !== null;
 
-            if (line && sourceElem && targetElem && isSourceVisible && isTargetVisible) {
+            if (path && sourceElem && targetElem && isSourceVisible && isTargetVisible) {
                 try {
                     var sourceRect = sourceElem.getBoundingClientRect();
                     var targetRect = targetElem.getBoundingClientRect();
 
-                    var sourceParentContainer = sourceElem.closest('.tree-grid-item');
-                    var targetParentContainer = targetElem.closest('.tree-grid-item');
-                    var sourceInFolder = sourceElem.closest('.folder-items-container');
-                    var targetInFolder = targetElem.closest('.folder-items-container');
+                    var x1 = sourceRect.left + sourceRect.width / 2 - svgRect.left;
+                    var y1 = sourceRect.bottom - svgRect.top;
+                    var x2 = targetRect.left + targetRect.width / 2 - svgRect.left;
+                    var y2 = targetRect.top - svgRect.top;
 
-                    var x1, y1, x2, y2;
-
-                    if (sourceInFolder && targetInFolder && sourceParentContainer === targetParentContainer) {
-                        x1 = sourceRect.left + sourceRect.width / 2 - svgRect.left;
-                        y1 = sourceRect.bottom - svgRect.top;
-                        x2 = targetRect.left + targetRect.width / 2 - svgRect.left;
-                        y2 = targetRect.top - svgRect.top;
-                    } else {
-                        x1 = sourceRect.left + sourceRect.width / 2 - svgRect.left;
-                        y1 = sourceRect.bottom - svgRect.top;
-                        x2 = targetRect.left + targetRect.width / 2 - svgRect.left;
-                        y2 = targetRect.top - svgRect.top;
-                    }
-
-                    line.setAttribute('x1', x1);
-                    line.setAttribute('y1', y1);
-                    line.setAttribute('x2', x2);
-                    line.setAttribute('y2', y2);
-                    line.style.visibility = 'visible';
+                    path.setAttribute('d', window.techTreeFunctions._buildConnectionPath(x1, y1, x2, y2));
+                    path.style.visibility = 'visible';
                 } catch (e) {
-                    if (line) line.style.visibility = 'hidden';
+                    if (path) path.style.visibility = 'hidden';
                 }
             } else {
-                if (line) line.style.visibility = 'hidden';
+                if (path) path.style.visibility = 'hidden';
             }
         });
     },

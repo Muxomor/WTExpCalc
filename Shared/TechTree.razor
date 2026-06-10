@@ -67,9 +67,11 @@
                 {
                     @foreach (var dep in Dependencies)
                     {
-                        <line id="dep-@dep.NodeId-@dep.PrerequisiteNodeId"
-                              x1="0" y1="0" x2="0" y2="0"
+                        <path id="dep-@dep.NodeId-@dep.PrerequisiteNodeId"
+                              d=""
+                              fill="none"
                               stroke="#cccccc" stroke-width="2"
+                              stroke-linejoin="round"
                               marker-end="url(#arrowhead)"
                               visibility="hidden" />
                     }
