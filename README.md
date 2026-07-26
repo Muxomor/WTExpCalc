@@ -39,7 +39,6 @@ This application relies on several external components to function correctly. Th
 
   * Docker and Docker Compose
   * Git
-  * A running PostgreSQL instance
 
 ### Installation
 

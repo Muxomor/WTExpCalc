@@ -103,6 +103,24 @@ nav.flex-column {
         background-color: rgba(0, 0, 0, 0.2);
     }
 
+.github-link {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 2px;
+    color: rgba(255, 255, 255, 0.4);
+    text-decoration: none;
+    line-height: 1;
+}
+
+    .github-link:hover {
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .github-link svg {
+        display: block;
+    }
+
 /* Переключатель языков */
 ::deep .language-toggle {
     flex-shrink: 0;
