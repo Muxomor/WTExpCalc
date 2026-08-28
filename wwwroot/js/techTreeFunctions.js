@@ -332,12 +332,13 @@
 
         return { tempContainer, finalScreenshotArea };
     },
-    _renderScreenshotCanvas: async function (tempContainer, screenshotArea, scale) {
+    _renderScreenshotCanvas: async function (tempContainer, screenshotArea, scale, maxCanvasSize) {
         document.body.appendChild(tempContainer);
         await new Promise(resolve => setTimeout(resolve, 100));
 
         const maxDimension = Math.max(screenshotArea.width, screenshotArea.height);
-        const effectiveScale = Math.min(scale, 16384 / maxDimension);
+        const targetLimit = (typeof maxCanvasSize === 'number' && maxCanvasSize > 0) ? maxCanvasSize : 16384;
+        const effectiveScale = Math.min(scale, 16384 / maxDimension, targetLimit / maxDimension);
 
         return html2canvas(tempContainer, {
             scale: effectiveScale,
@@ -388,7 +389,7 @@
             tempContainer = scene.tempContainer;
 
             this._reportProgress(onProgress, options.renderMessage);
-            const canvas = await this._renderScreenshotCanvas(tempContainer, scene.finalScreenshotArea, options.scale);
+            const canvas = await this._renderScreenshotCanvas(tempContainer, scene.finalScreenshotArea, options.scale, options.maxCanvasSize);
 
             this._reportProgress(onProgress, options.processMessage);
             return this._limitCanvasSize(canvas, options.maxCanvasSize, options.modeName);
