@@ -105,13 +105,6 @@ else
                             <i class="bi bi-link-45deg"></i>
                         </button>
                         <button class="btn btn-sm copy-button screenshot-button" 
-                                title="@GetScreenshotButtonTitle()" 
-                                @onclick="CopyScreenshotToClipboard" 
-                                disabled="@(!hasSelectedRanks || isScreenshotInProgress)"
-                                style="margin-left: 5px;">
-                            <i class="bi bi-camera"></i>
-                        </button>
-                        <button class="btn btn-sm copy-button screenshot-button" 
                                 title="@Localization.GetText("DownloadScreenshot")" 
                                 @onclick="DownloadScreenshot" 
                                 disabled="@(!hasSelectedRanks || isScreenshotInProgress)"
@@ -123,7 +116,7 @@ else
                         @onclick="DownloadScreenshot4K"
                         disabled="@(!hasSelectedRanks || isScreenshotInProgress)"
                         style="margin-left: 5px;">
-                    <i class="bi bi-crop"></i>
+                    <i class="bi bi-camera"></i>
                 </button>
             }
             </div>

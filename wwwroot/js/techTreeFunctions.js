@@ -336,8 +336,11 @@
         document.body.appendChild(tempContainer);
         await new Promise(resolve => setTimeout(resolve, 100));
 
+        const maxDimension = Math.max(screenshotArea.width, screenshotArea.height);
+        const effectiveScale = Math.min(scale, 16384 / maxDimension);
+
         return html2canvas(tempContainer, {
-            scale: scale,
+            scale: effectiveScale,
             useCORS: true,
             allowTaint: true,
             backgroundColor: '#1a1a1a',
