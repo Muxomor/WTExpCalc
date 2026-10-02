@@ -7,17 +7,17 @@
 @inject ILocalizationService Localization
 @implements IDisposable
 
-<h3>@Localization.GetText("SelectNation")</h3>
+<h3>@Localization.Text(UIStrings.SelectNation)</h3>
 
 @if (nations == null)
 {
-        <p><em>@Localization.GetText("Loading")</em></p>
+        <p><em>@Localization.Text(UIStrings.Loading)</em></p>
 }
 else if (loadError != null)
 {
         <div class="alert alert-danger" style="background-color: #5a1e1e; border-color: #721c24; color: #f8d7d7;">
-            <p>@Localization.GetText("Error"): @loadError</p>
-            <button class="btn btn-primary" @onclick="ReloadData">@Localization.GetText("Retry")</button>
+            <p>@Localization.Text(UIStrings.Error): @loadError</p>
+            <button class="btn btn-primary" @onclick="ReloadData">@Localization.Text(UIStrings.Retry)</button>
         </div>
 }
 else
@@ -49,11 +49,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var savedLang = await Localization.LoadSavedLanguageAsync();
-        await Localization.SetLanguageAsync(savedLang);
-
         Localization.LanguageChanged += OnLanguageChanged;
-
         await LoadData();
     }
 
@@ -64,7 +60,7 @@ else
 
     private string GetNationDisplayName(Nation nation)
     {
-        return SimpleGameLocalization.GetNationName(nation.Name, Localization.IsEnglish, nation.Id);
+        return Localization.NationName(nation.Name, nation.Id);
     }
 
     private async Task LoadData()
@@ -106,12 +102,12 @@ else
             }
             else
             {
-                loadError = "Не удалось загрузить типы техники для навигации";
+                loadError = Localization.Text(UIStrings.VehicleTypesLoadFailed);
             }
         }
         catch (Exception ex)
         {
-            loadError = $"Ошибка навигации: {ex.Message}";
+            loadError = Localization.Text(UIStrings.NavigationError, ex.Message);
         }
     }
 

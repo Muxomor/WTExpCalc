@@ -68,8 +68,8 @@
         await LoadVersionAsync();
 
         Nav.LocationChanged += OnLocationChanged;
-        currentUrl = Nav.Uri;
         Localization.LanguageChanged += OnLanguageChanged;
+        currentUrl = Nav.Uri;
     }
 
     private async Task LoadVersionAsync()
@@ -99,7 +99,7 @@
 
     private string GetNationDisplayName(Nation nation)
     {
-        return SimpleGameLocalization.GetNationName(nation.Name, Localization.IsEnglish, nation.Id);
+        return Localization.NationName(nation.Name, nation.Id);
     }
 
     private string GetActiveCssClass(string nationSlug)

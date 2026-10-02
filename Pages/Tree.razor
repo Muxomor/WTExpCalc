@@ -10,22 +10,22 @@
 @inject ILocalizationService Localization
 @implements IDisposable
 
-<h3>@Localization.GetText("TechTreeFor") @GetNationDisplayName()</h3>
+<h3>@Localization.Text(UIStrings.TechTreeFor) @GetNationDisplayName()</h3>
 
 @if (isLoading)
 {
-        <p><em>@Localization.GetText("LoadingData")</em></p>
+        <p><em>@Localization.Text(UIStrings.LoadingData)</em></p>
 }
 else if (loadingError != null)
 {
         <div class="alert alert-danger" style="background-color: #5a1e1e; border-color: #721c24; color: #f8d7d7;">
-            <p>@Localization.GetText("Error"): @loadingError</p>
-            <button class="btn btn-primary" @onclick="RetryLoad">@Localization.GetText("Retry")</button>
+            <p>@Localization.Text(UIStrings.Error): @loadingError</p>
+            <button class="btn btn-primary" @onclick="RetryLoad">@Localization.Text(UIStrings.Retry)</button>
         </div>
 }
 else if (vehicleTypes == null || !vehicleTypes.Any())
 {
-        <p><em>@Localization.GetText("NoVehicleTypes")</em></p>
+        <p><em>@Localization.Text(UIStrings.NoVehicleTypes)</em></p>
 }
 else
 {
@@ -55,17 +55,17 @@ else
         <div id="summary-container">
         <div id="summary-panel">
             <span class="summary-item summary-rp">
-                <span>@Localization.GetText("RP"):</span> @currentTotalRp.ToString("N0")
+                <span>@Localization.Text(UIStrings.RP):</span> @currentTotalRp.ToString("N0")
             </span>
             <span class="summary-item summary-sl">
-                <span>@Localization.GetText("SL"):</span> @currentTotalSl.ToString("N0")
+                <span>@Localization.Text(UIStrings.SL):</span> @currentTotalSl.ToString("N0")
             </span>
             <span class="summary-item summary-limit">
-                <span>@Localization.GetText("RPLimit"):</span>
+                <span>@Localization.Text(UIStrings.RPLimit):</span>
                 <input type="number"
                        class="rp-limit-input"
                        min="1"
-                       placeholder="@Localization.GetText("Unlimited")"
+                       placeholder="@Localization.Text(UIStrings.Unlimited)"
                        @bind="maxRpLimitK"
                        @oninput="OnRpLimitChanged" />
                 <span class="limit-suffix">K</span>
@@ -75,7 +75,7 @@ else
         {
             <div class="rp-limit-warning">
                 <i class="bi bi-exclamation-triangle"></i>
-                <span>@Localization.GetText("RPLimitExceeded")</span>
+                <span>@Localization.Text(UIStrings.RPLimitExceeded)</span>
             </div>
         }
             <div id="selected-names-container">
@@ -83,7 +83,7 @@ else
                 @if (!string.IsNullOrEmpty(selectedVehicleNames))
                 {
                             <span title="@selectedVehicleNames">
-                        @Localization.GetText("Selected"): @selectedVehicleNames
+                        @Localization.Text(UIStrings.Selected): @selectedVehicleNames
                             </span>
                 }
                 else
@@ -94,18 +94,18 @@ else
             @if (!string.IsNullOrEmpty(selectedVehicleNames))
             {
                         <button class="btn btn-sm btn-secondary copy-button" 
-                                title="@Localization.GetText("CopyList")" 
+                                title="@Localization.Text(UIStrings.CopyList)" 
                                 @onclick="CopyNamesToClipboard">
                             <i class="bi bi-clipboard"></i>
                         </button>
                         <button class="btn btn-sm btn-info copy-button" 
-                                title="@Localization.GetText("CopyUrl")" 
+                                title="@Localization.Text(UIStrings.CopyUrl)" 
                                 @onclick="CopyUrlToClipboard" 
                                 style="margin-left: 5px;">
                             <i class="bi bi-link-45deg"></i>
                         </button>
                         <button class="btn btn-sm copy-button screenshot-button" 
-                                title="@Localization.GetText("DownloadScreenshot")" 
+                                title="@Localization.Text(UIStrings.DownloadScreenshot)" 
                                 @onclick="DownloadScreenshot" 
                                 disabled="@(!hasSelectedRanks || isScreenshotInProgress)"
                                 style="margin-left: 5px;">
@@ -160,11 +160,9 @@ else
     {
         await LoadPageData();
     }
-    protected override async Task OnInitializedAsync()
-    {
-        var savedLang = await Localization.LoadSavedLanguageAsync();
-        await Localization.SetLanguageAsync(savedLang);
 
+    protected override void OnInitialized()
+    {
         Localization.LanguageChanged += OnLanguageChanged;
     }
 
@@ -175,23 +173,23 @@ else
 
     private string GetVehicleTypeDisplayName(VehicleType vt)
     {
-        return SimpleGameLocalization.GetVehicleTypeName(vt.Name, vt.NameEnglish, Localization.IsEnglish);
+        return Localization.VehicleTypeName(vt.Name, vt.NameEnglish);
     }
 
     private string GetNationDisplayName()
     {
         return currentNation != null ?
-               SimpleGameLocalization.GetNationName(currentNation.Name, Localization.IsEnglish, currentNation.Id) :
-               Localization.GetText("Loading");
+               Localization.NationName(currentNation.Name, currentNation.Id) :
+               Localization.Text(UIStrings.Loading);
     }
     private string GetScreenshot4KButtonTitle()
     {
         var uri = new Uri(Navigation.Uri);
         if (uri.Scheme == "http")
         {
-            return Localization.GetText("Screenshot4KTooltipHTTP");
+            return Localization.Text(UIStrings.Screenshot4KTooltipHttp);
         }
-        return Localization.GetText("Screenshot4KTooltip");
+        return Localization.Text(UIStrings.Screenshot4KTooltip);
     }
     private async Task OnRpLimitChanged(ChangeEventArgs e)
     {
@@ -237,9 +235,9 @@ else
         var uri = new Uri(Navigation.Uri);
         if (uri.Scheme == "http")
         {
-            return Localization.GetText("CopyScreenshot") + " (HTTP)";
+            return Localization.Text(UIStrings.CopyScreenshotHttp);
         }
-        return Localization.GetText("CopyScreenshot");
+        return Localization.Text(UIStrings.CopyScreenshot);
     }
 
     private async Task LoadPageData()
@@ -254,7 +252,7 @@ else
             currentNation = await Api.GetNationBySlugAsync(NationSlug);
             if (currentNation == null)
             {
-                loadingError = $"Нация '{NationSlug}' не найдена.";
+                loadingError = Localization.Text(UIStrings.NationNotFound, NationSlug);
                 return;
             }
 
@@ -264,7 +262,7 @@ else
             vehicleTypes = await Api.GetVehicleTypesAsync();
             if (vehicleTypes == null || !vehicleTypes.Any())
             {
-                loadingError = "Не удалось загрузить типы техники.";
+                loadingError = Localization.Text(UIStrings.VehicleTypesLoadFailed);
                 return;
             }
 
@@ -272,7 +270,7 @@ else
             if (!string.IsNullOrEmpty(TypeSlug))
             {
                 // Проверяем валидность slug
-                if (!VehicleTypeFormattingUtils.IsValidSlug(TypeSlug))
+                if (!GameDataLocalization.IsValidVehicleTypeSlug(TypeSlug))
                 {
                     var firstType = vehicleTypes.First();
                     Navigation.NavigateTo($"/tree/{NationSlug}/{firstType.Slug}", replace: true);
@@ -309,7 +307,7 @@ else
         }
         catch (Exception ex)
         {
-            loadingError = $"Произошла ошибка при загрузке данных: {ex.Message}";
+            loadingError = Localization.Text(UIStrings.DataLoadError, ex.Message);
         }
         finally
         {
@@ -358,7 +356,7 @@ else
         try
         {
             isScreenshotInProgress = true;
-            screenshotProgressMessage = "Подготовка скриншота...";
+            screenshotProgressMessage = Localization.Text(UIStrings.PreparingScreenshot);
             StateHasChanged();
 
             await techTreeRef.CopyScreenshotToClipboard();
@@ -366,7 +364,7 @@ else
         catch (Exception ex)
         {
             Console.WriteLine($"Error copying screenshot: {ex.Message}");
-            screenshotProgressMessage = "Ошибка создания скриншота";
+            screenshotProgressMessage = Localization.Text(UIStrings.ScreenshotError);
             await Task.Delay(2000);
         }
         finally
@@ -383,7 +381,7 @@ else
         try
         {
             isScreenshotInProgress = true;
-            screenshotProgressMessage = "Подготовка скриншота...";
+            screenshotProgressMessage = Localization.Text(UIStrings.PreparingScreenshot);
             StateHasChanged();
 
             await techTreeRef.DownloadScreenshot();
@@ -391,7 +389,7 @@ else
         catch (Exception ex)
         {
             Console.WriteLine($"Error downloading screenshot: {ex.Message}");
-            screenshotProgressMessage = "Ошибка создания скриншота";
+            screenshotProgressMessage = Localization.Text(UIStrings.ScreenshotError);
             await Task.Delay(2000);
         }
         finally
@@ -407,7 +405,7 @@ else
         try
         {
             isScreenshotInProgress = true;
-            screenshotProgressMessage = Localization.GetText("Preparing4KScreenshot");
+            screenshotProgressMessage = Localization.Text(UIStrings.Preparing4KScreenshot);
             StateHasChanged();
 
             await techTreeRef.DownloadScreenshot4K();
@@ -415,7 +413,7 @@ else
         catch (Exception ex)
         {
             Console.WriteLine($"Error downloading 4K screenshot: {ex.Message}");
-            screenshotProgressMessage = Localization.GetText("Error4KScreenshot");
+            screenshotProgressMessage = Localization.Text(UIStrings.Error4KScreenshot);
             await Task.Delay(2000);
         }
         finally

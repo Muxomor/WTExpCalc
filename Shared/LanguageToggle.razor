@@ -1,6 +1,5 @@
 ﻿@using WTExpCalc.Services
 @inject ILocalizationService Localization
-@inject NavigationManager Navigation
 @implements IDisposable
 
 <div class="language-toggle">
@@ -24,7 +23,6 @@
     private async Task SwitchLanguage(string lang)
     {
         await Localization.SetLanguageAsync(lang);
-        StateHasChanged();
     }
 
     private void OnLanguageChanged()

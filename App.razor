@@ -1,4 +1,5 @@
 ﻿@using WTExpCalc.Services
+@using WTExpCalc.Shared
 @inject ILocalizationService Localization
 
 <Router AppAssembly="@typeof(App).Assembly">
@@ -7,13 +8,13 @@
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
     <NotFound>
-        <PageTitle>@Localization.GetText("PageNotFound")</PageTitle>
+        <PageTitle>@Localization.Text(UIStrings.PageNotFound)</PageTitle>
         <LayoutView Layout="@typeof(MainLayout)">
             <div style="text-align: center; padding: 2rem;">
-                <h3>@Localization.GetText("PageNotFound")</h3>
+                <h3>@Localization.Text(UIStrings.PageNotFound)</h3>
                 <p>
                     <a href="/" class="btn btn-primary">
-                        @Localization.GetText("ReturnToHome")
+                        @Localization.Text(UIStrings.ReturnToHome)
                     </a>
                 </p>
             </div>

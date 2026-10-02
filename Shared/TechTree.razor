@@ -37,7 +37,7 @@
                     int selectedCount = AllNodesFlat.Count(n => n.Rank == rank && n.Type == "vehicle" && selectedNodeIds.Contains(n.Id));
 
                     <div class="rank-label" style="@rankLabelStyle">
-                        <span>@Localization.GetText("Rank") @rank</span>
+                        <span>@Localization.Text(UIStrings.Rank) @rank</span>
                         @if (requirement != null)
                         {
                             <span class="rank-requirement-counter @(selectedCount >= requiredCount ? "req-met" : "req-not-met")">
@@ -138,16 +138,16 @@
     }
     else if (LoadingState != "loading")
     {
-        <p>@Localization.GetText("NoVehicleTypes")</p>
+        <p>@Localization.Text(UIStrings.NoVehicleTypes)</p>
     }
 
     @if (LoadingState == "loading")
     {
-        <p>@Localization.GetText("Loading")</p>
+        <p>@Localization.Text(UIStrings.Loading)</p>
     }
     @if (LoadingState == "error")
     {
-        <p style="color: red;">@Localization.GetText("Error")</p>
+        <p style="color: red;">@Localization.Text(UIStrings.Error)</p>
     }
 </div>
 
@@ -362,7 +362,7 @@
     }
     private string GetNodeDisplayName(Node node)
     {
-        return SimpleGameLocalization.GetNodeName(node.Name, node.NameEnglish, Localization.IsEnglish);
+        return Localization.NodeName(node.Name, node.NameEnglish);
     }
 
     private async Task LoadData()
@@ -600,7 +600,7 @@
                 }
 
                 // Формируем строку для ранга с учетом языка
-                string rankLine = $"{Localization.GetText("Rank")} {ToRomanNumeral(rankNumber)}:\n{string.Join(", ", vehicleNames)}";
+                string rankLine = $"{Localization.Text(UIStrings.Rank)} {ToRomanNumeral(rankNumber)}:\n{string.Join(", ", vehicleNames)}";
                 result.Add(rankLine);
             }
         }
@@ -626,7 +626,7 @@
         }
 
         // Добавляем общее количество опыта в конец
-        string totalRpText = $"{Localization.GetText("TotalRP")}: {totalSelectedRp:N0}";
+        string totalRpText = $"{Localization.Text(UIStrings.TotalRP)}: {totalSelectedRp:N0}";
 
         var finalResult = string.Join("\n\n", result) + (result.Any() ? "\n\n" + totalRpText : totalRpText);
         Console.WriteLine($"=== Final formatted text ===\n{finalResult}");
@@ -869,7 +869,7 @@
         try
         {
             await JSRuntime.InvokeVoidAsync("techTreeFunctions.showRpLimitWarning",
-                Localization.GetText("RPLimitExceededMessage"));
+                Localization.Text(UIStrings.RPLimitExceededMessage));
         }
         catch (Exception ex)
         {
@@ -996,7 +996,7 @@
             __builder.OpenElement(seq++, "div");
             __builder.AddAttribute(seq++, "class", "node-detail-item node-br");
             // ИСПРАВЛЕНО: используем локализованную метку БР
-            __builder.AddContent(seq++, $"{Localization.GetText("BR")}: {node.Br}");
+            __builder.AddContent(seq++, $"{Localization.Text(UIStrings.BR)}: {node.Br}");
             __builder.CloseElement();
         }
 
@@ -1004,7 +1004,7 @@
         __builder.AddAttribute(seq++, "class", "node-detail-item node-exp");
         if (node.RequiredExp.HasValue)
         {
-            __builder.AddContent(seq++, $"{Localization.GetText("RP")}: ");
+            __builder.AddContent(seq++, $"{Localization.Text(UIStrings.RP)}: ");
             __builder.OpenElement(seq++, "input");
             __builder.AddAttribute(seq++, "type", "number");
             __builder.AddAttribute(seq++, "class", $"rp-input {(isRpModified ? "rp-modified" : "")}");

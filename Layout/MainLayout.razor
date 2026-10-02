@@ -1,4 +1,7 @@
 ﻿@inherits LayoutComponentBase
+@using WTExpCalc.Services
+@inject ILocalizationService Localization
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -10,3 +13,12 @@
         </article>
     </main>
 </div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var saved = await Localization.LoadSavedLanguageAsync();
+        await Localization.SetLanguageAsync(saved);
+        LocalizationService.PreloadCultures();
+    }
+}

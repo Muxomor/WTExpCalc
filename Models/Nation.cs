@@ -1,5 +1,4 @@
 ﻿using System.Text.Json.Serialization;
-using WTExpCalc.Shared;
 
 namespace WTExpCalc.Models
 {
@@ -17,16 +16,7 @@ namespace WTExpCalc.Models
         [JsonPropertyName("image_url")]
         public string? ImageUrl { get; set; }
 
-        /// <summary>
-        /// URL-friendly slug (английское название нации)
-        /// </summary>
         [JsonIgnore]
         public string Slug => Name.ToLowerInvariant();
-
-        /// <summary>
-        /// Отображаемое название (русское, через FormattingUtils)
-        /// </summary>
-        [JsonIgnore]
-        public string DisplayName => FormattingUtils.FormatNationName(Name, Id);
     }
 }
