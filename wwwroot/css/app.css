@@ -385,6 +385,55 @@ h3 {
     z-index: 2;
 }
 
+.folder-index-squares {
+    position: absolute;
+    left: 6px;
+    bottom: 4px;
+    width: 140px;
+    display: flex;
+    gap: 3px;
+    z-index: 2;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+}
+
+.tree-grid-item:hover .folder-index-squares,
+.tree-grid-item .folder-node.folder-contains-selected .folder-index-squares {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.folder-index {
+    flex: 1 1 0;
+    min-width: 0;
+    height: calc(24px - (var(--folder-count, 3) - 2) * 1px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(0.95em - (var(--folder-count, 3) - 2) * 0.05em);
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.72);
+    background-color: rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 5px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.folder-index:hover {
+    background-color: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.32);
+    color: #fff;
+}
+
+.folder-index.selected {
+    background-color: rgba(13, 202, 240, 0.75);
+    border-color: rgba(13, 202, 240, 0.9);
+    color: #08252c;
+}
+
 .folder-toggle-icon {
     margin-left: auto;
     padding: 0 8px;

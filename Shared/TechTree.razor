@@ -921,6 +921,24 @@
             builder.AddAttribute(seq++, "class", "folder-child-counter");
             builder.AddContent(seq++, $"{selectedChildrenCount} / {totalChildren}");
             builder.CloseElement();
+
+            builder.OpenElement(seq++, "div");
+            builder.AddAttribute(seq++, "class", "folder-index-squares");
+            builder.AddAttribute(seq++, "style", $"--folder-count: {children.Count}");
+            for (int i = 0; i < children.Count; i++)
+            {
+                var child = children[i];
+                bool isChildSelected = selectedNodeIds.Contains(child.Id);
+
+                builder.OpenElement(seq++, "div");
+                builder.AddAttribute(seq++, "class", isChildSelected ? "folder-index selected" : "folder-index");
+                builder.AddAttribute(seq++, "title", GetNodeDisplayName(child));
+                builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => ToggleNodeSelection(child)));
+                builder.AddEventStopPropagationAttribute(seq++, "onclick", true);
+                builder.AddContent(seq++, (i + 1).ToString());
+                builder.CloseElement();
+            }
+            builder.CloseElement();
         }
 
         // Плюс/минус
