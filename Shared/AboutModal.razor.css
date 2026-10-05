@@ -1,0 +1,152 @@
+.about-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.about-modal {
+    display: flex;
+    flex-direction: column;
+    background-color: #2a2a2a;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    max-width: 640px;
+    width: 100%;
+    max-height: 90vh;
+    padding: 1.25rem 1.5rem;
+}
+
+.about-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-shrink: 0;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid #444;
+}
+
+.about-title {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.about-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+    .about-close:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+.about-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    overflow-y: auto;
+}
+
+    .about-body p {
+        margin: 0;
+        font-size: 0.9em;
+        line-height: 1.5;
+        color: #ddd;
+    }
+
+    .about-body .about-disclaimer {
+        font-size: 1.05em;
+        background: rgba(255, 255, 255, 0.06);
+        border-left: 3px solid #4384d0;
+        padding: 0.7rem 0.9rem;
+        border-radius: 4px;
+        color: #fff;
+    }
+
+.about-seller-link {
+    color: #7ab3ff;
+    text-decoration: underline;
+}
+
+    .about-seller-link:hover {
+        color: #a8cfff;
+        text-decoration: underline;
+    }
+
+.about-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid #444;
+}
+
+.about-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 40px;
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #eee;
+    text-decoration: none;
+    font-size: 0.85em;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+    .about-link:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+        text-decoration: none;
+    }
+
+    .about-link svg {
+        display: block;
+    }
+
+.about-link.funpay {
+    background: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    padding: 0 18px;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+    .about-link.funpay:hover {
+        background: #fff;
+        border-color: #fff;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+        transform: translateY(-1px);
+    }
+
+.funpay-logo {
+    height: 22px;
+    width: auto;
+    display: block;
+}

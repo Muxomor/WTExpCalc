@@ -1,10 +1,11 @@
 ﻿@inherits LayoutComponentBase
 @using WTExpCalc.Services
+@using WTExpCalc.Shared
 @inject ILocalizationService Localization
 
 <div class="page">
     <div class="sidebar">
-        <NavMenu />
+        <NavMenu OnOpenAbout="@OpenAbout" />
     </div>
     
     <main>
@@ -14,7 +15,15 @@
     </main>
 </div>
 
+<AboutModal Visible="@_aboutVisible" OnClose="@CloseAbout" />
+
 @code {
+    private bool _aboutVisible;
+
+    private void OpenAbout() => _aboutVisible = true;
+
+    private void CloseAbout() => _aboutVisible = false;
+
     protected override async Task OnInitializedAsync()
     {
         var saved = await Localization.LoadSavedLanguageAsync();

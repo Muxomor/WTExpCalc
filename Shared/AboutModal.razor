@@ -1,0 +1,69 @@
+@using Microsoft.AspNetCore.Components
+@using WTExpCalc.Services
+@using WTExpCalc.Shared
+@inject ILocalizationService Localization
+@implements IDisposable
+
+@if (Visible)
+{
+    <div class="about-overlay" @onclick="Close">
+        <div class="about-modal" @onclick:stopPropagation="true" role="dialog" aria-modal="true" aria-label="@Localization.Text(UIStrings.AboutTitle)">
+            <div class="about-header">
+                <h2 class="about-title">@Localization.Text(UIStrings.AboutTitle)</h2>
+                <button type="button" class="about-close" @onclick="Close" title="@Localization.Text(UIStrings.Close)" aria-label="@Localization.Text(UIStrings.Close)">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="about-body">
+                <p class="about-disclaimer">@((MarkupString)Localization.Text(UIStrings.AboutDisclaimer, SellerLink(SellerName)))</p>
+                <p>@Localization.Text(UIStrings.AboutPrivacy)</p>
+                <p>@Localization.Text(UIStrings.AboutOpenSource)</p>
+                <p>@((MarkupString)Localization.Text(UIStrings.AboutThanks, SellerLink(SellerName)))</p>
+                <p>@((MarkupString)Localization.Text(UIStrings.AboutRecommendation, SellerLink(Localization.Text(UIStrings.AboutVerifiedSellers))))</p>
+            </div>
+            <div class="about-footer">
+                <a class="about-link funpay" href="@SellerUrl" target="_blank" rel="noopener noreferrer" title="FunPay">
+                    <svg class="funpay-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30000 11317" aria-label="FunPay" role="img">
+                        <path fill="#000" d="M27726 8340V7139l2274-4161h-1276l-1512 2917h-65l-1544-2917h-1298l2274 4161v1201h1147zm-5367-4075h75l837 2102h-1748l836-2102zm-525-1287l-2381 5362h1212l418-954h2638l419 954h1244l-2381-5362h-1169zm-3959 2938h-1502V3997h1427c300 0 557 107 729 310 129 172 225 397 225 655 0 268-86 493-246 675-151 183-366 279-633 279zm2027-954c0-547-215-1019-558-1362-375-397-901-622-1501-622h-2617v5362h1147V6935h1470c600 0 1147-247 1523-633 332-354 536-826 536-1340zM9589 6066V2978H8442v3142c0 396-129 708-333 922-214 225-514 365-890 365-364 0-665-129-901-375-225-226-343-537-343-912V2978H4828v3088c0 654 257 1244 675 1684 418 418 987 676 1716 676 676 0 1234-236 1652-622 461-440 718-1051 718-1738zM0 2978v5362h1148V6238h2670V5219H1148V4007h3002V2978H0z"/>
+                        <path fill="#4384d0" d="M9724 2978L12407 0l2684 2978h-1263v3507l-2917-3507H9724zm5367 5362l-2684 2977-2683-2977h1273V4822l2906 3518h1188z"/>
+                    </svg>
+                </a>
+                <a class="about-link" href="@GitHubUrl" target="_blank" rel="noopener noreferrer" title="GitHub">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/>
+                    </svg>
+                    <span>GitHub</span>
+                </a>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private const string SellerUrl = "https://funpay.com/users/1816777/";
+    private const string SellerName = "VolkodaV3214";
+    private const string GitHubUrl = "https://github.com/Muxomor/WTExpCalc";
+
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Localization.LanguageChanged += OnLanguageChanged;
+    }
+
+    private string SellerLink(string label)
+        => $"<a class=\"about-seller-link\" href=\"{SellerUrl}\" target=\"_blank\" rel=\"noopener noreferrer\">{label}</a>";
+
+    private Task Close() => OnClose.InvokeAsync();
+
+    private void OnLanguageChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Localization.LanguageChanged -= OnLanguageChanged;
+    }
+}
