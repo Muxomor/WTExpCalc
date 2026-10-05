@@ -61,11 +61,9 @@ namespace WTExpCalc.Shared
         public static readonly LocalizedString AboutVerifiedSellers = new("проверенных продавцов", "verified sellers");
         public static readonly LocalizedString Close = new("Закрыть", "Close");
         public static readonly LocalizedString CalculatorTitle = new("Калькулятор", "Calculator");
-        public static readonly LocalizedString CalculatorResult = new("Результат", "Result");
-        public static readonly LocalizedString CalculatorCopyResult = new("Копировать результат", "Copy result");
-        public static readonly LocalizedString CalculatorLockedValue = new(
-            "Опыт в тысячах (первое значение изменить нельзя)",
-            "Experience in thousands (the first value is locked)");
-        public static readonly LocalizedString CalculatorPlaceholder = new("например, + 30%", "e.g. + 30%");
+        public static readonly LocalizedString CalculatorInsertXp = new("Добавить ОИ: {0}", "Add RP: {0}");
+        public static readonly LocalizedString CalculatorCopyValue = new("Копировать значение", "Copy value");
+        public static readonly LocalizedString CalculatorBackspace = new("Удалить символ", "Delete character");
+        public static readonly LocalizedString CalculatorResize = new("Изменить размер", "Resize");
     }
 }

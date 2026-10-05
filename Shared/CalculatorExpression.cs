@@ -19,7 +19,7 @@ namespace WTExpCalc.Shared
 
         private readonly record struct Token(TokenType Type, double Value);
 
-        public static string NormalizeTail(string raw)
+        public static string NormalizeExpression(string raw)
         {
             var result = new StringBuilder(raw.Length);
 
@@ -94,15 +94,10 @@ namespace WTExpCalc.Shared
             return result.ToString();
         }
 
-        public static string BuildExpression(string firstOperand, string tail)
+        public static bool IsPlainNumber(string expression)
         {
-            if (tail.Length > 0 && (char.IsDigit(tail[0]) || tail[0] is '.' or ',' or '('))
-            {
-                // Пропущенный знак умножения не показываем в поле ввода, только подставляем при вычислении.
-                tail = "×" + tail;
-            }
-
-            return firstOperand + tail;
+            var text = expression.Trim().Replace(',', '.');
+            return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
         }
 
         private static bool HasSeparatorInCurrentNumber(string text)

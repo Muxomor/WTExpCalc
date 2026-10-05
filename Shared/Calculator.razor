@@ -4,38 +4,53 @@
 @inject IJSRuntime JSRuntime
 @implements IDisposable
 
-<div class="calculator-popover @(IsOpen ? "" : "calculator-hidden")" data-html2canvas-ignore="true">
-    <div class="calculator-header">
+<div class="calculator-window @(IsOpen ? "" : "calculator-hidden")"
+     @ref="_windowRef"
+     data-html2canvas-ignore="true">
+    <div class="calculator-grip" @ref="_gripRef" title="@Localization.Text(UIStrings.CalculatorResize)"></div>
+    <div class="calculator-header" @ref="_headerRef">
         <i class="bi bi-calculator" aria-hidden="true"></i>
         <span>@Localization.Text(UIStrings.CalculatorTitle)</span>
     </div>
-    <div class="calculator-expression">
-        <span class="calculator-first" title="@Localization.Text(UIStrings.CalculatorLockedValue)">
-            <i class="bi bi-lock-fill" aria-hidden="true"></i>
-            <span>@FirstOperandText</span>
-        </span>
-        <input class="calculator-tail"
+    <div class="calculator-history">
+        @foreach (var line in _history)
+        {
+            <div class="calculator-history-line" title="@line">@line</div>
+        }
+    </div>
+    <div class="calculator-input-row">
+        <input class="calculator-input"
                type="text"
                inputmode="decimal"
                autocomplete="off"
                spellcheck="false"
-               placeholder="@Localization.Text(UIStrings.CalculatorPlaceholder)"
-               value="@_tail"
-               @oninput="OnTailInput"
-               @ref="_tailInput" />
-    </div>
-    <div class="calculator-result">
-        <span class="calculator-result-label">@Localization.Text(UIStrings.CalculatorResult):</span>
-        <span class="calculator-result-value">@ResultText</span>
+               value="@_expression"
+               @oninput="OnInput"
+               @ref="_inputRef" />
         <button type="button"
-                class="copy-button"
-                title="@Localization.Text(UIStrings.CalculatorCopyResult)"
-                disabled="@(!HasValidResult)"
+                class="copy-button calculator-input-button"
+                title="@Localization.Text(UIStrings.CalculatorCopyValue)"
+                disabled="@(string.IsNullOrEmpty(_expression))"
                 @onmousedown:preventDefault
-                @onclick="CopyResultAsync">
+                @onclick="CopyValueAsync">
             <i class="bi @(_copied ? "bi-check-lg" : "bi-clipboard")" aria-hidden="true"></i>
         </button>
+        <button type="button"
+                class="copy-button calculator-input-button"
+                title="@Localization.Text(UIStrings.CalculatorBackspace)"
+                disabled="@(string.IsNullOrEmpty(_expression))"
+                @onmousedown:preventDefault
+                @onclick="BackspaceAsync">
+            <i class="bi bi-backspace" aria-hidden="true"></i>
+        </button>
     </div>
+    <button type="button"
+            class="calculator-insert-xp"
+            disabled="@(!CanInsertExperience)"
+            @onmousedown:preventDefault
+            @onclick="InsertExperienceAsync">
+        @Localization.Text(UIStrings.CalculatorInsertXp, ExperienceText)
+    </button>
     <div class="calculator-keys">
         @foreach (var key in BuildKeys())
         {
@@ -50,30 +65,30 @@
 </div>
 
 @code {
-    private static readonly string[] OperatorKeys = { "+", "-", "×", "÷" };
-
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public long ExperienceRp { get; set; }
 
     private readonly record struct KeyDef(string Label, string Value, string CssClass);
 
-    private ElementReference _tailInput;
-    private string _tail = string.Empty;
-    private double _result;
-    private bool _hasValidResult;
-    private bool _wasOpen;
-    private bool _focusPending;
+    private ElementReference _windowRef;
+    private ElementReference _headerRef;
+    private ElementReference _gripRef;
+    private ElementReference _inputRef;
+    private readonly List<string> _history = new();
+    private string _expression = string.Empty;
+    private bool _justEvaluated;
     private bool _copied;
+    private bool _focusPending;
+    private bool _wasOpen;
     private bool _disposed;
+    private int? _pendingCaret;
 
-    public bool HasValidResult => _hasValidResult;
+    private bool CanInsertExperience => ExperienceRp > 0;
 
     private double ExperienceThousands =>
         Math.Round(ExperienceRp / 100.0, 0, MidpointRounding.AwayFromZero) / 10.0;
 
-    private string FirstOperandText => ExperienceThousands.ToString("0.#", CultureInfo.CurrentCulture);
-
-    private string ResultText => _hasValidResult ? _result.ToString("0.####", CultureInfo.CurrentCulture) : "—";
+    private string ExperienceText => ExperienceThousands.ToString("0.#", CultureInfo.CurrentCulture);
 
     private KeyDef[] BuildKeys()
     {
@@ -85,6 +100,10 @@
 
         return new[]
         {
+            new KeyDef("(", "(", ""),
+            new KeyDef(")", ")", ""),
+            new KeyDef("%", "%", "calculator-key-op"),
+            new KeyDef("AC", "AC", "calculator-key-action"),
             new KeyDef("7", "7", ""),
             new KeyDef("8", "8", ""),
             new KeyDef("9", "9", ""),
@@ -99,12 +118,8 @@
             new KeyDef("−", "-", "calculator-key-op"),
             new KeyDef("0", "0", ""),
             new KeyDef(separator, separator, ""),
-            new KeyDef("%", "%", "calculator-key-op"),
-            new KeyDef("+", "+", "calculator-key-op"),
-            new KeyDef("(", "(", ""),
-            new KeyDef(")", ")", ""),
-            new KeyDef("⌫", "⌫", "calculator-key-action"),
-            new KeyDef("C", "C", "calculator-key-action")
+            new KeyDef("=", "=", "calculator-key-equals"),
+            new KeyDef("+", "+", "calculator-key-op")
         };
     }
 
@@ -115,8 +130,6 @@
 
     protected override void OnParametersSet()
     {
-        Recalculate();
-
         if (IsOpen && !_wasOpen)
         {
             _focusPending = true;
@@ -127,85 +140,114 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_focusPending && IsOpen)
+        if (firstRender)
         {
-            _focusPending = false;
             try
             {
-                await _tailInput.FocusAsync();
+                await JSRuntime.InvokeVoidAsync("calculatorFunctions.init", _windowRef, _headerRef, _gripRef);
             }
             catch (Exception)
             {
-                // Элемент может быть недоступен для фокуса, если калькулятор уже скрыт.
+                // Перетаскивание и ресайз недоступны, остальной калькулятор работает.
             }
+        }
+
+        if (IsOpen && _focusPending)
+        {
+            _focusPending = false;
+            await SetCaretAsync(_expression.Length);
+        }
+
+        if (_pendingCaret is int caret)
+        {
+            _pendingCaret = null;
+            await SetCaretAsync(caret);
         }
     }
 
     public void Reset()
     {
-        _tail = string.Empty;
+        _expression = string.Empty;
+        _history.Clear();
+        _justEvaluated = false;
         _copied = false;
-        Recalculate();
+        _pendingCaret = null;
     }
 
     private void OnLanguageChanged()
     {
-        Recalculate();
         InvokeAsync(StateHasChanged);
     }
 
-    private void OnTailInput(ChangeEventArgs e)
+    private void OnInput(ChangeEventArgs e)
     {
-        _tail = CalculatorExpression.NormalizeTail(e.Value?.ToString() ?? string.Empty);
-        Recalculate();
+        var raw = e.Value?.ToString() ?? string.Empty;
+
+        if (_justEvaluated)
+        {
+            var committed = _expression;
+            if (raw.StartsWith(committed, StringComparison.Ordinal))
+            {
+                var remainder = raw[committed.Length..];
+                if (remainder.Length > 0 && (char.IsDigit(remainder[0]) || remainder[0] is '.' or ',' or '('))
+                {
+                    raw = remainder;
+                }
+            }
+
+            _justEvaluated = false;
+        }
+
+        _expression = CalculatorExpression.NormalizeExpression(raw);
     }
 
     private async Task PressKeyAsync(string key)
     {
         switch (key)
         {
-            case "C":
-                _tail = string.Empty;
+            case "AC":
+                _expression = string.Empty;
+                _history.Clear();
+                _justEvaluated = false;
                 break;
-            case "⌫":
-                if (_tail.Length > 0)
-                {
-                    _tail = _tail[..^1];
-                }
+            case "=":
+                CommitEvaluation();
                 break;
             case "(":
-                AppendOpenParen();
+                if (_justEvaluated)
+                {
+                    _expression = string.Empty;
+                    _justEvaluated = false;
+                }
+
+                _expression += "(";
                 break;
             case ")":
                 AppendCloseParen();
                 break;
             case "%":
+                _justEvaluated = false;
                 AppendPercent();
                 break;
             case "+":
             case "-":
             case "×":
             case "÷":
+                _justEvaluated = false;
                 AppendOperator(key);
                 break;
             default:
+                if (_justEvaluated)
+                {
+                    _expression = string.Empty;
+                }
+
+                _justEvaluated = false;
                 AppendValue(key);
                 break;
         }
 
-        Recalculate();
-
-        if (IsOpen)
-        {
-            try
-            {
-                await _tailInput.FocusAsync();
-            }
-            catch (Exception)
-            {
-                // Фокус не критичен: ручной ввод остаётся доступен мышью.
-            }
-        }
+        await FocusInputAsync();
     }
 
     private void AppendValue(string key)
@@ -219,61 +261,84 @@
                 return;
             }
 
-            if (_tail.Length == 0 || (!char.IsDigit(_tail[^1]) && _tail[^1] is not ('.' or ',')))
+            if (_expression.Length == 0 || (!char.IsDigit(_expression[^1]) && _expression[^1] is not ('.' or ',')))
             {
-                _tail += "0";
+                _expression += "0";
             }
         }
 
-        _tail += key;
+        _expression += key;
     }
 
     private void AppendOperator(string op)
     {
-        if (_tail.Length > 0 && _tail[^1] is '+' or '-' or '×' or '÷')
+        if (_expression.Length == 0)
         {
-            _tail = _tail[..^1] + op;
+            if (op is not ("+" or "-"))
+            {
+                return;
+            }
+
+            _expression = op;
             return;
         }
 
-        _tail += op;
-    }
+        var last = _expression[^1];
 
-    private void AppendOpenParen()
-    {
-        _tail += "(";
+        if (last == '(')
+        {
+            if (op is "+" or "-")
+            {
+                _expression += op;
+            }
+
+            return;
+        }
+
+        if (last is '+' or '-' or '×' or '÷')
+        {
+            _expression = _expression[..^1] + op;
+            return;
+        }
+
+        _expression += op;
     }
 
     private void AppendCloseParen()
     {
-        if (OpenParenCount() <= CloseParenCount())
+        if (_expression.Length == 0 || OpenParenCount() <= CloseParenCount())
         {
             return;
         }
 
-        var last = _tail.Length > 0 ? _tail[^1] : '\0';
+        var last = _expression[^1];
         if (last is '(' or '+' or '-' or '×' or '÷')
         {
             return;
         }
 
-        _tail += ")";
+        _expression += ")";
     }
 
     private void AppendPercent()
     {
-        var last = _tail.Length > 0 ? _tail[^1] : '\0';
-        if (_tail.Length > 0 && (char.IsDigit(last) || last == ')'))
+        if (_expression.Length == 0)
         {
-            _tail += "%";
+            return;
+        }
+
+        var last = _expression[^1];
+        if (char.IsDigit(last) || last == ')')
+        {
+            _expression += "%";
         }
     }
 
     private bool CurrentNumberHasSeparator()
     {
-        for (var i = _tail.Length - 1; i >= 0; i--)
+        for (var i = _expression.Length - 1; i >= 0; i--)
         {
-            var c = _tail[i];
+            var c = _expression[i];
             if (char.IsDigit(c))
             {
                 continue;
@@ -285,28 +350,95 @@
         return false;
     }
 
-    private int OpenParenCount() => _tail.Count(c => c == '(');
+    private int OpenParenCount() => _expression.Count(c => c == '(');
 
-    private int CloseParenCount() => _tail.Count(c => c == ')');
+    private int CloseParenCount() => _expression.Count(c => c == ')');
 
-    private void Recalculate()
+    private void CommitEvaluation()
     {
-        var expression = CalculatorExpression.BuildExpression(FirstOperandText, _tail);
-        _hasValidResult = CalculatorExpression.TryEvaluate(expression, out var value);
-        if (_hasValidResult)
-        {
-            _result = value;
-        }
-    }
-
-    private async Task CopyResultAsync()
-    {
-        if (!_hasValidResult || _disposed)
+        var expression = _expression.Trim();
+        if (expression.Length == 0 || !CalculatorExpression.TryEvaluate(expression, out var value))
         {
             return;
         }
 
-        await JSRuntime.InvokeVoidAsync("techTreeFunctions.copyTextToClipboard_fallback", ResultText);
+        var resultText = value.ToString("0.####", CultureInfo.CurrentCulture);
+
+        if (!CalculatorExpression.IsPlainNumber(expression))
+        {
+            _history.Add($"{expression} = {resultText}");
+            while (_history.Count > 2)
+            {
+                _history.RemoveAt(0);
+            }
+        }
+
+        _expression = resultText;
+        _justEvaluated = true;
+    }
+
+    private async Task InsertExperienceAsync()
+    {
+        if (!CanInsertExperience)
+        {
+            return;
+        }
+
+        int caret;
+        if (_justEvaluated)
+        {
+            _expression = string.Empty;
+            _justEvaluated = false;
+            caret = 0;
+        }
+        else
+        {
+            caret = await GetCaretAsync();
+        }
+
+        var insert = ExperienceText;
+
+        if (caret > 0 && IsNumberChar(_expression[caret - 1]))
+        {
+            insert = "×" + insert;
+        }
+
+        if (caret < _expression.Length && IsNumberChar(_expression[caret]))
+        {
+            insert += "×";
+        }
+
+        _expression = _expression.Insert(caret, insert);
+        _pendingCaret = caret + insert.Length;
+        StateHasChanged();
+    }
+
+    private async Task BackspaceAsync()
+    {
+        if (_expression.Length == 0)
+        {
+            return;
+        }
+
+        var caret = await GetCaretAsync();
+        if (caret > 0)
+        {
+            _expression = _expression.Remove(caret - 1, 1);
+            _pendingCaret = caret - 1;
+        }
+
+        _justEvaluated = false;
+        StateHasChanged();
+    }
+
+    private async Task CopyValueAsync()
+    {
+        if (_disposed || _expression.Length == 0)
+        {
+            return;
+        }
+
+        await JSRuntime.InvokeVoidAsync("techTreeFunctions.copyTextToClipboard_fallback", _expression);
 
         if (_disposed)
         {
@@ -325,6 +457,40 @@
 
         _copied = false;
         StateHasChanged();
+    }
+
+    private static bool IsNumberChar(char c) => char.IsDigit(c) || c is '.' or ',';
+
+    private async Task FocusInputAsync()
+    {
+        if (IsOpen)
+        {
+            await SetCaretAsync(_expression.Length);
+        }
+    }
+
+    private async Task SetCaretAsync(int caret)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("calculatorFunctions.setCaret", _inputRef, caret);
+        }
+        catch (Exception)
+        {
+            // Фокус не критичен.
+        }
+    }
+
+    private async Task<int> GetCaretAsync()
+    {
+        try
+        {
+            return await JSRuntime.InvokeAsync<int>("calculatorFunctions.getCaret", _inputRef);
+        }
+        catch (Exception)
+        {
+            return _expression.Length;
+        }
     }
 
     public void Dispose()
