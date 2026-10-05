@@ -1,0 +1,335 @@
+@using System.Globalization
+@using WTExpCalc.Services
+@inject ILocalizationService Localization
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+<div class="calculator-popover @(IsOpen ? "" : "calculator-hidden")" data-html2canvas-ignore="true">
+    <div class="calculator-header">
+        <i class="bi bi-calculator" aria-hidden="true"></i>
+        <span>@Localization.Text(UIStrings.CalculatorTitle)</span>
+    </div>
+    <div class="calculator-expression">
+        <span class="calculator-first" title="@Localization.Text(UIStrings.CalculatorLockedValue)">
+            <i class="bi bi-lock-fill" aria-hidden="true"></i>
+            <span>@FirstOperandText</span>
+        </span>
+        <input class="calculator-tail"
+               type="text"
+               inputmode="decimal"
+               autocomplete="off"
+               spellcheck="false"
+               placeholder="@Localization.Text(UIStrings.CalculatorPlaceholder)"
+               value="@_tail"
+               @oninput="OnTailInput"
+               @ref="_tailInput" />
+    </div>
+    <div class="calculator-result">
+        <span class="calculator-result-label">@Localization.Text(UIStrings.CalculatorResult):</span>
+        <span class="calculator-result-value">@ResultText</span>
+        <button type="button"
+                class="copy-button"
+                title="@Localization.Text(UIStrings.CalculatorCopyResult)"
+                disabled="@(!HasValidResult)"
+                @onmousedown:preventDefault
+                @onclick="CopyResultAsync">
+            <i class="bi @(_copied ? "bi-check-lg" : "bi-clipboard")" aria-hidden="true"></i>
+        </button>
+    </div>
+    <div class="calculator-keys">
+        @foreach (var key in BuildKeys())
+        {
+            <button type="button"
+                    class="calculator-key @key.CssClass"
+                    @onmousedown:preventDefault
+                    @onclick="() => PressKeyAsync(key.Value)">
+                @key.Label
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    private static readonly string[] OperatorKeys = { "+", "-", "×", "÷" };
+
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public long ExperienceRp { get; set; }
+
+    private readonly record struct KeyDef(string Label, string Value, string CssClass);
+
+    private ElementReference _tailInput;
+    private string _tail = string.Empty;
+    private double _result;
+    private bool _hasValidResult;
+    private bool _wasOpen;
+    private bool _focusPending;
+    private bool _copied;
+    private bool _disposed;
+
+    public bool HasValidResult => _hasValidResult;
+
+    private double ExperienceThousands =>
+        Math.Round(ExperienceRp / 100.0, 0, MidpointRounding.AwayFromZero) / 10.0;
+
+    private string FirstOperandText => ExperienceThousands.ToString("0.#", CultureInfo.CurrentCulture);
+
+    private string ResultText => _hasValidResult ? _result.ToString("0.####", CultureInfo.CurrentCulture) : "—";
+
+    private KeyDef[] BuildKeys()
+    {
+        var separator = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
+        if (separator.Length != 1)
+        {
+            separator = ".";
+        }
+
+        return new[]
+        {
+            new KeyDef("7", "7", ""),
+            new KeyDef("8", "8", ""),
+            new KeyDef("9", "9", ""),
+            new KeyDef("÷", "÷", "calculator-key-op"),
+            new KeyDef("4", "4", ""),
+            new KeyDef("5", "5", ""),
+            new KeyDef("6", "6", ""),
+            new KeyDef("×", "×", "calculator-key-op"),
+            new KeyDef("1", "1", ""),
+            new KeyDef("2", "2", ""),
+            new KeyDef("3", "3", ""),
+            new KeyDef("−", "-", "calculator-key-op"),
+            new KeyDef("0", "0", ""),
+            new KeyDef(separator, separator, ""),
+            new KeyDef("%", "%", "calculator-key-op"),
+            new KeyDef("+", "+", "calculator-key-op"),
+            new KeyDef("(", "(", ""),
+            new KeyDef(")", ")", ""),
+            new KeyDef("⌫", "⌫", "calculator-key-action"),
+            new KeyDef("C", "C", "calculator-key-action")
+        };
+    }
+
+    protected override void OnInitialized()
+    {
+        Localization.LanguageChanged += OnLanguageChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        Recalculate();
+
+        if (IsOpen && !_wasOpen)
+        {
+            _focusPending = true;
+        }
+
+        _wasOpen = IsOpen;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusPending && IsOpen)
+        {
+            _focusPending = false;
+            try
+            {
+                await _tailInput.FocusAsync();
+            }
+            catch (Exception)
+            {
+                // Элемент может быть недоступен для фокуса, если калькулятор уже скрыт.
+            }
+        }
+    }
+
+    public void Reset()
+    {
+        _tail = string.Empty;
+        _copied = false;
+        Recalculate();
+    }
+
+    private void OnLanguageChanged()
+    {
+        Recalculate();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnTailInput(ChangeEventArgs e)
+    {
+        _tail = CalculatorExpression.NormalizeTail(e.Value?.ToString() ?? string.Empty);
+        Recalculate();
+    }
+
+    private async Task PressKeyAsync(string key)
+    {
+        switch (key)
+        {
+            case "C":
+                _tail = string.Empty;
+                break;
+            case "⌫":
+                if (_tail.Length > 0)
+                {
+                    _tail = _tail[..^1];
+                }
+                break;
+            case "(":
+                AppendOpenParen();
+                break;
+            case ")":
+                AppendCloseParen();
+                break;
+            case "%":
+                AppendPercent();
+                break;
+            case "+":
+            case "-":
+            case "×":
+            case "÷":
+                AppendOperator(key);
+                break;
+            default:
+                AppendValue(key);
+                break;
+        }
+
+        Recalculate();
+
+        if (IsOpen)
+        {
+            try
+            {
+                await _tailInput.FocusAsync();
+            }
+            catch (Exception)
+            {
+                // Фокус не критичен: ручной ввод остаётся доступен мышью.
+            }
+        }
+    }
+
+    private void AppendValue(string key)
+    {
+        var isSeparator = key is "," or ".";
+
+        if (isSeparator)
+        {
+            if (CurrentNumberHasSeparator())
+            {
+                return;
+            }
+
+            if (_tail.Length == 0 || (!char.IsDigit(_tail[^1]) && _tail[^1] is not ('.' or ',')))
+            {
+                _tail += "0";
+            }
+        }
+
+        _tail += key;
+    }
+
+    private void AppendOperator(string op)
+    {
+        if (_tail.Length > 0 && _tail[^1] is '+' or '-' or '×' or '÷')
+        {
+            _tail = _tail[..^1] + op;
+            return;
+        }
+
+        _tail += op;
+    }
+
+    private void AppendOpenParen()
+    {
+        _tail += "(";
+    }
+
+    private void AppendCloseParen()
+    {
+        if (OpenParenCount() <= CloseParenCount())
+        {
+            return;
+        }
+
+        var last = _tail.Length > 0 ? _tail[^1] : '\0';
+        if (last is '(' or '+' or '-' or '×' or '÷')
+        {
+            return;
+        }
+
+        _tail += ")";
+    }
+
+    private void AppendPercent()
+    {
+        var last = _tail.Length > 0 ? _tail[^1] : '\0';
+        if (_tail.Length > 0 && (char.IsDigit(last) || last == ')'))
+        {
+            _tail += "%";
+        }
+    }
+
+    private bool CurrentNumberHasSeparator()
+    {
+        for (var i = _tail.Length - 1; i >= 0; i--)
+        {
+            var c = _tail[i];
+            if (char.IsDigit(c))
+            {
+                continue;
+            }
+
+            return c is '.' or ',';
+        }
+
+        return false;
+    }
+
+    private int OpenParenCount() => _tail.Count(c => c == '(');
+
+    private int CloseParenCount() => _tail.Count(c => c == ')');
+
+    private void Recalculate()
+    {
+        var expression = CalculatorExpression.BuildExpression(FirstOperandText, _tail);
+        _hasValidResult = CalculatorExpression.TryEvaluate(expression, out var value);
+        if (_hasValidResult)
+        {
+            _result = value;
+        }
+    }
+
+    private async Task CopyResultAsync()
+    {
+        if (!_hasValidResult || _disposed)
+        {
+            return;
+        }
+
+        await JSRuntime.InvokeVoidAsync("techTreeFunctions.copyTextToClipboard_fallback", ResultText);
+
+        if (_disposed)
+        {
+            return;
+        }
+
+        _copied = true;
+        StateHasChanged();
+
+        await Task.Delay(1500);
+
+        if (_disposed)
+        {
+            return;
+        }
+
+        _copied = false;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        Localization.LanguageChanged -= OnLanguageChanged;
+    }
+}

@@ -60,5 +60,12 @@ namespace WTExpCalc.Shared
             "When ordering boosting, choose {0}. Remember: the price of a mistake is your account, along with the time and money spent on the game.");
         public static readonly LocalizedString AboutVerifiedSellers = new("проверенных продавцов", "verified sellers");
         public static readonly LocalizedString Close = new("Закрыть", "Close");
+        public static readonly LocalizedString CalculatorTitle = new("Калькулятор", "Calculator");
+        public static readonly LocalizedString CalculatorResult = new("Результат", "Result");
+        public static readonly LocalizedString CalculatorCopyResult = new("Копировать результат", "Copy result");
+        public static readonly LocalizedString CalculatorLockedValue = new(
+            "Опыт в тысячах (первое значение изменить нельзя)",
+            "Experience in thousands (the first value is locked)");
+        public static readonly LocalizedString CalculatorPlaceholder = new("например, + 30%", "e.g. + 30%");
     }
 }

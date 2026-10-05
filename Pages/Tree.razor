@@ -119,7 +119,13 @@ else
                     <i class="bi bi-camera"></i>
                 </button>
             }
+                <button class="btn btn-sm copy-button calculator-toggle-button @(isCalculatorOpen ? "active" : "")"
+                        title="@Localization.Text(UIStrings.CalculatorTitle)"
+                        @onclick="ToggleCalculator">
+                    <i class="bi bi-calculator"></i>
+                </button>
             </div>
+            <Calculator @ref="calculatorRef" IsOpen="isCalculatorOpen" ExperienceRp="currentTotalRp" />
         </div>
 }
 @if (isScreenshotInProgress)
@@ -156,6 +162,9 @@ else
     private int? maxRpLimitK = null; 
     private bool showLimitExceededWarning = false;
 
+    private bool isCalculatorOpen = false;
+    private Calculator? calculatorRef;
+
     protected override async Task OnParametersSetAsync()
     {
         await LoadPageData();
@@ -182,6 +191,11 @@ else
                Localization.NationName(currentNation.Name, currentNation.Id) :
                Localization.Text(UIStrings.Loading);
     }
+    private void ToggleCalculator()
+    {
+        isCalculatorOpen = !isCalculatorOpen;
+    }
+
     private string GetScreenshot4KButtonTitle()
     {
         var uri = new Uri(Navigation.Uri);
@@ -304,6 +318,8 @@ else
             currentTotalRp = 0;
             currentTotalSl = 0;
             hasSelectedRanks = false;
+            isCalculatorOpen = false;
+            calculatorRef?.Reset();
         }
         catch (Exception ex)
         {
