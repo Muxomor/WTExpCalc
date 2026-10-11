@@ -10,6 +10,16 @@ COPY . .
 
 RUN dotnet publish WTExpCalc.csproj -c Release -o /app/publish --no-restore
 
+RUN BUILD_ID=$(sha256sum \
+        /app/publish/wwwroot/css/app.css \
+        /app/publish/wwwroot/css/bootstrap/bootstrap.min.css \
+        /app/publish/wwwroot/WTExpCalc.styles.css \
+        /app/publish/wwwroot/js/techTreeFunctions.js \
+        /app/publish/wwwroot/_framework/blazor.webassembly.js \
+    | sha256sum | cut -c1-12) \
+    && sed -i "s|__BUILD__|${BUILD_ID}|g" /app/publish/wwwroot/index.html \
+    && rm -f /app/publish/wwwroot/index.html.gz /app/publish/wwwroot/index.html.br
+
 FROM nginx:alpine AS final
 WORKDIR /usr/share/nginx/html
 
