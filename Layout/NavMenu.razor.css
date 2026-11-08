@@ -108,6 +108,11 @@ nav.flex-column {
     }
 
 .info-link-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
     padding: 4px 6px;
     text-align: center;
     border-top: 1px solid #333;
@@ -165,8 +170,8 @@ nav.flex-column {
 
 /* ?????????? ??? ??????? ????????? ??????????????? */
 body .page .sidebar {
-    width: 70px !important;
-    min-width: 70px !important;
+    width: var(--sidebar-width) !important;
+    min-width: var(--sidebar-width) !important;
     position: static !important;
     padding-top: 0.5rem !important;
     display: flex !important;

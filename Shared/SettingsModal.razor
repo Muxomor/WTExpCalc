@@ -1,0 +1,123 @@
+@using WTExpCalc.Models
+@using WTExpCalc.Services
+@using WTExpCalc.Shared
+@inject IUiSettingsService Settings
+@inject ILocalizationService Localization
+@implements IDisposable
+
+@if (Visible)
+{
+    <div class="settings-overlay" @onclick="Close">
+        <div class="settings-modal" @onclick:stopPropagation="true" role="dialog" aria-modal="true" aria-label="@Localization.Text(UIStrings.SettingsTitle)">
+            <div class="settings-header">
+                <h2 class="settings-title">@Localization.Text(UIStrings.SettingsTitle)</h2>
+                <button type="button" class="settings-close" @onclick="Close"
+                        title="@Localization.Text(UIStrings.Close)"
+                        aria-label="@Localization.Text(UIStrings.Close)">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <div class="settings-body">
+                <section class="settings-section">
+                    <h3 class="settings-section-title">@Localization.Text(UIStrings.SettingsAlignmentSection)</h3>
+
+                    <div class="settings-row">
+                        <span class="settings-label">@Localization.Text(UIStrings.SettingsTreeAlignment)</span>
+                        <div class="settings-options" role="group" aria-label="@Localization.Text(UIStrings.SettingsTreeAlignment)">
+                            @foreach (var option in AlignmentOptions)
+                            {
+                                <button type="button"
+                                        class="settings-option @(Settings.Current.TreeAlignment == option.Value ? "active" : "")"
+                                        aria-pressed="@(Settings.Current.TreeAlignment == option.Value ? "true" : "false")"
+                                        @onclick="() => SetTreeAlignment(option.Value)">
+                                    @Localization.Text(option.Label)
+                                </button>
+                            }
+                        </div>
+                    </div>
+
+                    <p class="settings-hint">@Localization.Text(UIStrings.SettingsAlignmentHint)</p>
+                </section>
+
+                <section class="settings-section">
+                    <h3 class="settings-section-title">@Localization.Text(UIStrings.SettingsBehaviorSection)</h3>
+                    <label class="settings-checkbox-row">
+                        <input type="checkbox" class="settings-checkbox"
+                               checked="@Settings.Current.ShowAboutOnStartup"
+                               @onchange="OnShowAboutOnStartupChanged" />
+                        <span>@Localization.Text(UIStrings.SettingsShowAboutOnStartup)</span>
+                    </label>
+                </section>
+
+                <section class="settings-section">
+                    <h3 class="settings-section-title">@Localization.Text(UIStrings.SettingsScreenshotSection)</h3>
+                    <label class="settings-checkbox-row">
+                        <input type="checkbox" class="settings-checkbox"
+                               checked="@Settings.Current.ShowSummaryOnScreenshot"
+                               @onchange="OnShowSummaryChanged" />
+                        <span>@Localization.Text(UIStrings.SettingsShowSummaryOnScreenshot)</span>
+                    </label>
+                </section>
+
+                <p class="settings-hint">@Localization.Text(UIStrings.SettingsSavedLocally)</p>
+            </div>
+
+            <div class="settings-footer">
+                <button type="button" class="settings-reset" @onclick="ResetSettings">
+                    @Localization.Text(UIStrings.SettingsReset)
+                </button>
+                <button type="button" class="settings-done" @onclick="Close">
+                    @Localization.Text(UIStrings.Close)
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private static readonly (UiAlignment Value, LocalizedString Label)[] AlignmentOptions =
+    {
+        (UiAlignment.Left, UIStrings.AlignLeft),
+        (UiAlignment.Center, UIStrings.AlignCenter),
+        (UiAlignment.Right, UIStrings.AlignRight)
+    };
+
+    protected override void OnInitialized()
+    {
+        Settings.Changed += OnSettingsChanged;
+        Localization.LanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnSettingsChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    private Task Close() => OnClose.InvokeAsync();
+
+    private Task SetTreeAlignment(UiAlignment value)
+        => Settings.UpdateAsync(Settings.Current with { TreeAlignment = value });
+
+    private async Task OnShowAboutOnStartupChanged(ChangeEventArgs e)
+    {
+        var value = e.Value is bool enabled && enabled;
+        await Settings.UpdateAsync(Settings.Current with { ShowAboutOnStartup = value });
+    }
+
+    private async Task OnShowSummaryChanged(ChangeEventArgs e)
+    {
+        var value = e.Value is bool enabled && enabled;
+        await Settings.UpdateAsync(Settings.Current with { ShowSummaryOnScreenshot = value });
+    }
+
+    private Task ResetSettings() => Settings.ResetAsync();
+
+    public void Dispose()
+    {
+        Settings.Changed -= OnSettingsChanged;
+        Localization.LanguageChanged -= OnLanguageChanged;
+    }
+}

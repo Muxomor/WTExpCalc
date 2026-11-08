@@ -8,9 +8,7 @@ This project is a web application designed to calculate the research and purchas
   * **Cost Calculation**: Select any number of vehicles to get an instant calculation of the total RP and SL costs.
   * **Shareable Links**: Generate a unique URL that saves your current selection, allowing you to share your research plan with others.
   * **Custom RP Values**: Modify the RP cost for any vehicle to account for partially researched modules or personal calculations.
-  * **Screenshot Generation**: Provides two distinct modes for capturing the tech tree:
-      * **Standard Screenshot**: Creates a high-quality image suitable for most uses.
-      * **4000x4000 Screenshot**: Renders the image at maximum quality, then strictly limits its dimensions to 4000x4000 pixels. This function is specifically designed to ensure compatibility with platforms that have fixed size limits, such as FunPay.
+  * **Screenshot Generation**: Captures the selected part of the tech tree as a single image. The output is strictly limited to 4000x4000 pixels for compatibility with platforms that have fixed size limits, such as FunPay. The summary block can be hidden from screenshots in settings.
   * **RP Limit Planning**: Set a total RP budget, and the calculator will help you plan your research by preventing over-selection and auto-adjusting costs.
   * **Multi-language Support**: The interface is available in both English and Russian.
 

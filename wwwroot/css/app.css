@@ -1,4 +1,9 @@
 /* ==================== Base layout ==================== */
+:root {
+    --sidebar-width: 70px;
+    --summary-side-gap: 2.5rem;
+}
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     height: 100%;
@@ -19,6 +24,32 @@ main {
     overflow-y: auto;
     height: 100vh;
     background-color: #1a1a1a;
+}
+
+/* On the tree page the app column (sidebar + main) is sized by its content and
+   aligned as a whole. This keeps the nation rail next to the tree instead of
+   pinning it to the viewport edge. Other pages keep the normal full-width
+   layout. */
+.page.tree-layout[data-tree-align="left"] {
+    justify-content: flex-start;
+}
+
+.page.tree-layout[data-tree-align="center"] {
+    justify-content: center;
+}
+
+.page.tree-layout[data-tree-align="right"] {
+    justify-content: flex-end;
+}
+
+body .page.tree-layout main {
+    flex-grow: 0 !important;
+    flex-shrink: 1;
+    width: max-content;
+    max-width: calc(100% - var(--sidebar-width));
+    /* Reserve the vertical scrollbar in the content width, otherwise the tree
+       grid loses ~12px and gets a tiny horizontal scrollbar when it just fits. */
+    scrollbar-gutter: stable;
 }
 
 .content {
@@ -174,6 +205,13 @@ h3 {
     padding: 10px;
     background-color: #222;
     position: relative;
+}
+
+/* The grid keeps its natural width so the whole app column can shrink to it
+   and be aligned together with the sidebar. Scoped to .page so screenshot
+   clones keep their current layout and coordinate calculations. */
+.page .tree-grid {
+    width: max-content;
 }
 
 .tree-grid-item {
@@ -636,6 +674,14 @@ h3 {
     gap: 8px;
 }
 
+/* JS syncs the fixed bar to the tree container: it moves together with the
+   tree and its content stays centered under the tree. Scoped to .page so
+   screenshot clones keep their own inline layout. */
+.page #summary-container {
+    padding-left: var(--summary-side-gap);
+    padding-right: var(--summary-side-gap);
+}
+
 /* Screenshot in-progress overlay */
 .screenshot-loading-overlay {
     position: fixed;
@@ -812,8 +858,8 @@ h3 {
 
 /* ==================== Sidebar (narrow rail) ==================== */
 body .page .sidebar {
-    width: 70px !important;
-    min-width: 70px !important;
+    width: var(--sidebar-width) !important;
+    min-width: var(--sidebar-width) !important;
     position: static !important;
     padding-top: 0.5rem !important;
     display: flex !important;

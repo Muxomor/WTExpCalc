@@ -5,6 +5,7 @@
 @inject IUrlStateManager UrlStateManager
 @inject NavigationManager Navigation
 @inject ILocalizationService Localization
+@inject IUiSettingsService UiSettings
 @implements IAsyncDisposable
 
 <div class="tech-tree-container @LoadingState" id="tech-tree-container-id">
@@ -234,6 +235,15 @@
         }
 
         await EnsureTreeLayoutObserversAsync();
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("techTreeFunctions.syncSummaryPosition");
+        }
+        catch
+        {
+            /* Summary bar may not be rendered yet */
+        }
     }
 
     private async Task WaitDomLayoutStableAsync()
@@ -1067,31 +1077,6 @@
     }
 
     // Публичные методы для скриншотов
-    public async Task CopyScreenshotToClipboard()
-    {
-        try
-        {
-            var selectedRanks = GetSelectedRanks();
-            if (!selectedRanks.Any())
-            {
-                Console.WriteLine("No ranks selected for screenshot");
-                return;
-            }
-
-            var progressCallback = DotNetObjectReference.Create(this);
-            var completeCallback = DotNetObjectReference.Create(this);
-
-            await JSRuntime.InvokeVoidAsync("techTreeFunctions.copyScreenshotToClipboard",
-                selectedRanks.ToArray(),
-                progressCallback,
-                completeCallback);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error copying screenshot to clipboard: {ex.Message}");
-        }
-    }
-
     public async Task DownloadScreenshot()
     {
         try
@@ -1110,38 +1095,13 @@
             await JSRuntime.InvokeVoidAsync("techTreeFunctions.downloadScreenshot",
                 selectedRanks.ToArray(),
                 filename,
+                UiSettings.Current.ShowSummaryOnScreenshot,
                 progressCallback,
                 completeCallback);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error downloading screenshot: {ex.Message}");
-        }
-    }
-    public async Task DownloadScreenshot4K()
-    {
-        try
-        {
-            var selectedRanks = GetSelectedRanks();
-            if (!selectedRanks.Any())
-            {
-                Console.WriteLine("No ranks selected for 4K screenshot");
-                return;
-            }
-
-            var filename = await JSRuntime.InvokeAsync<string>("techTreeFunctions.generateScreenshotFilename4K");
-            var progressCallback = DotNetObjectReference.Create(this);
-            var completeCallback = DotNetObjectReference.Create(this);
-
-            await JSRuntime.InvokeVoidAsync("techTreeFunctions.downloadScreenshot4K",
-                selectedRanks.ToArray(),
-                filename,
-                progressCallback,
-                completeCallback);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error downloading 4K screenshot: {ex.Message}");
         }
     }
     private List<int> GetSelectedRanks()

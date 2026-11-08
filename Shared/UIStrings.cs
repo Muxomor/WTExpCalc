@@ -18,9 +18,7 @@ namespace WTExpCalc.Shared
         public static readonly LocalizedString BR = new("БР", "BR");
         public static readonly LocalizedString CopyList = new("Копировать список", "Copy List");
         public static readonly LocalizedString CopyUrl = new("Копировать ссылку", "Copy Link");
-        public static readonly LocalizedString CopyScreenshot = new("Копировать скриншот в буфер обмена", "Copy Screenshot to Clipboard");
-        public static readonly LocalizedString CopyScreenshotHttp = new("Копировать скриншот в буфер обмена (HTTP)", "Copy Screenshot to Clipboard (HTTP)");
-        public static readonly LocalizedString DownloadScreenshot = new("Скачать скриншот", "Download Screenshot");
+        public static readonly LocalizedString DownloadScreenshot = new("Скриншот", "Screenshot");
         public static readonly LocalizedString PageNotFound = new("Страница не найдена", "Page Not Found");
         public static readonly LocalizedString TotalRP = new("Сумма опыта", "Total RP");
         public static readonly LocalizedString ReturnToHome = new("Вернуться на главную", "Return to Home");
@@ -28,14 +26,6 @@ namespace WTExpCalc.Shared
         public static readonly LocalizedString Unlimited = new("Без лимита", "Unlimited");
         public static readonly LocalizedString RPLimitExceeded = new("Превышен лимит опыта!", "RP limit exceeded!");
         public static readonly LocalizedString RPLimitExceededMessage = new("Нельзя выбрать больше техники - достигнут лимит опыта", "Cannot select more vehicles - RP limit reached");
-        public static readonly LocalizedString Screenshot4KTooltip = new("Скриншот 4K (максимум 4000×4000)", "4000x4000 Screenshot (max 4000×4000)");
-        public static readonly LocalizedString Screenshot4KTooltipHttp = new("Скриншот 4K (максимум 4000×4000) (HTTP)", "4000x4000 Screenshot (max 4000×4000) (HTTP)");
-        public static readonly LocalizedString Preparing4KScreenshot = new("Подготовка 4K скриншота...", "Preparing 4K screenshot...");
-        public static readonly LocalizedString Creating4KScreenshot = new("Создание 4K скриншота...", "Creating 4K screenshot...");
-        public static readonly LocalizedString Processing4KImage = new("Обработка 4K изображения...", "Processing 4K image...");
-        public static readonly LocalizedString Preparing4KDownload = new("Подготовка 4K загрузки...", "Preparing 4K download...");
-        public static readonly LocalizedString Screenshot4KSaved = new("4K скриншот сохранен", "4K screenshot saved");
-        public static readonly LocalizedString Error4KScreenshot = new("Ошибка создания 4K скриншота", "4K screenshot creation error");
         public static readonly LocalizedString PreparingScreenshot = new("Подготовка скриншота...", "Preparing screenshot...");
         public static readonly LocalizedString ScreenshotError = new("Ошибка создания скриншота", "Screenshot creation error");
         public static readonly LocalizedString NationNotFound = new("Нация '{0}' не найдена.", "Nation '{0}' not found.");
@@ -59,6 +49,23 @@ namespace WTExpCalc.Shared
             "При заказе прокачки выбирайте {0}. Помните: цена ошибки - ваш аккаунт, а вместе с ним - время и деньги, потраченные на игру.",
             "When ordering boosting, choose {0}. Remember: the price of a mistake is your account, along with the time and money spent on the game.");
         public static readonly LocalizedString AboutVerifiedSellers = new("проверенных продавцов", "verified sellers");
+        public static readonly LocalizedString AboutCanBeDisabled = new("Это окно можно отключить в настройках.", "This window can be disabled in settings.");
         public static readonly LocalizedString Close = new("Закрыть", "Close");
+
+        public static readonly LocalizedString SettingsTitle = new("Настройки", "Settings");
+        public static readonly LocalizedString SettingsAlignmentSection = new("Выравнивание", "Alignment");
+        public static readonly LocalizedString SettingsTreeAlignment = new("Ветка прокачки", "Tech tree");
+        public static readonly LocalizedString SettingsAlignmentHint = new(
+            "При обычном масштабе ветка обычно занимает всю ширину экрана, поэтому разница может быть незаметна. Настройка полезна при уменьшении масштаба или на широком экране: она выбирает, где будет расположена ветка.",
+            "At normal zoom the tech tree usually fills the screen width, so the difference may not be noticeable. This setting is useful when you zoom out or use a wide screen: it chooses where the tree sits.");
+        public static readonly LocalizedString AlignLeft = new("Слева", "Left");
+        public static readonly LocalizedString AlignCenter = new("По центру", "Center");
+        public static readonly LocalizedString AlignRight = new("Справа", "Right");
+        public static readonly LocalizedString SettingsBehaviorSection = new("Поведение", "Behavior");
+        public static readonly LocalizedString SettingsShowAboutOnStartup = new("Показывать «О проекте» при запуске", "Show About on startup");
+        public static readonly LocalizedString SettingsScreenshotSection = new("Скриншоты", "Screenshots");
+        public static readonly LocalizedString SettingsShowSummaryOnScreenshot = new("Показывать итоги на скриншоте", "Show summary on screenshot");
+        public static readonly LocalizedString SettingsReset = new("Сбросить настройки", "Reset settings");
+        public static readonly LocalizedString SettingsSavedLocally = new("Настройки сохраняются в этом браузере.", "Settings are saved in this browser.");
     }
 }

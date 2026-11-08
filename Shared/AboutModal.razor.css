@@ -150,3 +150,10 @@
     width: auto;
     display: block;
 }
+
+.about-settings-hint {
+    margin: 0.75rem 0 0;
+    font-size: 0.8em;
+    color: #888;
+    text-align: center;
+}

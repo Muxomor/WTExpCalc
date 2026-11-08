@@ -104,20 +104,13 @@ else
                                 style="margin-left: 5px;">
                             <i class="bi bi-link-45deg"></i>
                         </button>
-                        <button class="btn btn-sm copy-button screenshot-button" 
-                                title="@Localization.Text(UIStrings.DownloadScreenshot)" 
-                                @onclick="DownloadScreenshot" 
+                        <button class="btn btn-sm copy-button screenshot-button"
+                                title="@Localization.Text(UIStrings.DownloadScreenshot)"
+                                @onclick="DownloadScreenshot"
                                 disabled="@(!hasSelectedRanks || isScreenshotInProgress)"
                                 style="margin-left: 5px;">
-                            <i class="bi bi-download"></i>
+                            <i class="bi bi-camera"></i>
                         </button>
-                <button class="btn btn-sm copy-button screenshot-button"
-                        title="@GetScreenshot4KButtonTitle()"
-                        @onclick="DownloadScreenshot4K"
-                        disabled="@(!hasSelectedRanks || isScreenshotInProgress)"
-                        style="margin-left: 5px;">
-                    <i class="bi bi-camera"></i>
-                </button>
             }
             </div>
         </div>
@@ -182,15 +175,6 @@ else
                Localization.NationName(currentNation.Name, currentNation.Id) :
                Localization.Text(UIStrings.Loading);
     }
-    private string GetScreenshot4KButtonTitle()
-    {
-        var uri = new Uri(Navigation.Uri);
-        if (uri.Scheme == "http")
-        {
-            return Localization.Text(UIStrings.Screenshot4KTooltipHttp);
-        }
-        return Localization.Text(UIStrings.Screenshot4KTooltip);
-    }
     private async Task OnRpLimitChanged(ChangeEventArgs e)
     {
         if (int.TryParse(e.Value?.ToString(), out int limitK) && limitK >= 1)
@@ -230,16 +214,6 @@ else
             });
         });
     }
-    private string GetScreenshotButtonTitle()
-    {
-        var uri = new Uri(Navigation.Uri);
-        if (uri.Scheme == "http")
-        {
-            return Localization.Text(UIStrings.CopyScreenshotHttp);
-        }
-        return Localization.Text(UIStrings.CopyScreenshot);
-    }
-
     private async Task LoadPageData()
     {
         try
@@ -349,31 +323,6 @@ else
         }
     }
 
-    private async Task CopyScreenshotToClipboard()
-    {
-        if (techTreeRef == null || !hasSelectedRanks || isScreenshotInProgress) return;
-
-        try
-        {
-            isScreenshotInProgress = true;
-            screenshotProgressMessage = Localization.Text(UIStrings.PreparingScreenshot);
-            StateHasChanged();
-
-            await techTreeRef.CopyScreenshotToClipboard();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error copying screenshot: {ex.Message}");
-            screenshotProgressMessage = Localization.Text(UIStrings.ScreenshotError);
-            await Task.Delay(2000);
-        }
-        finally
-        {
-            isScreenshotInProgress = false;
-            StateHasChanged();
-        }
-    }
-
     private async Task DownloadScreenshot()
     {
         if (techTreeRef == null || !hasSelectedRanks || isScreenshotInProgress) return;
@@ -390,30 +339,6 @@ else
         {
             Console.WriteLine($"Error downloading screenshot: {ex.Message}");
             screenshotProgressMessage = Localization.Text(UIStrings.ScreenshotError);
-            await Task.Delay(2000);
-        }
-        finally
-        {
-            isScreenshotInProgress = false;
-            StateHasChanged();
-        }
-    }
-    private async Task DownloadScreenshot4K()
-    {
-        if (techTreeRef == null || !hasSelectedRanks || isScreenshotInProgress) return;
-
-        try
-        {
-            isScreenshotInProgress = true;
-            screenshotProgressMessage = Localization.Text(UIStrings.Preparing4KScreenshot);
-            StateHasChanged();
-
-            await techTreeRef.DownloadScreenshot4K();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error downloading 4K screenshot: {ex.Message}");
-            screenshotProgressMessage = Localization.Text(UIStrings.Error4KScreenshot);
             await Task.Delay(2000);
         }
         finally

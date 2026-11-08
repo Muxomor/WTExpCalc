@@ -33,6 +33,7 @@ builder.Services.AddScoped(sp => {
 builder.Services.AddScoped<IExperienceApi, ExperienceApiService>();
 builder.Services.AddScoped<IUrlStateManager, UrlStateManager>();
 builder.Services.AddScoped<ILocalizationService, LocalizationService>();
+builder.Services.AddScoped<IUiSettingsService, UiSettingsService>();
 
 builder.Services.Configure<JsonSerializerOptions>(options =>
 {

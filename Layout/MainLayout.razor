@@ -1,11 +1,16 @@
 ﻿@inherits LayoutComponentBase
 @using WTExpCalc.Services
 @using WTExpCalc.Shared
+@implements IDisposable
 @inject ILocalizationService Localization
+@inject IUiSettingsService UiSettings
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
-<div class="page">
+<div class="page @(_isTreePage ? "tree-layout" : null)"
+     data-tree-align="@TreeAlignmentCss">
     <div class="sidebar">
-        <NavMenu OnOpenAbout="@OpenAbout" />
+        <NavMenu OnOpenAbout="@OpenAbout" OnOpenSettings="@OpenSettings" />
     </div>
     
     <main>
@@ -16,18 +21,81 @@
 </div>
 
 <AboutModal Visible="@_aboutVisible" OnClose="@CloseAbout" />
+<SettingsModal Visible="@_settingsVisible" OnClose="@CloseSettings" />
 
 @code {
     private bool _aboutVisible;
+    private bool _settingsVisible;
+    private bool _isTreePage;
+
+    private string TreeAlignmentCss => UiSettings.Current.TreeAlignment.ToString().ToLowerInvariant();
 
     private void OpenAbout() => _aboutVisible = true;
 
     private void CloseAbout() => _aboutVisible = false;
 
+    private void OpenSettings() => _settingsVisible = true;
+
+    private void CloseSettings() => _settingsVisible = false;
+
+    private void OnSettingsChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        var isTreePage = IsTreePage();
+        if (_isTreePage == isTreePage)
+        {
+            return;
+        }
+
+        _isTreePage = isTreePage;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private bool IsTreePage()
+    {
+        var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri);
+        return relativePath.StartsWith("tree/", StringComparison.OrdinalIgnoreCase);
+    }
+
     protected override async Task OnInitializedAsync()
     {
+        _isTreePage = IsTreePage();
+        Navigation.LocationChanged += OnLocationChanged;
+
+        await UiSettings.LoadAsync();
+
         var saved = await Localization.LoadSavedLanguageAsync();
         await Localization.SetLanguageAsync(saved);
         LocalizationService.PreloadCultures();
+
+        _aboutVisible = UiSettings.Current.ShowAboutOnStartup;
+        UiSettings.Changed += OnSettingsChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_isTreePage)
+        {
+            return;
+        }
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("techTreeFunctions.syncSummaryPosition");
+        }
+        catch
+        {
+            /* Tree page may still be loading */
+        }
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+        UiSettings.Changed -= OnSettingsChanged;
     }
 }
