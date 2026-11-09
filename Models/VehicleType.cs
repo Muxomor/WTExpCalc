@@ -1,5 +1,5 @@
 ﻿using System.Text.Json.Serialization;
-using WTExpCalc.Shared;
+using WTExpCalc.Shared.Localization;
 
 namespace WTExpCalc.Models
 {

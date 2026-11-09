@@ -3,6 +3,59 @@
         document.documentElement.lang = language === 'en' ? 'en' : 'ru';
     },
 
+    ensureCalculatorFunctions: function () {
+        if (window.calculatorFunctions) return Promise.resolve();
+        if (this._calculatorFunctionsPromise) return this._calculatorFunctionsPromise;
+
+        var self = this;
+        this._calculatorFunctionsPromise = new Promise(function (resolve, reject) {
+            var script = document.createElement('script');
+            script.src = new URL('js/calculatorFunctions.js', document.baseURI).href;
+            script.async = true;
+            script.onload = function () { resolve(); };
+            script.onerror = function () {
+                self._calculatorFunctionsPromise = null;
+                reject(new Error('Failed to load calculator functions'));
+            };
+            document.head.appendChild(script);
+        });
+
+        return this._calculatorFunctionsPromise;
+    },
+
+    rememberFocus: function () {
+        this._previousFocus = document.activeElement;
+    },
+
+    restoreFocus: function () {
+        const previous = this._previousFocus;
+        this._previousFocus = null;
+        if (previous && previous.isConnected && typeof previous.focus === 'function') {
+            previous.focus();
+        }
+    },
+
+    /* Load html2canvas only when the user actually requests a screenshot. */
+    ensureHtml2Canvas: function () {
+        if (window.html2canvas) return Promise.resolve();
+        if (this._html2CanvasPromise) return this._html2CanvasPromise;
+
+        var self = this;
+        this._html2CanvasPromise = new Promise(function (resolve, reject) {
+            var script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+            script.async = true;
+            script.onload = function () { resolve(); };
+            script.onerror = function () {
+                self._html2CanvasPromise = null;
+                reject(new Error('Failed to load html2canvas'));
+            };
+            document.head.appendChild(script);
+        });
+
+        return this._html2CanvasPromise;
+    },
+
     /* Waits until after the next two animation frames — use after Blazor DOM updates before measuring boxes. */
     waitTwoAnimationFramesAsync: function () {
         return new Promise(function (resolve) {
@@ -89,14 +142,11 @@
         summary.style.right = 'auto';
     },
 
-    positionFolderPopup: function (popupId, targetNodeId, containerId) {
+    positionFolderPopup: function (popupId, targetNodeId) {
         var popupElement = document.getElementById(popupId);
         var targetNodeElement = document.getElementById(targetNodeId);
-        var containerElement = document.getElementById(containerId);
 
-        if (!popupElement || !targetNodeElement || !containerElement) {
-            console.error('Popup positioning error: Elements not found.',
-                { popupId, targetNodeId, containerId, popupElement, targetNodeElement, containerElement });
+        if (!popupElement || !targetNodeElement) {
             if (popupElement) popupElement.style.visibility = 'hidden';
             return;
         }
@@ -110,34 +160,31 @@
         var popupWidth = popupElement.offsetWidth;
 
         var targetRect = targetNodeElement.getBoundingClientRect();
-        var containerRect = containerElement.getBoundingClientRect();
         var summaryPanel = document.getElementById('summary-container');
         var summaryPanelHeight = summaryPanel ? summaryPanel.offsetHeight : 0;
 
         var viewportHeight = window.innerHeight;
+        var viewportWidth = window.innerWidth;
         var spaceBelow = viewportHeight - targetRect.bottom - summaryPanelHeight - 5;
         var spaceAbove = targetRect.top - 5;
 
         var top;
-        var left = targetRect.left - containerRect.left + (containerElement.scrollLeft || 0);
+        var left = targetRect.left;
 
         if (popupHeight <= spaceBelow) {
-            top = targetRect.bottom - containerRect.top + (containerElement.scrollTop || 0) + 5;
+            top = targetRect.bottom + 5;
         } else if (popupHeight <= spaceAbove) {
-            top = targetRect.top - containerRect.top + (containerElement.scrollTop || 0) - popupHeight - 5;
+            top = targetRect.top - popupHeight - 5;
         } else {
-            top = targetRect.bottom - containerRect.top + (containerElement.scrollTop || 0) + 5;
+            top = targetRect.bottom + 5;
         }
 
-        var finalLeft = left;
-        if (containerRect.left + left + popupWidth > window.innerWidth - 10) {
-            finalLeft = window.innerWidth - containerRect.left - popupWidth - 10 - (containerElement.scrollLeft || 0);
-        }
-        if (containerRect.left + finalLeft < 10) {
-            finalLeft = 10 - containerRect.left + (containerElement.scrollLeft || 0);
-        }
+        // Keep the fixed popup inside the viewport. Fixed positioning prevents
+        // it from contributing to the scrollable area of the tree container.
+        left = Math.max(10, Math.min(left, viewportWidth - popupWidth - 10));
+        top = Math.max(10, Math.min(top, viewportHeight - popupHeight - 10));
 
-        popupElement.style.left = finalLeft + 'px';
+        popupElement.style.left = left + 'px';
         popupElement.style.top = top + 'px';
         popupElement.style.visibility = 'visible';
     },
@@ -350,6 +397,7 @@
         return { tempContainer, finalScreenshotArea };
     },
     _renderScreenshotCanvas: async function (tempContainer, screenshotArea, scale, maxCanvasSize) {
+        await this.ensureHtml2Canvas();
         document.body.appendChild(tempContainer);
         await new Promise(resolve => setTimeout(resolve, 100));
 

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using WTExpCalc.Models;
-using WTExpCalc.Services;
+using WTExpCalc.Services.UrlState;
 using Xunit;
 
 namespace WTExpCalc.Tests;

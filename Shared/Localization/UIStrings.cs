@@ -1,4 +1,4 @@
-namespace WTExpCalc.Shared
+namespace WTExpCalc.Shared.Localization
 {
     public sealed record LocalizedString(string Ru, string En);
 
@@ -57,6 +57,11 @@ namespace WTExpCalc.Shared
         public static readonly LocalizedString AboutVerifiedSellers = new("проверенных продавцов", "verified sellers");
         public static readonly LocalizedString AboutCanBeDisabled = new("Это окно можно отключить в настройках.", "This window can be disabled in settings.");
         public static readonly LocalizedString Close = new("Закрыть", "Close");
+        public static readonly LocalizedString CalculatorTitle = new("Калькулятор", "Calculator");
+        public static readonly LocalizedString CalculatorInsertXp = new("Добавить ОИ: {0}", "Add RP: {0}");
+        public static readonly LocalizedString CalculatorCopyValue = new("Копировать значение", "Copy value");
+        public static readonly LocalizedString CalculatorBackspace = new("Удалить символ", "Delete character");
+        public static readonly LocalizedString CalculatorResize = new("Изменить размер", "Resize");
 
         public static readonly LocalizedString SettingsTitle = new("Настройки", "Settings");
         public static readonly LocalizedString SettingsAlignmentSection = new("Выравнивание", "Alignment");

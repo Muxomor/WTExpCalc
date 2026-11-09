@@ -1,0 +1,46 @@
+@using WTExpCalc.Models
+@inject ILocalizationService Localization
+
+<div id="node-@Node.Id"
+     class="node-content vehicle-node @(Node.RequiredExp.HasValue ? "rp-editable" : "") @(IsSelected ? "node-selected" : "")"
+     @onclick="() => OnToggle.InvokeAsync()">
+    <div class="node-icon" style="background-image:url('@Node.ImageUrl')"></div>
+
+    <div class="node-info">
+        <div class="node-name" title="@DisplayName">@DisplayName</div>
+
+        <div class="node-details">
+            @if (Node.BattleRating.HasValue)
+            {
+                <div class="node-detail-item node-br">
+                    @Localization.Text(UIStrings.BR): @Node.BattleRating
+                </div>
+            }
+
+            <div class="node-detail-item node-exp">
+                @if (Node.RequiredExp.HasValue)
+                {
+                    @Localization.Text(UIStrings.RP)
+                    <span>:</span>
+                    <input type="number"
+                           class="rp-input @(IsRpModified ? "rp-modified" : "")"
+                           min="0"
+                           value="@EffectiveRp"
+                           @onchange="e => OnRpChanged.InvokeAsync(e)"
+                           @onclick:stopPropagation="true" />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Node Node { get; set; } = null!;
+    [Parameter] public bool IsSelected { get; set; }
+    [Parameter] public bool IsRpModified { get; set; }
+    [Parameter] public int EffectiveRp { get; set; }
+    [Parameter] public EventCallback OnToggle { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnRpChanged { get; set; }
+
+    private string DisplayName => Localization.NodeName(Node.Name, Node.NameEnglish);
+}

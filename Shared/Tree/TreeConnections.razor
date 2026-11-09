@@ -1,0 +1,27 @@
+@using WTExpCalc.Models
+
+<svg class="tree-connections-overlay" width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0;">
+    @if (Dependencies.Count > 0)
+    {
+        @foreach (var dep in Dependencies)
+        {
+            <path id="dep-@dep.NodeId-@dep.PrerequisiteNodeId"
+                  d=""
+                  fill="none"
+                  stroke="#cccccc" stroke-width="2"
+                  stroke-linejoin="round"
+                  marker-end="url(#arrowhead)"
+                  visibility="hidden" />
+        }
+        <defs>
+            <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                    refX="10" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#cccccc" />
+            </marker>
+        </defs>
+    }
+</svg>
+
+@code {
+    [Parameter] public IReadOnlyList<NodeDependency> Dependencies { get; set; } = Array.Empty<NodeDependency>();
+}

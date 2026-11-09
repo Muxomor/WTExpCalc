@@ -1,6 +1,7 @@
 using WTExpCalc.Models;
-using WTExpCalc.Services;
-using WTExpCalc.Shared;
+using WTExpCalc.Services.Localization;
+using WTExpCalc.Services.Tree;
+using WTExpCalc.Shared.Localization;
 using Xunit;
 
 namespace WTExpCalc.Tests;

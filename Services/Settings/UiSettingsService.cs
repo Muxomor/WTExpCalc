@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using Microsoft.JSInterop;
 using WTExpCalc.Models;
 
-namespace WTExpCalc.Services
+namespace WTExpCalc.Services.Settings
 {
     public interface IUiSettingsService
     {

@@ -78,6 +78,20 @@ This application relies on several external components to function correctly. Th
 
 -----
 
+## Feature flags
+
+The calculator is disabled by default and enabled per server via `wwwroot/appsettings.json`:
+
+```json
+{
+  "Features": {
+    "CalculatorEnabled": true
+  }
+}
+```
+
+The same file can be mounted/overridden in the deployed nginx container, so the same image can run with the calculator on one server and without it on another. The wtmeta.ru deployment is the intended server for the calculator; other deployments keep the flag `false`. The appsettings files are served with `gzip_static off` and without precompressed `.gz`/`.br`, so a mounted override takes effect immediately. When the flag is off, the calculator button/component is not rendered and `calculatorFunctions.js` is not loaded.
+
 ## Deployment
 
 In a **production environment**, the application is configured to make API calls to its own host address. Therefore, you must use a reverse proxy to route API requests (e.g., `/api/*`) to the PostgREST service and all other requests to the Blazor application.

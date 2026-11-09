@@ -1,0 +1,63 @@
+@inject ILocalizationService Localization
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+<div class="calculator-window @(IsOpen ? "" : "calculator-hidden")"
+     @ref="_windowRef"
+     data-html2canvas-ignore="true">
+    <div class="calculator-grip" @ref="_gripRef" title="@Localization.Text(UIStrings.CalculatorResize)"></div>
+    <div class="calculator-header" @ref="_headerRef">
+        <i class="bi bi-calculator" aria-hidden="true"></i>
+        <span>@Localization.Text(UIStrings.CalculatorTitle)</span>
+    </div>
+    <div class="calculator-history">
+        @foreach (var line in _history)
+        {
+            <div class="calculator-history-line" title="@line">@line</div>
+        }
+    </div>
+    <div class="calculator-input-row">
+        <input class="calculator-input"
+               type="text"
+               inputmode="decimal"
+               autocomplete="off"
+               spellcheck="false"
+               value="@_expression"
+               @oninput="OnInput"
+               @ref="_inputRef" />
+        <button type="button"
+                class="copy-button calculator-input-button"
+                title="@Localization.Text(UIStrings.CalculatorCopyValue)"
+                disabled="@(string.IsNullOrEmpty(_expression))"
+                @onmousedown:preventDefault
+                @onclick="CopyValueAsync">
+            <i class="bi @(_copied ? "bi-check-lg" : "bi-clipboard")" aria-hidden="true"></i>
+        </button>
+        <button type="button"
+                class="copy-button calculator-input-button"
+                title="@Localization.Text(UIStrings.CalculatorBackspace)"
+                disabled="@(string.IsNullOrEmpty(_expression))"
+                @onmousedown:preventDefault
+                @onclick="BackspaceAsync">
+            <i class="bi bi-backspace" aria-hidden="true"></i>
+        </button>
+    </div>
+    <button type="button"
+            class="calculator-insert-xp"
+            disabled="@(!CanInsertExperience)"
+            @onmousedown:preventDefault
+            @onclick="InsertExperienceAsync">
+        @Localization.Text(UIStrings.CalculatorInsertXp, ExperienceText)
+    </button>
+    <div class="calculator-keys">
+        @foreach (var key in BuildKeys())
+        {
+            <button type="button"
+                    class="calculator-key @key.CssClass"
+                    @onmousedown:preventDefault
+                    @onclick="() => PressKeyAsync(key.Value)">
+                @key.Label
+            </button>
+        }
+    </div>
+</div>

@@ -1,7 +1,12 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using WTExpCalc;
-using WTExpCalc.Services;
+using WTExpCalc.Services.Api;
+using WTExpCalc.Services.Features;
+using WTExpCalc.Services.Localization;
+using WTExpCalc.Services.Settings;
+using WTExpCalc.Services.Tree;
+using WTExpCalc.Services.UrlState;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -40,6 +45,7 @@ builder.Services.AddScoped(_ =>
 
 builder.Services.AddScoped<IExperienceApi, ExperienceApiService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
+builder.Services.AddSingleton<IFeatureFlags, FeatureFlags>();
 builder.Services.AddScoped<TreeSummaryFormatter>();
 builder.Services.AddScoped<IUrlStateManager, UrlStateManager>();
 builder.Services.AddScoped<ILocalizationService, LocalizationService>();

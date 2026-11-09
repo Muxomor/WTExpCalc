@@ -1,0 +1,45 @@
+@using WTExpCalc.Models
+@inject ILocalizationService Localization
+
+<div id="node-@Node.Id"
+     class="node-content folder-node @(IsExpanded ? "folder-active" : "") @(ContainsSelected ? "folder-contains-selected" : "")"
+     @onclick="() => OnFolderClick.InvokeAsync(Node)">
+    <div class="node-icon" style="background-image:url('@Node.ImageUrl')"></div>
+    <div class="node-name" title="@DisplayName">@DisplayName</div>
+
+    @if (Children.Count > 0)
+    {
+        <div class="folder-child-counter">
+            @SelectedChildrenCount / @Children.Count
+        </div>
+
+        <div class="folder-index-squares" style="--folder-count: @Children.Count">
+            @for (var i = 0; i < Children.Count; i++)
+            {
+                var child = Children[i];
+                var isSelected = SelectedIds.Contains(child.Id);
+                <div class="folder-index @(isSelected ? "selected" : "")"
+                     title="@Localization.NodeName(child.Name, child.NameEnglish)"
+                     @onclick="() => OnChildClick.InvokeAsync(child)"
+                     @onclick:stopPropagation="true">
+                    @(i + 1)
+                </div>
+            }
+        </div>
+    }
+
+    <div class="folder-toggle-icon">@(IsExpanded ? "−" : "+")</div>
+</div>
+
+@code {
+    [Parameter] public Node Node { get; set; } = null!;
+    [Parameter] public bool IsExpanded { get; set; }
+    [Parameter] public bool ContainsSelected { get; set; }
+    [Parameter] public IReadOnlyList<Node> Children { get; set; } = Array.Empty<Node>();
+    [Parameter] public IReadOnlySet<int> SelectedIds { get; set; } = new HashSet<int>();
+    [Parameter] public EventCallback<Node> OnFolderClick { get; set; }
+    [Parameter] public EventCallback<Node> OnChildClick { get; set; }
+
+    private string DisplayName => Localization.NodeName(Node.Name, Node.NameEnglish);
+    private int SelectedChildrenCount => Children.Count(child => SelectedIds.Contains(child.Id));
+}

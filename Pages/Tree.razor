@@ -1,12 +1,11 @@
-﻿@page "/tree/{NationSlug}/{TypeSlug?}"
+@page "/tree/{NationSlug}/{TypeSlug?}"
 @using WTExpCalc.Models
-@using WTExpCalc.Services
-@using WTExpCalc.Shared
 @inject ICatalogService Catalog
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 @inject IUrlStateManager UrlStateManager
 @inject ILocalizationService Localization
+@inject IFeatureFlags Features
 @implements IDisposable
 
 <h3>@Localization.Text(UIStrings.TechTreeFor) @GetNationDisplayName()</h3>
@@ -54,83 +53,30 @@ else
         }
         </div>
 
-        <div id="summary-container">
-        <div id="summary-panel">
-            <span class="summary-item summary-rp">
-                <span>@Localization.Text(UIStrings.RP):</span> @currentTotalRp.ToString("N0")
-            </span>
-            <span class="summary-item summary-sl">
-                <span>@Localization.Text(UIStrings.SL):</span> @currentTotalSl.ToString("N0")
-            </span>
-            <span class="summary-item summary-limit">
-                <span>@Localization.Text(UIStrings.RPLimit):</span>
-                <input type="number"
-                       class="rp-limit-input"
-                       min="1"
-                       placeholder="@Localization.Text(UIStrings.Unlimited)"
-                       aria-label="@Localization.Text(UIStrings.RPLimit)"
-                       value="@rpLimitText"
-                       @oninput="OnRpLimitInput"
-                       @onblur="CommitRpLimit"
-                       @onkeydown="OnRpLimitKeyDown" />
-                <span class="limit-suffix">K</span>
-            </span>
-        </div>
-            <div id="selected-names-container">
-                <div id="selected-names-panel">
-                @if (!string.IsNullOrEmpty(selectedVehicleNames))
-                {
-                            <span title="@selectedVehicleNames">
-                        @Localization.Text(UIStrings.Selected): @selectedVehicleNames
-                            </span>
-                }
-                else
-                {
-                            <span>&nbsp;</span>
-                }
-                </div>
-            @if (!string.IsNullOrEmpty(selectedVehicleNames))
-            {
-                        <button class="btn btn-sm btn-secondary copy-button" 
-                                title="@Localization.Text(UIStrings.CopyList)" 
-                                @onclick="CopyNamesToClipboard">
-                            <i class="bi bi-clipboard"></i>
-                        </button>
-                        <button class="btn btn-sm btn-info copy-button" 
-                                title="@Localization.Text(UIStrings.CopyUrl)" 
-                                @onclick="CopyUrlToClipboard" 
-                                style="margin-left: 5px;">
-                            <i class="bi bi-link-45deg"></i>
-                        </button>
-                        <button class="btn btn-sm copy-button screenshot-button"
-                                title="@Localization.Text(UIStrings.DownloadScreenshot)"
-                                @onclick="DownloadScreenshot"
-                                disabled="@(!hasSelectedRanks || isScreenshotInProgress)"
-                                style="margin-left: 5px;">
-                            <i class="bi bi-camera"></i>
-                        </button>
-            }
-            </div>
-        </div>
+        <SummaryPanel TotalRp="currentTotalRp"
+                      TotalSl="currentTotalSl"
+                      SelectedNames="@selectedVehicleNames"
+                      RpLimitText="@rpLimitText"
+                      HasSelectedRanks="@hasSelectedRanks"
+                      IsScreenshotInProgress="@isScreenshotInProgress"
+                      OnRpLimitInput="OnRpLimitInput"
+                      OnRpLimitCommit="CommitRpLimit"
+                      OnRpLimitKeyDown="OnRpLimitKeyDown"
+                      OnCopyNames="CopyNamesToClipboard"
+                      OnCopyUrl="CopyUrlToClipboard"
+                      OnDownloadScreenshot="DownloadScreenshot"
+                      CalculatorEnabled="@Features.CalculatorEnabled"
+                      IsCalculatorOpen="@isCalculatorOpen"
+                      OnToggleCalculator="ToggleCalculator" />
+        @if (Features.CalculatorEnabled)
+        {
+            <Calculator @ref="calculatorRef" IsOpen="@isCalculatorOpen" ExperienceRp="@currentTotalRp" />
+        }
 }
-@if (isScreenshotInProgress)
-{
-        <div class="screenshot-loading-overlay">
-            <div class="screenshot-loading-content">
-                @if (screenshotCompleted)
-                {
-                    <div class="screenshot-result-icon @(screenshotSucceeded ? "success" : "error")" aria-hidden="true">
-                        @(screenshotSucceeded ? "✓" : "!")
-                    </div>
-                }
-                else
-                {
-                    <div class="screenshot-loading-spinner"></div>
-                }
-                <div>@screenshotProgressMessage</div>
-            </div>
-        </div>
-}
+<ScreenshotOverlay Visible="@isScreenshotInProgress"
+                   Completed="@screenshotCompleted"
+                   Succeeded="@screenshotSucceeded"
+                   Message="@screenshotProgressMessage" />
 
 @code {
     [Parameter] public string NationSlug { get; set; } = string.Empty;
@@ -154,6 +100,8 @@ else
     private bool screenshotCompleted;
     private bool screenshotSucceeded;
     private string screenshotProgressMessage = "";
+    private bool isCalculatorOpen;
+    private Calculator? calculatorRef;
 
     private string rpLimitText = "";
     private int? appliedRpLimitK;
@@ -263,6 +211,11 @@ else
         return appliedRpLimitK.HasValue ? appliedRpLimitK.Value * 1000L : null;
     }
 
+    private void ToggleCalculator()
+    {
+        isCalculatorOpen = !isCalculatorOpen;
+    }
+
     private void OnRpLimitKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
@@ -333,6 +286,8 @@ else
             currentTotalRp = 0;
             currentTotalSl = 0;
             hasSelectedRanks = false;
+            isCalculatorOpen = false;
+            calculatorRef?.Reset();
         }
         catch (Exception ex)
         {

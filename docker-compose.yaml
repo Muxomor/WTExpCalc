@@ -1,10 +1,13 @@
-﻿version: '3.8'
-
 services:
   blazor-app:
     build:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     ports:
       - "127.0.0.1:8080:80"

@@ -1,0 +1,19 @@
+@using WTExpCalc.Models
+@inject ILocalizationService Localization
+
+<div class="rank-label" data-rank="@Rank" style="@Style">
+    <span>@Localization.Text(UIStrings.Rank) @Rank</span>
+    @if (Requirement != null)
+    {
+        <span class="rank-requirement-counter @(SelectedCount >= Requirement.RequiredUnits ? "req-met" : "req-not-met")">
+            @SelectedCount / @Requirement.RequiredUnits
+        </span>
+    }
+</div>
+
+@code {
+    [Parameter] public int Rank { get; set; }
+    [Parameter] public int SelectedCount { get; set; }
+    [Parameter] public RankRequirement? Requirement { get; set; }
+    [Parameter] public string Style { get; set; } = string.Empty;
+}

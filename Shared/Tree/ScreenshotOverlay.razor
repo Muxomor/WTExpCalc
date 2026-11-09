@@ -1,0 +1,25 @@
+@if (Visible)
+{
+    <div class="screenshot-loading-overlay">
+        <div class="screenshot-loading-content">
+            @if (Completed)
+            {
+                <div class="screenshot-result-icon @(Succeeded ? "success" : "error")" aria-hidden="true">
+                    @(Succeeded ? "✓" : "!")
+                </div>
+            }
+            else
+            {
+                <div class="screenshot-loading-spinner"></div>
+            }
+            <div>@Message</div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public bool Completed { get; set; }
+    [Parameter] public bool Succeeded { get; set; }
+    [Parameter] public string Message { get; set; } = string.Empty;
+}

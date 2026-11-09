@@ -2,7 +2,7 @@
 using System.Text.Json;
 using WTExpCalc.Models;
 
-namespace WTExpCalc.Services
+namespace WTExpCalc.Services.Api
 {
     public sealed class ExperienceApiService : IExperienceApi
     {

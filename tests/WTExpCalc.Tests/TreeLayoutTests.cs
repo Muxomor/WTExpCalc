@@ -1,5 +1,5 @@
 using WTExpCalc.Models;
-using WTExpCalc.Services;
+using WTExpCalc.Services.Tree;
 using Xunit;
 
 namespace WTExpCalc.Tests;

@@ -1,6 +1,6 @@
 using WTExpCalc.Models;
 
-namespace WTExpCalc.Services
+namespace WTExpCalc.Services.Api
 {
     public interface ICatalogService
     {

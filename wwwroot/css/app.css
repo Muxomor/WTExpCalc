@@ -2,14 +2,24 @@
 :root {
     --sidebar-width: 70px;
     --summary-side-gap: 2.5rem;
+    --app-bg: #1a1a1a;
+    --app-surface: #222;
+    --app-surface-2: #2a2a2a;
+    --app-surface-3: #3a3a3a;
+    --app-border: #555;
+    --app-border-light: #666;
+    --app-text: #eee;
+    --app-text-muted: #bbb;
+    --app-text-secondary: #ccc;
+    --app-accent: #0dcaf0;
 }
 
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     height: 100%;
     margin: 0;
-    background-color: #1a1a1a;
-    color: #eee;
+    background-color: var(--app-bg);
+    color: var(--app-text);
 }
 
 .page {
@@ -23,7 +33,7 @@ main {
     flex-grow: 1;
     overflow-y: auto;
     height: 100vh;
-    background-color: #1a1a1a;
+    background-color: var(--app-bg);
 }
 
 /* On the tree page the app column (sidebar + main) is sized by its content and
@@ -66,7 +76,7 @@ body .page.tree-layout main {
     position: sticky;
     top: 0;
     z-index: 10;
-    color: #eee;
+    color: var(--app-text);
 }
 
 /* ==================== Headings ==================== */
@@ -77,10 +87,10 @@ h3 {
 
 /* ==================== Nation cards ==================== */
 .nation-card {
-    border: 2px solid #555;
+    border: 2px solid var(--app-border);
     transition: border-color .2s, transform .2s;
-    background-color: #3a3a3a;
-    color: #eee;
+    background-color: var(--app-surface-3);
+    color: var(--app-text);
 }
 
     .nation-card:hover {
@@ -93,36 +103,36 @@ h3 {
     }
 
     .nation-card .card-footer {
-        background-color: #2a2a2a;
-        border-top: 1px solid #555;
+        background-color: var(--app-surface-2);
+        border-top: 1px solid var(--app-border);
         color: #fff;
     }
 
 /* ==================== Tab strip ==================== */
 .nav-tabs {
-    border-bottom: 1px solid #555;
+    border-bottom: 1px solid var(--app-border);
     margin-bottom: 1rem;
 }
 
     .nav-tabs .nav-item .nav-link {
-        background-color: #2a2a2a;
-        border: 1px solid #555;
-        color: #ccc;
+        background-color: var(--app-surface-2);
+        border: 1px solid var(--app-border);
+        color: var(--app-text-secondary);
         margin-right: 2px;
         border-bottom: none;
     }
 
         .nav-tabs .nav-item .nav-link:hover {
-            background-color: #3a3a3a;
+            background-color: var(--app-surface-3);
             color: #fff;
-            border-color: #666;
+            border-color: var(--app-border-light);
         }
 
         .nav-tabs .nav-item .nav-link.active {
-            background-color: #222;
+            background-color: var(--app-surface);
             color: #fff;
-            border-color: #555 #555 #222;
-            border-bottom: 1px solid #222;
+            border-color: var(--app-border) var(--app-border) var(--app-surface);
+            border-bottom: 1px solid var(--app-surface);
         }
 
 /* Закреплённая панель выбора типа техники. Не попадает на скриншоты:
@@ -132,7 +142,7 @@ h3 {
     position: sticky;
     top: 0;
     z-index: 90;
-    background-color: #1a1a1a;
+    background-color: var(--app-bg);
 }
 
 .tech-type-tabs::after {
@@ -142,7 +152,7 @@ h3 {
     right: 0;
     left: 0;
     height: 1rem;
-    background-color: #1a1a1a;
+    background-color: var(--app-bg);
 }
 
 /* ==================== Tech tree container ==================== */
@@ -152,7 +162,7 @@ h3 {
     min-height: 300px;
     padding-bottom: 70px;
     flex-grow: 1;
-    background-color: #222;
+    background-color: var(--app-surface);
 }
 
 .tree-load-error {
@@ -172,7 +182,7 @@ h3 {
     display: grid;
     gap: 10px 20px;
     padding: 10px;
-    background-color: #222;
+    background-color: var(--app-surface);
     position: relative;
 }
 
@@ -184,9 +194,9 @@ h3 {
 }
 
 .tree-grid-item {
-    border: 1px solid #555;
-    background-color: #3a3a3a;
-    color: #eee;
+    border: 1px solid var(--app-border);
+    background-color: var(--app-surface-3);
+    color: var(--app-text);
     padding: 5px;
     border-radius: 4px;
     position: relative;
@@ -227,13 +237,13 @@ h3 {
 }
 
 .vehicle-node.node-selected {
-    outline: 2px solid #0dcaf0;
+    outline: 2px solid var(--app-accent);
     outline-offset: -2px;
     background-color: #505f70;
 }
 
 .node-content.folder-node.folder-contains-selected {
-    border: 1px dashed #0dcaf0 !important;
+    border: 1px dashed var(--app-accent) !important;
     background-color: rgba(13, 202, 240, 0.15) !important;
     border-radius: 4px;
 }
@@ -274,14 +284,14 @@ h3 {
 .node-details span {
     margin-right: 8px;
     font-size: 0.9em;
-    color: #bbb;
+    color: var(--app-text-muted);
     white-space: nowrap;
 }
 
 .node-detail-item.node-exp {
     display: flex;
     align-items: center;
-    color: #bbb;
+    color: var(--app-text-muted);
 }
 
 /* ==================== Wiki-style fixed node cards ==================== */
@@ -363,7 +373,7 @@ h3 {
     width: 34px;
     height: 8px;
     background: inherit;
-    border: 1px solid #555;
+    border: 1px solid var(--app-border);
     border-bottom: none;
     border-radius: 4px 4px 0 0;
 }
@@ -446,7 +456,7 @@ h3 {
     padding: 0 8px;
     font-size: 1.1em;
     font-weight: bold;
-    color: #ccc;
+    color: var(--app-text-secondary);
     align-self: center;
     flex-shrink: 0;
 }
@@ -462,11 +472,11 @@ h3 {
 }
 
 .folder-popup {
-    position: absolute;
+    position: fixed;
     visibility: hidden;
     z-index: 100 !important;
-    background-color: #3a3a3a;
-    border: 1px solid #555;
+    background-color: var(--app-surface-3);
+    border: 1px solid var(--app-border);
     border-radius: 4px;
     box-shadow: 0 3px 8px rgba(0,0,0,0.6);
     min-width: 180px;
@@ -492,7 +502,7 @@ h3 {
 
 /* ==================== Rank labels & premium column ==================== */
 .rank-label {
-    background: #555;
+    background: var(--app-border);
     color: #fff;
     display: flex;
     align-items: center;
@@ -517,7 +527,7 @@ h3 {
 .rank-requirement-counter {
     font-size: 0.8em;
     margin-top: 4px;
-    color: #ccc;
+    color: var(--app-text-secondary);
 }
 
     .rank-requirement-counter.req-met {
@@ -532,7 +542,7 @@ h3 {
 .rank-divider-h {
     grid-column: 2 / -1;
     height: 3px;
-    background-color: #555;
+    background-color: var(--app-border);
     align-self: start;
     position: relative;
     z-index: 0;
@@ -541,7 +551,7 @@ h3 {
 
 .premium-divider-v {
     width: 3px;
-    background-color: #555;
+    background-color: var(--app-border);
     justify-self: start;
     position: relative;
     z-index: 0;
@@ -555,8 +565,8 @@ h3 {
 /* ==================== RP input (vehicle row) ==================== */
 .rp-input {
     background-color: rgba(0, 0, 0, 0.3);
-    color: #eee;
-    border: 1px solid #555;
+    color: var(--app-text);
+    border: 1px solid var(--app-border);
     border-radius: 3px;
     padding: 1px 4px;
     margin-left: 4px;
@@ -580,7 +590,7 @@ h3 {
     }
 
     .rp-input:focus {
-        color: #eee;
+        color: var(--app-text);
         background-color: rgba(0, 0, 0, 0.75);
         border-color: #007bff;
     }
@@ -634,7 +644,7 @@ h3 {
     right: 0;
     z-index: 99;
     background-color: rgba(40, 40, 40, 0.95);
-    border-top: 1px solid #666;
+    border-top: 1px solid var(--app-border-light);
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
     padding: 8px 20px;
     display: flex;
@@ -672,14 +682,14 @@ h3 {
     padding: 20px;
     background-color: rgba(40, 40, 40, 0.9);
     border-radius: 8px;
-    border: 1px solid #666;
+    border: 1px solid var(--app-border-light);
 }
 
 .screenshot-loading-spinner {
     width: 40px;
     height: 40px;
     border: 4px solid #333;
-    border-top: 4px solid #0dcaf0;
+    border-top: 4px solid var(--app-accent);
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 15px auto;
@@ -737,7 +747,7 @@ h3 {
     flex-shrink: 0;
     padding: 5px 0;
     width: auto;
-    color: #eee;
+    color: var(--app-text);
     justify-content: center;
 }
 
@@ -758,7 +768,7 @@ h3 {
 
         #summary-panel .summary-item span:first-child {
             margin-right: 5px;
-            color: #bbb;
+            color: var(--app-text-muted);
             font-weight: normal;
         }
 
@@ -771,7 +781,7 @@ h3 {
 }
 
 #selected-names-panel {
-    color: #ccc;
+    color: var(--app-text-secondary);
     font-size: 0.9em;
     text-align: left;
     max-width: 600px;
@@ -795,13 +805,13 @@ h3 {
     padding: 0.1rem 0.4rem;
     line-height: 1;
     flex-shrink: 0;
-    background-color: #555;
-    border-color: #666;
-    color: #eee;
+    background-color: var(--app-border);
+    border-color: var(--app-border-light);
+    color: var(--app-text);
 }
 
     .copy-button:hover {
-        background-color: #666;
+        background-color: var(--app-border-light);
         border-color: #777;
         color: #fff;
     }
@@ -825,7 +835,7 @@ h3 {
 
     .screenshot-button:disabled {
         background-color: #444;
-        border-color: #555;
+        border-color: var(--app-border);
         color: #888;
         cursor: not-allowed;
     }
@@ -833,19 +843,19 @@ h3 {
 /* ==================== Primary buttons ==================== */
 .btn {
     background-color: #444;
-    border-color: #555;
-    color: #eee;
+    border-color: var(--app-border);
+    color: var(--app-text);
 }
 
     .btn:hover {
-        background-color: #555;
-        border-color: #666;
+        background-color: var(--app-border);
+        border-color: var(--app-border-light);
         color: #fff;
     }
 
 .btn-secondary {
-    background-color: #555;
-    border-color: #666;
+    background-color: var(--app-border);
+    border-color: var(--app-border-light);
 }
 
 .btn-info {
@@ -871,7 +881,7 @@ body .page .sidebar {
     flex-shrink: 0 !important;
     height: 100vh !important;
     overflow: visible !important;
-    background-color: #2a2a2a;
+    background-color: var(--app-surface-2);
 }
 
     body .page .sidebar .top-row {
@@ -896,7 +906,7 @@ body .page main {
 
     .loading-progress circle {
         fill: none;
-        stroke: #666;
+        stroke: var(--app-border-light);
         stroke-width: 0.6rem;
         transform-origin: 50% 50%;
         transform: rotate(-90deg);
@@ -913,7 +923,7 @@ body .page main {
     text-align: center;
     font-weight: bold;
     inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
-    color: #eee;
+    color: var(--app-text);
 }
 
     .loading-progress-text:after {
@@ -991,8 +1001,8 @@ body .page main {
 
 .rp-limit-input {
     background-color: #444;
-    color: #eee;
-    border: 1px solid #666;
+    color: var(--app-text);
+    border: 1px solid var(--app-border-light);
     border-radius: 4px;
     padding: 4px 8px;
     width: 80px;
@@ -1011,12 +1021,12 @@ body .page main {
 
     .rp-limit-input:hover {
         border-color: #777;
-        background-color: #555;
+        background-color: var(--app-border);
     }
 
     .rp-limit-input:focus {
         border-color: #007bff;
-        background-color: #555;
+        background-color: var(--app-border);
         box-shadow: 0 0 4px rgba(0, 123, 255, 0.3);
     }
 
@@ -1026,7 +1036,7 @@ body .page main {
     }
 
 .limit-suffix {
-    color: #bbb;
+    color: var(--app-text-muted);
     font-size: 0.9em;
     font-weight: normal;
     margin-left: -4px;
@@ -1111,4 +1121,203 @@ body .page main {
         font-size: 1.1em;
         color: #ffeaa7;
     }
+
+/* ==================== Calculator ==================== */
+.calculator-window {
+    position: fixed;
+    right: 20px;
+    bottom: 92px;
+    width: 320px;
+    height: 480px;
+    min-width: 250px;
+    min-height: 360px;
+    max-width: 94vw;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background-color: #2b2b2b;
+    border: 1px solid #666;
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    padding: 10px 10px 10px 14px;
+    z-index: 300;
+    container-type: size;
+    overflow: hidden;
+}
+
+.calculator-hidden {
+    display: none;
+}
+
+.calculator-toggle-button.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+}
+
+.calculator-toggle-button.active:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+.calculator-grip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    border-top-left-radius: 8px;
+    background:
+        linear-gradient(135deg, transparent 0 45%, #777 45% 52%, transparent 52% 62%, #777 62% 69%, transparent 69%);
+}
+
+.calculator-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #bbb;
+    font-size: max(0.75rem, 3.2cqh);
+    cursor: move;
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.calculator-history {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 2px;
+    color: #999;
+    font-size: max(0.7rem, 3cqh);
+    line-height: 1.3;
+    height: calc(2.6em + 2px);
+    text-align: right;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.calculator-history-line {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.calculator-input-row {
+    display: flex;
+    align-items: center;
+    gap: max(5px, 1.2cqh);
+    flex-shrink: 0;
+}
+
+.calculator-input {
+    flex: 1;
+    min-width: 0;
+    background-color: #1f1f1f;
+    border: 1px solid #555;
+    border-radius: 6px;
+    color: #eee;
+    font-size: max(0.95rem, 4.5cqh);
+    padding: max(4px, 1cqh) max(6px, 1.6cqh);
+    outline: none;
+}
+
+.calculator-input:focus {
+    border-color: #0d6efd;
+}
+
+.calculator-input-button {
+    font-size: max(0.85rem, 3.6cqh);
+    padding: 0.35em 0.5em;
+}
+
+.calculator-input-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.calculator-insert-xp {
+    flex-shrink: 0;
+    width: 100%;
+    border: 1px solid #555;
+    border-radius: 6px;
+    background-color: #3a3a3a;
+    color: #ffd479;
+    font-size: max(0.8rem, 3.2cqh);
+    padding: max(5px, 1.2cqh) max(6px, 1.6cqh);
+    cursor: pointer;
+}
+
+.calculator-insert-xp:hover:not(:disabled) {
+    background-color: #4a4a4a;
+}
+
+.calculator-insert-xp:disabled {
+    color: #777;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.calculator-keys {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    gap: max(5px, 1.1cqh);
+    flex: 1;
+    min-height: 0;
+}
+
+.calculator-key {
+    padding: 0;
+    border: 1px solid #555;
+    border-radius: 6px;
+    background-color: #3a3a3a;
+    color: #eee;
+    font-size: max(0.9rem, 5cqh);
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+}
+
+.calculator-key:hover {
+    background-color: #4a4a4a;
+}
+
+.calculator-key:active {
+    background-color: #555;
+}
+
+.calculator-key-op {
+    color: #7cc4ff;
+}
+
+.calculator-key-action {
+    background-color: #5a3535;
+    border-color: #6b4040;
+}
+
+.calculator-key-action:hover {
+    background-color: #6b4040;
+}
+
+.calculator-key-equals {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+}
+
+.calculator-key-equals:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+@media (max-width: 600px) {
+    .calculator-window {
+        right: 10px;
+        bottom: 84px;
+        width: 290px;
+        height: 430px;
+    }
+}
 

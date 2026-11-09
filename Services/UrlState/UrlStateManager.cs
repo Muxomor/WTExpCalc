@@ -3,7 +3,7 @@ using System.Web;
 using Microsoft.JSInterop;
 using WTExpCalc.Models;
 
-namespace WTExpCalc.Services
+namespace WTExpCalc.Services.UrlState
 {
     public class UrlStateManager : IUrlStateManager
     {
@@ -18,7 +18,7 @@ namespace WTExpCalc.Services
 
         public void UpdateUrlWithSelection(
             List<Node> allNodes,
-            HashSet<int> selectedIds,
+            IReadOnlySet<int> selectedIds,
             IReadOnlyDictionary<int, int> originalRpValues,
             IReadOnlyDictionary<int, int> rpOverrides,
             bool includePremiumInShareUrl)

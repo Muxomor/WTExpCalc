@@ -1,13 +1,12 @@
 @using WTExpCalc.Models
-@using WTExpCalc.Services
-@using WTExpCalc.Shared
 @inject IUiSettingsService Settings
 @inject ILocalizationService Localization
+@inject IJSRuntime JSRuntime
 @implements IDisposable
 
 @if (Visible)
 {
-    <div class="settings-overlay" @onclick="Close">
+    <div class="settings-overlay" tabindex="-1" @ref="_overlayRef" @onclick="Close" @onkeydown="OnKeyDown">
         <div class="settings-modal" @onclick:stopPropagation="true" role="dialog" aria-modal="true" aria-label="@Localization.Text(UIStrings.SettingsTitle)">
             <div class="settings-header">
                 <h2 class="settings-title">@Localization.Text(UIStrings.SettingsTitle)</h2>
@@ -91,6 +90,9 @@
     [Parameter] public bool Visible { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
+    private ElementReference _overlayRef;
+    private bool _wasVisible;
+
     private static readonly (UiAlignment Value, LocalizedString Label)[] AlignmentOptions =
     {
         (UiAlignment.Left, UIStrings.AlignLeft),
@@ -109,6 +111,31 @@
     private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
     private Task Close() => OnClose.InvokeAsync();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Visible && !_wasVisible)
+        {
+            _wasVisible = true;
+            await JSRuntime.InvokeVoidAsync("techTreeFunctions.rememberFocus");
+            await _overlayRef.FocusAsync();
+        }
+        else if (!Visible && _wasVisible)
+        {
+            _wasVisible = false;
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("techTreeFunctions.restoreFocus");
+            }
+            catch
+            {
+                /* Focus restoration is best-effort. */
+            }
+        }
+    }
+
+    private Task OnKeyDown(KeyboardEventArgs args)
+        => args.Key == "Escape" ? Close() : Task.CompletedTask;
 
     private Task SetTreeAlignment(UiAlignment value)
         => Settings.UpdateAsync(Settings.Current with { TreeAlignment = value });

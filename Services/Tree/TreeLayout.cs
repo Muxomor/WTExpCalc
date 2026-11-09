@@ -1,6 +1,6 @@
 using WTExpCalc.Models;
 
-namespace WTExpCalc.Services
+namespace WTExpCalc.Services.Tree
 {
     /// <summary>
     /// Предвычисленная геометрия дерева. Все методы ниже чистые и не зависят от Blazor/JS.

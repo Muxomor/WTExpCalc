@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace WTExpCalc.Shared
+namespace WTExpCalc.Shared.Localization
 {
     public static class GameDataLocalization
     {

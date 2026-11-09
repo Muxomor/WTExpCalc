@@ -1,12 +1,11 @@
 @using Microsoft.AspNetCore.Components
-@using WTExpCalc.Services
-@using WTExpCalc.Shared
 @inject ILocalizationService Localization
+@inject IJSRuntime JSRuntime
 @implements IDisposable
 
 @if (Visible)
 {
-    <div class="about-overlay" @onclick="Close">
+    <div class="about-overlay" tabindex="-1" @ref="_overlayRef" @onclick="Close" @onkeydown="OnKeyDown">
         <div class="about-modal" @onclick:stopPropagation="true" role="dialog" aria-modal="true" aria-label="@Localization.Text(UIStrings.AboutTitle)">
             <div class="about-header">
                 <h2 class="about-title">@Localization.Text(UIStrings.AboutTitle)</h2>
@@ -48,6 +47,9 @@
     [Parameter] public bool Visible { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
+    private ElementReference _overlayRef;
+    private bool _wasVisible;
+
     protected override void OnInitialized()
     {
         Localization.LanguageChanged += OnLanguageChanged;
@@ -57,6 +59,31 @@
         => $"<a class=\"about-seller-link\" href=\"{SellerUrl}\" target=\"_blank\" rel=\"noopener noreferrer\">{label}</a>";
 
     private Task Close() => OnClose.InvokeAsync();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Visible && !_wasVisible)
+        {
+            _wasVisible = true;
+            await JSRuntime.InvokeVoidAsync("techTreeFunctions.rememberFocus");
+            await _overlayRef.FocusAsync();
+        }
+        else if (!Visible && _wasVisible)
+        {
+            _wasVisible = false;
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("techTreeFunctions.restoreFocus");
+            }
+            catch
+            {
+                /* Focus restoration is best-effort. */
+            }
+        }
+    }
+
+    private Task OnKeyDown(KeyboardEventArgs args)
+        => args.Key == "Escape" ? Close() : Task.CompletedTask;
 
     private void OnLanguageChanged()
     {

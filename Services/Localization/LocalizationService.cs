@@ -1,8 +1,8 @@
 ﻿using System.Globalization;
 using Microsoft.JSInterop;
-using WTExpCalc.Shared;
+using WTExpCalc.Shared.Localization;
 
-namespace WTExpCalc.Services
+namespace WTExpCalc.Services.Localization
 {
     public interface ILocalizationService
     {

@@ -1,6 +1,6 @@
 ﻿using WTExpCalc.Models;
 
-namespace WTExpCalc.Services
+namespace WTExpCalc.Services.UrlState
 {
     public interface IUrlStateManager
     {
@@ -9,7 +9,7 @@ namespace WTExpCalc.Services
         /// </summary>
         void UpdateUrlWithSelection(
             List<Node> allNodes,
-            HashSet<int> selectedIds,
+            IReadOnlySet<int> selectedIds,
             IReadOnlyDictionary<int, int> originalRpValues,
             IReadOnlyDictionary<int, int> rpOverrides,
             bool includePremiumInShareUrl);

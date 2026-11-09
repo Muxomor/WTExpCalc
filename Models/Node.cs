@@ -29,7 +29,7 @@ namespace WTExpCalc.Models
         public int VehicleTypeId { get; set; }
 
         [JsonPropertyName("parent_id")]
-        public int? ParentId { get; set; }
+        public int? PredecessorId { get; set; }
 
         [JsonPropertyName("rank")]
         public int Rank { get; set; }

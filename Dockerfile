@@ -18,7 +18,8 @@ RUN BUILD_ID=$(sha256sum \
         /app/publish/wwwroot/_framework/blazor.webassembly.js \
     | sha256sum | cut -c1-12) \
     && sed -i "s|__BUILD__|${BUILD_ID}|g" /app/publish/wwwroot/index.html \
-    && rm -f /app/publish/wwwroot/index.html.gz /app/publish/wwwroot/index.html.br
+    && rm -f /app/publish/wwwroot/index.html.gz /app/publish/wwwroot/index.html.br \
+    && rm -f /app/publish/wwwroot/appsettings*.json.gz /app/publish/wwwroot/appsettings*.json.br
 
 FROM nginx:alpine AS final
 WORKDIR /usr/share/nginx/html

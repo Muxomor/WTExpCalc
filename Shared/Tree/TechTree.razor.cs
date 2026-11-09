@@ -1,11 +1,15 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using WTExpCalc.Models;
-using WTExpCalc.Services;
+using WTExpCalc.Services.Api;
+using WTExpCalc.Services.Localization;
+using WTExpCalc.Services.Settings;
+using WTExpCalc.Services.Tree;
+using WTExpCalc.Services.UrlState;
+using WTExpCalc.Shared.Localization;
 
-namespace WTExpCalc.Shared
+namespace WTExpCalc.Shared.Tree
 {
     public partial class TechTree
     {
@@ -32,9 +36,9 @@ namespace WTExpCalc.Shared
         private TreeLoadState LoadingState = TreeLoadState.Loading;
         private string? _loadErrorMessage;
         private List<RankRequirement> rankRequirements = new();
-        private HashSet<int> selectedNodeIds = new();
-        private long totalSelectedRp = 0;
-        private long totalSelectedSl = 0;
+        private TreeSelectionState _selection = new(
+            new Dictionary<int, Node>(),
+            new Dictionary<int, int>());
 
         private string LoadingStateCss => LoadingState switch
         {
@@ -43,9 +47,8 @@ namespace WTExpCalc.Shared
             _ => "loaded"
         };
 
-        // Исходные значения RP из API и пользовательские/лимитные overrides.
+        // Исходные значения RP из API.
         private Dictionary<int, int> originalRpValues = new();
-        private Dictionary<int, int> rpOverrides = new();
         // Флаг для предотвращения циклических обновлений URL
         private bool _suppressUrlUpdate = false;
 
@@ -89,8 +92,7 @@ namespace WTExpCalc.Shared
                     {
                         await JSRuntime.InvokeVoidAsync("techTreeFunctions.positionFolderPopup",
                             $"folder-popup-{currentlyExpandedFolder.Id}",
-                            $"node-{currentlyExpandedFolder.Id}",
-                            "tech-tree-container-id");
+                            $"node-{currentlyExpandedFolder.Id}");
                     }
                     catch
                     {
@@ -207,9 +209,9 @@ namespace WTExpCalc.Shared
             var removedSelection = false;
 
             // Если текущий опыт превышает лимит, снимаем выбор с последних узлов
-            if (limit.HasValue && totalSelectedRp > limit.Value)
+            if (limit.HasValue && _selection.TotalRp > limit.Value)
             {
-                removedSelection = RemoveExcessSelection(limit.Value);
+                removedSelection = _selection.RemoveExcess(limit.Value);
             }
 
             await CalculateAndUpdateTotals();
@@ -221,34 +223,6 @@ namespace WTExpCalc.Shared
 
             ScheduleConnectionRedraw();
             StateHasChanged();
-        }
-
-        // Метод для снятия выбора с последних узлов до достижения лимита:
-        private bool RemoveExcessSelection(long limit)
-        {
-            var selectedNodesList = selectedNodeIds
-                .Select(id => NodeLookup.TryGetValue(id, out var node) ? node : null)
-                .OfType<Node>()
-                .Where(node => node.RequiredExp.HasValue)
-                .OrderByDescending(node => node.Rank) // Снимаем с самых высоких рангов
-                .ThenByDescending(node => node.ColumnIndex ?? 0)
-                .ToList();
-
-            long currentTotal = totalSelectedRp;
-            var removed = false;
-
-            foreach (var node in selectedNodesList)
-            {
-                if (currentTotal <= limit) break;
-
-                long nodeRp = GetEffectiveRp(node);
-                selectedNodeIds.Remove(node.Id);
-                rpOverrides.Remove(node.Id);
-                currentTotal -= nodeRp;
-                removed = true;
-            }
-
-            return removed;
         }
 
         private void OnLanguageChanged()
@@ -263,16 +237,6 @@ namespace WTExpCalc.Shared
         private string GetNodeDisplayName(Node node)
         {
             return Localization.NodeName(node.Name, node.NameEnglish);
-        }
-
-        private int GetEffectiveRp(Node node)
-        {
-            return TreeSummaryFormatter.GetEffectiveRp(node, rpOverrides);
-        }
-
-        private bool IsRpValueModified(Node node)
-        {
-            return TreeSummaryFormatter.IsRpValueModified(node, originalRpValues, rpOverrides);
         }
 
         private async Task LoadData()
@@ -290,9 +254,8 @@ namespace WTExpCalc.Shared
                 _layout = TreeLayout.Empty;
                 Dependencies.Clear();
                 rankRequirements.Clear();
-                selectedNodeIds.Clear();
+                _selection.Clear();
                 originalRpValues.Clear();
-                rpOverrides.Clear();
                 currentlyExpandedFolder = null;
                 AllNodesFlat = new();
                 NodeLookup = new();
@@ -321,6 +284,7 @@ namespace WTExpCalc.Shared
 
                 rankRequirements = await Api.GetRankRequirementsAsync(NationId, TypeId);
                 NodeLookup = AllNodesFlat.ToDictionary(n => n.Id);
+                _selection = new TreeSelectionState(NodeLookup, originalRpValues);
                 _layout = TreeLayout.Build(AllNodesFlat, rankRequirements);
                 Dependencies = await Api.GetAllDependenciesAsync(NodeLookup.Keys.ToList());
 
@@ -332,9 +296,9 @@ namespace WTExpCalc.Shared
 
                 await CalculateAndUpdateTotals();
 
-                if (maxRpLimit.HasValue && totalSelectedRp > maxRpLimit.Value)
+                if (maxRpLimit.HasValue && _selection.TotalRp > maxRpLimit.Value)
                 {
-                    RemoveExcessSelection(maxRpLimit.Value);
+                    _selection.RemoveExcess(maxRpLimit.Value);
                     await CalculateAndUpdateTotals();
                     UpdateUrlState();
                 }
@@ -353,8 +317,7 @@ namespace WTExpCalc.Shared
 
         private async Task ResetTotalsAsync()
         {
-            totalSelectedRp = 0;
-            totalSelectedSl = 0;
+            _selection.Clear();
 
             if (OnTotalsUpdated.HasDelegate)
             {
@@ -382,17 +345,7 @@ namespace WTExpCalc.Shared
             {
                 var urlState = UrlStateManager.RestoreSelectionFromUrl(AllNodesFlat, Navigation.Uri);
 
-                selectedNodeIds = urlState.SelectedNodeIds;
-
-                // Восстанавливаем измененные значения RP как overrides, не трогая DTO.
-                rpOverrides.Clear();
-                foreach (var kvp in urlState.ModifiedRpValues)
-                {
-                    if (NodeLookup.TryGetValue(kvp.Key, out var node) && node.RequiredExp.HasValue)
-                    {
-                        rpOverrides[node.Id] = kvp.Value;
-                    }
-                }
+                _selection.Restore(urlState.SelectedNodeIds, urlState.ModifiedRpValues);
             }
             catch (Exception ex)
             {
@@ -408,9 +361,9 @@ namespace WTExpCalc.Shared
             {
                 UrlStateManager.UpdateUrlWithSelection(
                     AllNodesFlat,
-                    selectedNodeIds,
+                    _selection.SelectedIds,
                     originalRpValues,
-                    rpOverrides,
+                    _selection.RpOverrides,
                     UiSettings.Current.IncludePremiumInShareUrl);
             }
             catch (Exception ex)
@@ -420,32 +373,20 @@ namespace WTExpCalc.Shared
         }
         private async Task CalculateAndUpdateTotals()
         {
-            totalSelectedRp = 0;
-            totalSelectedSl = 0;
-
-            var allSelectedNodes = selectedNodeIds
-                .Select(id => NodeLookup.TryGetValue(id, out var node) ? node : null)
-                .OfType<Node>()
-                .Where(node => node.Type == "vehicle")
-                .ToList();
-
-            // Подсчитываем опыт и SL только для узлов с опытом
-            foreach (var node in allSelectedNodes.Where(node => node.RequiredExp.HasValue))
-            {
-                totalSelectedRp += GetEffectiveRp(node);
-                totalSelectedSl += node.SilverCost ?? 0;
-            }
-
-            // Для отображения имен используем ВСЕ выбранные узлы
+            var allSelectedNodes = _selection.SelectedNodes;
             var namesString = string.Join(", ", allSelectedNodes.Select(GetNodeDisplayName));
-            var formattedText = SummaryFormatter.Format(allSelectedNodes, originalRpValues, rpOverrides, totalSelectedRp);
+            var formattedText = SummaryFormatter.Format(
+                allSelectedNodes,
+                originalRpValues,
+                _selection.RpOverrides,
+                _selection.TotalRp);
 
             if (OnTotalsUpdated.HasDelegate)
             {
                 await OnTotalsUpdated.InvokeAsync(new TotalsUpdateEventArgs
                     {
-                        TotalRp = totalSelectedRp,
-                        TotalSl = totalSelectedSl,
+                        TotalRp = _selection.TotalRp,
+                        TotalSl = _selection.TotalSl,
                         SelectedNames = namesString,
                         FormattedText = formattedText
                     });
@@ -454,8 +395,7 @@ namespace WTExpCalc.Shared
             // Уведомляем родительский компонент об изменении выбранных рангов
             if (OnSelectedRanksChanged.HasDelegate)
             {
-                var selectedRanks = GetSelectedRanks();
-                await OnSelectedRanksChanged.InvokeAsync(selectedRanks);
+                await OnSelectedRanksChanged.InvokeAsync(_selection.SelectedRanks.ToList());
             }
 
             await UpdateNodesLimitStateAsync();
@@ -473,7 +413,7 @@ namespace WTExpCalc.Shared
                 await JSRuntime.InvokeVoidAsync(
                     "techTreeFunctions.updateNodesLimitState",
                     maxRpLimit,
-                    totalSelectedRp);
+                    _selection.TotalRp);
             }
             catch (Exception ex)
             {
@@ -534,45 +474,12 @@ namespace WTExpCalc.Shared
                 }
             }
 
-            bool isSelected = selectedNodeIds.Contains(node.Id);
+            var toggleResult = _selection.Toggle(node, maxRpLimit);
 
-            if (isSelected)
+            if (toggleResult == SelectionToggleResult.LimitExceeded)
             {
-                // Снятие выбора всегда разрешено
-                selectedNodeIds.Remove(node.Id);
-                rpOverrides.Remove(node.Id);
-            }
-            else
-            {
-                long nodeRp = GetEffectiveRp(node);
-
-                if (!maxRpLimit.HasValue)
-                {
-                    // Нет лимита, выбираем как обычно
-                    selectedNodeIds.Add(node.Id);
-                }
-                else
-                {
-                    long remaining = maxRpLimit.Value - totalSelectedRp;
-
-                    if (nodeRp <= remaining)
-                    {
-                        // Нода целиком помещается в лимит (в том числе бесплатная премиумная)
-                        selectedNodeIds.Add(node.Id);
-                    }
-                    else if (remaining > 0 && nodeRp > 0)
-                    {
-                        // Автоподгонка: уменьшаем RP узла до остатка лимита
-                        rpOverrides[node.Id] = (int)remaining;
-                        selectedNodeIds.Add(node.Id);
-                    }
-                    else
-                    {
-                        // Лимит уже достигнут, показываем предупреждение
-                        await NotifyLimitExceeded();
-                        return;
-                    }
-                }
+                await NotifyLimitExceeded();
+                return;
             }
 
             await CalculateAndUpdateTotals();
@@ -597,74 +504,8 @@ namespace WTExpCalc.Shared
         private bool IsFolderSelected(Node folderNode)
         {
             var children = GetVisualNodesInFolderSequence(folderNode);
-            return children.Any(child => child.Type == "vehicle" && selectedNodeIds.Contains(child.Id));
+            return children.Any(child => child.Type == "vehicle" && _selection.SelectedIds.Contains(child.Id));
         }
-        private RenderFragment RenderFolderNode(Node node) => builder =>
-        {
-            bool isCurrentlyExpanded = currentlyExpandedFolder?.Id == node.Id;
-            bool containsSelected = IsFolderSelected(node);
-            var children = GetVisualNodesInFolderSequence(node)
-                        .Where(c => c.Type == "vehicle")
-                        .ToList();
-            int totalChildren = children.Count;
-            int selectedChildrenCount = children.Count(c => selectedNodeIds.Contains(c.Id));
-            string displayName = GetNodeDisplayName(node);
-
-            int seq = 0;
-
-            builder.OpenElement(seq++, "div");
-            builder.AddAttribute(seq++, "class",
-                $"node-content folder-node {(isCurrentlyExpanded ? "folder-active" : "")} {(containsSelected ? "folder-contains-selected" : "")}");
-            builder.AddAttribute(seq++, "id", $"node-{node.Id}");
-            builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => HandleNodeClick(node)));
-
-            // Иконка
-            builder.OpenElement(seq++, "div");
-            builder.AddAttribute(seq++, "class", "node-icon");
-            builder.AddAttribute(seq++, "style", $"background-image:url('{node.ImageUrl}')");
-            builder.CloseElement();
-
-            builder.OpenElement(seq++, "div");
-            builder.AddAttribute(seq++, "class", "node-name");
-            builder.AddAttribute(seq++, "title", displayName);
-            builder.AddContent(seq++, displayName);
-            builder.CloseElement();
-
-            if (totalChildren > 0)
-            {
-                builder.OpenElement(seq++, "div");
-                builder.AddAttribute(seq++, "class", "folder-child-counter");
-                builder.AddContent(seq++, $"{selectedChildrenCount} / {totalChildren}");
-                builder.CloseElement();
-
-                builder.OpenElement(seq++, "div");
-                builder.AddAttribute(seq++, "class", "folder-index-squares");
-                builder.AddAttribute(seq++, "style", $"--folder-count: {children.Count}");
-                for (int i = 0; i < children.Count; i++)
-                {
-                    var child = children[i];
-                    bool isChildSelected = selectedNodeIds.Contains(child.Id);
-
-                    builder.OpenElement(seq++, "div");
-                    builder.AddAttribute(seq++, "class", isChildSelected ? "folder-index selected" : "folder-index");
-                    builder.AddAttribute(seq++, "title", GetNodeDisplayName(child));
-                    builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => ToggleNodeSelection(child)));
-                    builder.AddEventStopPropagationAttribute(seq++, "onclick", true);
-                    builder.AddContent(seq++, (i + 1).ToString());
-                    builder.CloseElement();
-                }
-                builder.CloseElement();
-            }
-
-            // Плюс/минус
-            builder.OpenElement(seq++, "div");
-            builder.AddAttribute(seq++, "class", "folder-toggle-icon");
-            builder.AddContent(seq++, isCurrentlyExpanded ? "−" : "+");
-            builder.CloseElement();
-
-            builder.CloseElement();
-        };
-
         private IReadOnlyList<Node> GetVisualNodesInFolderSequence(Node folderNode)
             => _layout.GetFolderChildren(folderNode);
 
@@ -672,16 +513,7 @@ namespace WTExpCalc.Shared
         {
             if (int.TryParse(e.Value?.ToString(), out int newValue))
             {
-                newValue = Math.Max(0, newValue);
-
-                if (originalRpValues.TryGetValue(node.Id, out var originalRp) && newValue == originalRp)
-                {
-                    rpOverrides.Remove(node.Id);
-                }
-                else
-                {
-                    rpOverrides[node.Id] = newValue;
-                }
+                _selection.SetRpOverride(node, newValue);
 
                 await CalculateAndUpdateTotals();
                 UpdateUrlState(); // Обновляем URL после изменения RP
@@ -689,68 +521,6 @@ namespace WTExpCalc.Shared
                 StateHasChanged();
             }
         }
-        private RenderFragment RenderVehicleNode(Node node) => __builder =>
-        {
-            bool isSelected = selectedNodeIds.Contains(node.Id);
-            bool isRpModified = IsRpValueModified(node);
-            string displayName = GetNodeDisplayName(node);
-            int seq = 0;
-
-            __builder.OpenElement(seq++, "div");
-            __builder.AddAttribute(seq++, "id", $"node-{node.Id}");
-            __builder.AddAttribute(seq++, "class",
-                $"node-content vehicle-node {(node.RequiredExp.HasValue ? "rp-editable" : "")} {(isSelected ? "node-selected" : "")}");
-            __builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => ToggleNodeSelection(node)));
-
-            __builder.OpenElement(seq++, "div");
-            __builder.AddAttribute(seq++, "class", "node-icon");
-            __builder.AddAttribute(seq++, "style", $"background-image:url('{node.ImageUrl}')");
-            __builder.CloseElement();
-
-            __builder.OpenElement(seq++, "div");
-            __builder.AddAttribute(seq++, "class", "node-info");
-
-            __builder.OpenElement(seq++, "div");
-            __builder.AddAttribute(seq++, "class", "node-name");
-            __builder.AddAttribute(seq++, "title", displayName);
-            __builder.AddContent(seq++, displayName);
-            __builder.CloseElement();
-
-            __builder.OpenElement(seq++, "div");
-            __builder.AddAttribute(seq++, "class", "node-details");
-
-            if (node.BattleRating.HasValue)
-            {
-                __builder.OpenElement(seq++, "div");
-                __builder.AddAttribute(seq++, "class", "node-detail-item node-br");
-                // ИСПРАВЛЕНО: используем локализованную метку БР
-                __builder.AddContent(seq++, $"{Localization.Text(UIStrings.BR)}: {node.BattleRating}");
-                __builder.CloseElement();
-            }
-
-            __builder.OpenElement(seq++, "div");
-            __builder.AddAttribute(seq++, "class", "node-detail-item node-exp");
-            if (node.RequiredExp.HasValue)
-            {
-                __builder.AddContent(seq++, $"{Localization.Text(UIStrings.RP)}: ");
-                __builder.OpenElement(seq++, "input");
-                __builder.AddAttribute(seq++, "type", "number");
-                __builder.AddAttribute(seq++, "class", $"rp-input {(isRpModified ? "rp-modified" : "")}");
-                __builder.AddAttribute(seq++, "min", "0");
-                __builder.AddAttribute(seq++, "value", BindConverter.FormatValue(GetEffectiveRp(node)));
-                __builder.AddAttribute(seq++, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this,
-                    e => OnRpValueChanged(node, e)));
-                __builder.AddAttribute(seq++, "onclick", "event.stopPropagation();");
-                __builder.AddElementReferenceCapture(seq++, capturedRef => { });
-                __builder.CloseElement();
-            }
-            __builder.CloseElement();
-
-            __builder.CloseElement();
-            __builder.CloseElement();
-            __builder.CloseElement();
-        };
-
         private async Task DrawConnectionLines()
         {
             if (JSRuntime == null || Dependencies == null || !Dependencies.Any()) return;
@@ -814,23 +584,9 @@ namespace WTExpCalc.Shared
             }
         }
 
-        private List<Node> GetSelectedNodes()
-        {
-            return selectedNodeIds
-                .Select(id => NodeLookup.TryGetValue(id, out var node) ? node : null)
-                .OfType<Node>()
-                .Where(node => node.Type == "vehicle")
-                .ToList();
-        }
+        private List<Node> GetSelectedNodes() => _selection.SelectedNodes.ToList();
 
-        private List<int> GetSelectedRanks()
-        {
-            return GetSelectedNodes()
-                .Select(node => node.Rank)
-                .Distinct()
-                .OrderBy(rank => rank)
-                .ToList();
-        }
+        private List<int> GetSelectedRanks() => _selection.SelectedRanks.ToList();
 
         [JSInvokable]
         public Task RedrawConnectionsDebouncedAsync()

@@ -1,7 +1,8 @@
 using WTExpCalc.Models;
-using WTExpCalc.Shared;
+using WTExpCalc.Services.Localization;
+using WTExpCalc.Shared.Localization;
 
-namespace WTExpCalc.Services
+namespace WTExpCalc.Services.Tree
 {
     /// <summary>
     /// Формирует текст выбранной техники для копирования в буфер обмена.
