@@ -29,29 +29,19 @@
     {
         <div class="tree-grid" style="@GridStyles">
             @{
-                var activeRanks = GetActiveRanks();
-                var cumulativeRowsBefore = new Dictionary<int, int>();
-
-                if (activeRanks.Count > 0)
-                {
-                    int currentCumulativeRowCount = 0;
-                    foreach (var rank in activeRanks)
-                    {
-                        cumulativeRowsBefore[rank] = currentCumulativeRowCount;
-                        int rowsInRankR = (MaxRowIndexPerRank.TryGetValue(rank, out var maxRowIndex) ? maxRowIndex : 0) + 1;
-                        currentCumulativeRowCount += rowsInRankR;
-                    }
-                }
+                var activeRanks = _layout.ActiveRanks;
 
                 // Отрисовываем только активные ранги
                 foreach (var rank in activeRanks)
                 {
                     int rowsInThisRank = (MaxRowIndexPerRank.TryGetValue(rank, out var maxRowIndex) ? maxRowIndex : 0) + 1;
-                    int startGridRow = 2 + (cumulativeRowsBefore.TryGetValue(rank, out var cumRows) ? cumRows : 0);
+                    int startGridRow = 2 + (_layout.RankStartRows.TryGetValue(rank, out var rankStartRow) ? rankStartRow : 0);
                     string rankLabelStyle = $"grid-column: 1; grid-row: {startGridRow} / span {rowsInThisRank};";
-                    var requirement = rankRequirements.FirstOrDefault(r => r.PreviousRank == rank);
+                    _layout.RankRequirementsByPrevious.TryGetValue(rank, out var requirement);
                     int requiredCount = requirement?.RequiredUnits ?? 0;
-                    int selectedCount = AllNodesFlat.Count(n => n.Rank == rank && n.Type == "vehicle" && selectedNodeIds.Contains(n.Id));
+                    int selectedCount = _layout.NodesByRank.TryGetValue(rank, out var rankNodes)
+                        ? rankNodes.Count(n => n.Type == "vehicle" && selectedNodeIds.Contains(n.Id))
+                        : 0;
 
                     <div class="rank-label" data-rank="@rank" style="@rankLabelStyle">
                         <span>@Localization.Text(UIStrings.Rank) @rank</span>
@@ -101,16 +91,14 @@
                 }
             </svg>
             @{
-                var ranksForDividers = GetActiveRanks();
-                var standardNodes = AllNodesFlat.Where(n => n.TechCategory == "standard");
-                int maxStdColIndex = standardNodes.Any() ? standardNodes.Max(n => n.ColumnIndex ?? 0) : -1;
-                int standardColumnCount = Math.Max(0, maxStdColIndex + 1);
-                int premiumDividerColumn = 2 + standardColumnCount;
+                var ranksForDividers = _layout.ActiveRanks;
+                int standardColumnCount = _layout.StandardColumnCount;
+                int premiumDividerColumn = _layout.PremiumDividerColumn;
 
-                int lastDataRow = 1 + TotalDataGridRows;
+                int lastDataRow = _layout.LastDataRow;
 
                 //Вертикальный разделитель (Премы)
-                var premiumNodesExist = AllNodesFlat.Any(n => n.TechCategory != "standard");
+                var premiumNodesExist = _layout.PremiumColumnCount > 0;
                 if (premiumNodesExist && standardColumnCount > 0)
                 {
                     string premiumDividerStyle = $"grid-column: {premiumDividerColumn}; grid-row: 2 / {lastDataRow + 1};";
@@ -122,7 +110,7 @@
                 {
                     var currentRank = ranksForDividers[i];
                     int rowsInThisRank = (MaxRowIndexPerRank.TryGetValue(currentRank, out var maxRowIdx) ? maxRowIdx : 0) + 1;
-                    int startGridRowCurrentRank = 2 + (cumulativeRowsBefore.TryGetValue(currentRank, out var cumRows) ? cumRows : 0);
+                    int startGridRowCurrentRank = 2 + (_layout.RankStartRows.TryGetValue(currentRank, out var rankStartRow) ? rankStartRow : 0);
                     int endGridRowCurrentRank = startGridRowCurrentRank + rowsInThisRank - 1;
 
                     string rankDividerStyle = $"grid-column: 2 / -1; grid-row: {endGridRowCurrentRank + 1};";

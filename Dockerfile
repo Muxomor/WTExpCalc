@@ -4,7 +4,7 @@ WORKDIR /src
 COPY WTExpCalc.sln .
 COPY WTExpCalc.csproj .
 
-RUN dotnet restore WTExpCalc.sln
+RUN dotnet restore WTExpCalc.csproj
 
 COPY . .
 

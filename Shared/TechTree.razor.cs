@@ -26,17 +26,13 @@ namespace WTExpCalc.Shared
 
         private List<Node> AllNodesFlat = new();
         private Dictionary<int, Node> NodeLookup = new();
-        private List<Node> GridNodes = new();
+        private TreeLayout _layout = TreeLayout.Empty;
         private List<NodeDependency> Dependencies = new();
         private Node? currentlyExpandedFolder;
         private TreeLoadState LoadingState = TreeLoadState.Loading;
         private string? _loadErrorMessage;
         private List<RankRequirement> rankRequirements = new();
         private HashSet<int> selectedNodeIds = new();
-        private int MaxRank = 0;
-        private string GridStyles = "";
-        private readonly Dictionary<int, int> MaxRowIndexPerRank = new();
-        private int TotalDataGridRows = 0;
         private long totalSelectedRp = 0;
         private long totalSelectedSl = 0;
 
@@ -47,8 +43,9 @@ namespace WTExpCalc.Shared
             _ => "loaded"
         };
 
-        // Словарь для хранения исходных значений RP
-        private Dictionary<int, int?> originalRpValues = new();
+        // Исходные значения RP из API и пользовательские/лимитные overrides.
+        private Dictionary<int, int> originalRpValues = new();
+        private Dictionary<int, int> rpOverrides = new();
         // Флаг для предотвращения циклических обновлений URL
         private bool _suppressUrlUpdate = false;
 
@@ -57,10 +54,11 @@ namespace WTExpCalc.Shared
         private long? _previousRpLimit;
         private bool _isFirstLoad = true;
 
-        private const int NodeCardWidth = 204;
-        private const int NodeCardHeight = 87;
-
         private long? maxRpLimit = null;
+
+        private IReadOnlyList<Node> GridNodes => _layout.GridNodes;
+        private string GridStyles => _layout.GridStyles;
+        private IReadOnlyDictionary<int, int> MaxRowIndexPerRank => _layout.MaxRowIndexPerRank;
 
         private bool _deferConnectionRedrawAfterRender;
         private bool _deferFolderPopupPositionAfterRender;
@@ -243,8 +241,9 @@ namespace WTExpCalc.Shared
             {
                 if (currentTotal <= limit) break;
 
-                long nodeRp = node.RequiredExp ?? 0;
+                long nodeRp = GetEffectiveRp(node);
                 selectedNodeIds.Remove(node.Id);
+                rpOverrides.Remove(node.Id);
                 currentTotal -= nodeRp;
                 removed = true;
             }
@@ -266,6 +265,16 @@ namespace WTExpCalc.Shared
             return Localization.NodeName(node.Name, node.NameEnglish);
         }
 
+        private int GetEffectiveRp(Node node)
+        {
+            return TreeSummaryFormatter.GetEffectiveRp(node, rpOverrides);
+        }
+
+        private bool IsRpValueModified(Node node)
+        {
+            return TreeSummaryFormatter.IsRpValueModified(node, originalRpValues, rpOverrides);
+        }
+
         private async Task LoadData()
         {
             try
@@ -278,12 +287,12 @@ namespace WTExpCalc.Shared
                 _loadErrorMessage = null;
                 _suppressUrlUpdate = true; // Предотвращаем обновление URL во время загрузки
 
-                MaxRowIndexPerRank.Clear();
-                GridNodes.Clear();
+                _layout = TreeLayout.Empty;
                 Dependencies.Clear();
                 rankRequirements.Clear();
                 selectedNodeIds.Clear();
                 originalRpValues.Clear();
+                rpOverrides.Clear();
                 currentlyExpandedFolder = null;
                 AllNodesFlat = new();
                 NodeLookup = new();
@@ -293,8 +302,7 @@ namespace WTExpCalc.Shared
                 AllNodesFlat = await Api.GetAllNodesFlatAsync(NationId, TypeId);
                 if (AllNodesFlat == null || AllNodesFlat.Count == 0)
                 {
-                    MaxRank = 0;
-                    GridStyles = "";
+                    _layout = TreeLayout.Empty;
                     LoadingState = TreeLoadState.Loaded;
                     _suppressUrlUpdate = false;
                     await ResetTotalsAsync();
@@ -313,9 +321,8 @@ namespace WTExpCalc.Shared
 
                 rankRequirements = await Api.GetRankRequirementsAsync(NationId, TypeId);
                 NodeLookup = AllNodesFlat.ToDictionary(n => n.Id);
-                PrepareGridNodesAndCalculateRows();
+                _layout = TreeLayout.Build(AllNodesFlat, rankRequirements);
                 Dependencies = await Api.GetAllDependenciesAsync(NodeLookup.Keys.ToList());
-                CalculateGridDimensions();
 
                 // Восстанавливаем состояние из URL
                 RestoreStateFromUrl();
@@ -377,12 +384,13 @@ namespace WTExpCalc.Shared
 
                 selectedNodeIds = urlState.SelectedNodeIds;
 
-                // Восстанавливаем измененные значения RP
+                // Восстанавливаем измененные значения RP как overrides, не трогая DTO.
+                rpOverrides.Clear();
                 foreach (var kvp in urlState.ModifiedRpValues)
                 {
                     if (NodeLookup.TryGetValue(kvp.Key, out var node) && node.RequiredExp.HasValue)
                     {
-                        node.RequiredExp = kvp.Value;
+                        rpOverrides[node.Id] = kvp.Value;
                     }
                 }
             }
@@ -402,6 +410,7 @@ namespace WTExpCalc.Shared
                     AllNodesFlat,
                     selectedNodeIds,
                     originalRpValues,
+                    rpOverrides,
                     UiSettings.Current.IncludePremiumInShareUrl);
             }
             catch (Exception ex)
@@ -423,13 +432,13 @@ namespace WTExpCalc.Shared
             // Подсчитываем опыт и SL только для узлов с опытом
             foreach (var node in allSelectedNodes.Where(node => node.RequiredExp.HasValue))
             {
-                totalSelectedRp += node.RequiredExp ?? 0;
+                totalSelectedRp += GetEffectiveRp(node);
                 totalSelectedSl += node.SilverCost ?? 0;
             }
 
             // Для отображения имен используем ВСЕ выбранные узлы
             var namesString = string.Join(", ", allSelectedNodes.Select(GetNodeDisplayName));
-            var formattedText = SummaryFormatter.Format(allSelectedNodes, originalRpValues, totalSelectedRp);
+            var formattedText = SummaryFormatter.Format(allSelectedNodes, originalRpValues, rpOverrides, totalSelectedRp);
 
             if (OnTotalsUpdated.HasDelegate)
             {
@@ -471,98 +480,7 @@ namespace WTExpCalc.Shared
                 Console.WriteLine($"Failed to update nodes limit state: {ex.Message}");
             }
         }
-        private void PrepareGridNodesAndCalculateRows()
-        {
-            GridNodes.Clear();
-            MaxRowIndexPerRank.Clear();
-            TotalDataGridRows = 0;
-
-            if (AllNodesFlat == null || !AllNodesFlat.Any()) return;
-
-            foreach (var node in AllNodesFlat)
-            {
-                int currentMax = MaxRowIndexPerRank.TryGetValue(node.Rank, out var max) ? max : -1;
-                if ((node.RowIndex ?? 0) > currentMax) MaxRowIndexPerRank[node.Rank] = node.RowIndex ?? 0;
-                else if (!MaxRowIndexPerRank.ContainsKey(node.Rank)) MaxRowIndexPerRank[node.Rank] = node.RowIndex ?? 0;
-            }
-            TotalDataGridRows = MaxRowIndexPerRank.Sum(kvp => kvp.Value + 1);
-
-            foreach (var node in AllNodesFlat)
-            {
-                bool isGridNode = false;
-
-                if (node.Type == "folder")
-                {
-                    isGridNode = true;
-                }
-                else if (node.Type == "vehicle")
-                {
-                    if (!node.OrderInFolder.HasValue)
-                    {
-                        isGridNode = true;
-                    }
-                }
-                if (isGridNode)
-                {
-                    GridNodes.Add(node);
-                }
-            }
-        }
-
-        private void CalculateGridDimensions()
-        {
-            MaxRank = AllNodesFlat.Any() ? AllNodesFlat.Max(n => n.Rank) : 0;
-            var standardNodes = AllNodesFlat.Where(n => n.TechCategory == "standard");
-            int maxStd = standardNodes.Any() ? standardNodes.Max(n => n.ColumnIndex ?? 0) : -1;
-            var premiumNodes = AllNodesFlat.Where(n => n.TechCategory != "standard");
-            int maxPrem = premiumNodes.Any() ? premiumNodes.Max(n => n.ColumnIndex ?? 0) : -1;
-            int stdCount = Math.Max(0, maxStd + 1);
-            int premCount = Math.Max(0, maxPrem + 1);
-
-            string gridRowsStyle = "auto";
-            if (TotalDataGridRows > 0)
-                gridRowsStyle += $" repeat({TotalDataGridRows}, {NodeCardHeight}px)";
-            else if (MaxRank > 0)
-                gridRowsStyle += $" repeat({MaxRank}, {NodeCardHeight}px)";
-
-            GridStyles =
-                $"display: grid; " +
-                $"grid-template-rows: {gridRowsStyle}; " +
-                $"grid-template-columns: 60px {(stdCount > 0 ? $"repeat({stdCount}, {NodeCardWidth}px) " : "")}{(premCount > 0 ? $"repeat({premCount}, {NodeCardWidth}px)" : "")}; " +
-                $"gap: 30px 40px; position: relative;";
-        }
-
-        private List<int> GetActiveRanks()
-        {
-            // Получаем ранги из rankRequirements и из техники
-            var ranksFromRequirements = rankRequirements.Select(r => r.PreviousRank).ToHashSet();
-            var ranksFromNodes = AllNodesFlat.Select(n => n.Rank).ToHashSet();
-
-            // Объединяем и сортируем
-            var allActiveRanks = ranksFromRequirements.Union(ranksFromNodes).OrderBy(r => r).ToList();
-
-            return allActiveRanks;
-        }
-
-        private string GetNodeGridStyle(Node node)
-        {
-            var activeRanks = GetActiveRanks();
-
-            int col = node.TechCategory == "standard"
-                ? 1 + (node.ColumnIndex ?? 0) + 1
-                : 1 + ((AllNodesFlat.Where(n => n.TechCategory == "standard").Max(n => n.ColumnIndex ?? 0)) + 1) + (node.ColumnIndex ?? 0) + 1;
-
-            // Вычисляем строку на базе активных рангов
-            int calculatedRow = 1;
-            foreach (var activeRank in activeRanks)
-            {
-                if (activeRank >= node.Rank) break;
-                calculatedRow += (MaxRowIndexPerRank.TryGetValue(activeRank, out var prev) ? prev : 0) + 1;
-            }
-            calculatedRow += (node.RowIndex ?? 0);
-
-            return $"grid-column: {col}; grid-row: {calculatedRow + 1}; z-index:1; position:relative;";
-        }
+        private string GetNodeGridStyle(Node node) => _layout.GetNodeGridStyle(node);
 
         private string GetNodeCssClass(Node node)
         {
@@ -622,16 +540,11 @@ namespace WTExpCalc.Shared
             {
                 // Снятие выбора всегда разрешено
                 selectedNodeIds.Remove(node.Id);
-
-                // Восстанавливаем оригинальное значение RP при снятии выбора
-                if (originalRpValues.TryGetValue(node.Id, out var originalRp))
-                {
-                    node.RequiredExp = originalRp;
-                }
+                rpOverrides.Remove(node.Id);
             }
             else
             {
-                long nodeRp = node.RequiredExp ?? 0;
+                long nodeRp = GetEffectiveRp(node);
 
                 if (!maxRpLimit.HasValue)
                 {
@@ -650,7 +563,7 @@ namespace WTExpCalc.Shared
                     else if (remaining > 0 && nodeRp > 0)
                     {
                         // Автоподгонка: уменьшаем RP узла до остатка лимита
-                        node.RequiredExp = (int)remaining;
+                        rpOverrides[node.Id] = (int)remaining;
                         selectedNodeIds.Add(node.Id);
                     }
                     else
@@ -752,24 +665,24 @@ namespace WTExpCalc.Shared
             builder.CloseElement();
         };
 
-        private List<Node> GetVisualNodesInFolderSequence(Node folderNode)
-        {
-            return AllNodesFlat
-                .Where(n =>
-                    n.Rank == folderNode.Rank
-                    && n.ColumnIndex == folderNode.ColumnIndex
-                    && n.TechCategory == folderNode.TechCategory 
-                    && n.RowIndex == folderNode.RowIndex
-                    && n.OrderInFolder.HasValue)
-                .OrderBy(n => n.OrderInFolder!.Value)
-                .ToList();
-        }
+        private IReadOnlyList<Node> GetVisualNodesInFolderSequence(Node folderNode)
+            => _layout.GetFolderChildren(folderNode);
 
         private async Task OnRpValueChanged(Node node, ChangeEventArgs e)
         {
             if (int.TryParse(e.Value?.ToString(), out int newValue))
             {
-                node.RequiredExp = newValue;
+                newValue = Math.Max(0, newValue);
+
+                if (originalRpValues.TryGetValue(node.Id, out var originalRp) && newValue == originalRp)
+                {
+                    rpOverrides.Remove(node.Id);
+                }
+                else
+                {
+                    rpOverrides[node.Id] = newValue;
+                }
+
                 await CalculateAndUpdateTotals();
                 UpdateUrlState(); // Обновляем URL после изменения RP
                 ScheduleConnectionRedraw();
@@ -779,7 +692,7 @@ namespace WTExpCalc.Shared
         private RenderFragment RenderVehicleNode(Node node) => __builder =>
         {
             bool isSelected = selectedNodeIds.Contains(node.Id);
-            bool isRpModified = TreeSummaryFormatter.IsRpValueModified(node, originalRpValues);
+            bool isRpModified = IsRpValueModified(node);
             string displayName = GetNodeDisplayName(node);
             int seq = 0;
 
@@ -824,7 +737,7 @@ namespace WTExpCalc.Shared
                 __builder.AddAttribute(seq++, "type", "number");
                 __builder.AddAttribute(seq++, "class", $"rp-input {(isRpModified ? "rp-modified" : "")}");
                 __builder.AddAttribute(seq++, "min", "0");
-                __builder.AddAttribute(seq++, "value", BindConverter.FormatValue(node.RequiredExp));
+                __builder.AddAttribute(seq++, "value", BindConverter.FormatValue(GetEffectiveRp(node)));
                 __builder.AddAttribute(seq++, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this,
                     e => OnRpValueChanged(node, e)));
                 __builder.AddAttribute(seq++, "onclick", "event.stopPropagation();");

@@ -10,7 +10,8 @@ namespace WTExpCalc.Services
         void UpdateUrlWithSelection(
             List<Node> allNodes,
             HashSet<int> selectedIds,
-            Dictionary<int, int?> originalRpValues,
+            IReadOnlyDictionary<int, int> originalRpValues,
+            IReadOnlyDictionary<int, int> rpOverrides,
             bool includePremiumInShareUrl);
 
         /// <summary>

@@ -17,7 +17,8 @@ namespace WTExpCalc.Services
 
         public string Format(
             IReadOnlyList<Node> selectedNodes,
-            IReadOnlyDictionary<int, int?> originalRpValues,
+            IReadOnlyDictionary<int, int> originalRpValues,
+            IReadOnlyDictionary<int, int> rpOverrides,
             long totalRp)
         {
             if (selectedNodes.Count == 0)
@@ -44,7 +45,7 @@ namespace WTExpCalc.Services
                     var rankNumber = rankGroup.Key;
                     var vehicleNames = rankGroup
                         .OrderBy(n => n.ColumnIndex ?? 0)
-                        .Select(vehicle => FormatVehicleName(vehicle, originalRpValues))
+                        .Select(vehicle => FormatVehicleName(vehicle, originalRpValues, rpOverrides))
                         .ToList();
 
                     // Формируем строку для ранга с учетом языка
@@ -71,30 +72,42 @@ namespace WTExpCalc.Services
             return string.Join("\n\n", result) + (result.Count > 0 ? "\n\n" + totalRpText : totalRpText);
         }
 
+        public static int GetEffectiveRp(Node node, IReadOnlyDictionary<int, int> rpOverrides)
+        {
+            return rpOverrides.TryGetValue(node.Id, out var value)
+                ? value
+                : node.RequiredExp ?? 0;
+        }
+
         public static bool IsRpValueModified(
             Node node,
-            IReadOnlyDictionary<int, int?> originalRpValues)
+            IReadOnlyDictionary<int, int> originalRpValues,
+            IReadOnlyDictionary<int, int> rpOverrides)
         {
             if (!node.RequiredExp.HasValue)
             {
                 return false;
             }
 
-            return originalRpValues.TryGetValue(node.Id, out var originalValue)
-                   && node.RequiredExp.Value != originalValue;
+            return rpOverrides.TryGetValue(node.Id, out var currentValue)
+                   && originalRpValues.TryGetValue(node.Id, out var originalValue)
+                   && currentValue != originalValue;
         }
 
-        private string FormatVehicleName(Node vehicle, IReadOnlyDictionary<int, int?> originalRpValues)
+        private string FormatVehicleName(
+            Node vehicle,
+            IReadOnlyDictionary<int, int> originalRpValues,
+            IReadOnlyDictionary<int, int> rpOverrides)
         {
             string vehicleName = _localization.NodeName(vehicle.Name, vehicle.NameEnglish);
 
-            if (!IsRpValueModified(vehicle, originalRpValues))
+            if (!IsRpValueModified(vehicle, originalRpValues, rpOverrides))
             {
                 return vehicleName;
             }
 
-            var currentRp = vehicle.RequiredExp ?? 0;
-            var originalRp = originalRpValues.TryGetValue(vehicle.Id, out var original) ? original ?? 0 : 0;
+            var currentRp = GetEffectiveRp(vehicle, rpOverrides);
+            var originalRp = originalRpValues.TryGetValue(vehicle.Id, out var original) ? original : 0;
             return $"{vehicleName} ({currentRp} / {originalRp})";
         }
 

@@ -5,6 +5,10 @@ VisualStudioVersion = 17.13.35931.197
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WTExpCalc", "WTExpCalc.csproj", "{8DF4D651-A4BC-477C-ADF1-3958AF5972DE}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{CF07A131-C5E2-48A7-9EBB-24683534D547}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WTExpCalc.Tests", "tests\WTExpCalc.Tests\WTExpCalc.Tests.csproj", "{40CA730B-2B78-4312-A395-225B2B927CA4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,11 +19,18 @@ Global
 		{8DF4D651-A4BC-477C-ADF1-3958AF5972DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8DF4D651-A4BC-477C-ADF1-3958AF5972DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8DF4D651-A4BC-477C-ADF1-3958AF5972DE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40CA730B-2B78-4312-A395-225B2B927CA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40CA730B-2B78-4312-A395-225B2B927CA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40CA730B-2B78-4312-A395-225B2B927CA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40CA730B-2B78-4312-A395-225B2B927CA4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8E037246-D421-46A3-B46A-7CF41D5BBF30}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{40CA730B-2B78-4312-A395-225B2B927CA4} = {CF07A131-C5E2-48A7-9EBB-24683534D547}
 	EndGlobalSection
 EndGlobal

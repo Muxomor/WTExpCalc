@@ -19,7 +19,8 @@ namespace WTExpCalc.Services
         public void UpdateUrlWithSelection(
             List<Node> allNodes,
             HashSet<int> selectedIds,
-            Dictionary<int, int?> originalRpValues,
+            IReadOnlyDictionary<int, int> originalRpValues,
+            IReadOnlyDictionary<int, int> rpOverrides,
             bool includePremiumInShareUrl)
         {
             try
@@ -52,7 +53,10 @@ namespace WTExpCalc.Services
                     }
 
                     // Проверяем, изменено ли значение RP
-                    var currentRp = node.RequiredExp.Value;
+                    var currentRp = rpOverrides.TryGetValue(node.Id, out var overrideRp)
+                        ? overrideRp
+                        : node.RequiredExp.Value;
+
                     var originalRp = originalRpValues.TryGetValue(node.Id, out var orig) ? orig : currentRp;
 
                     if (currentRp != originalRp)
