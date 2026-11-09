@@ -2,7 +2,7 @@
 
 namespace WTExpCalc.Models
 {
-    public class Version
+    public class AppVersion
     {
         [JsonPropertyName("id")]
         public int Id { get; set; }

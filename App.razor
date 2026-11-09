@@ -1,6 +1,7 @@
 ﻿@using WTExpCalc.Services
 @using WTExpCalc.Shared
 @inject ILocalizationService Localization
+@implements IDisposable
 
 <Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
@@ -21,3 +22,20 @@
         </LayoutView>
     </NotFound>
 </Router>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Localization.LanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Localization.LanguageChanged -= OnLanguageChanged;
+    }
+}

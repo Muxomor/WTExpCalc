@@ -1,8 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using System.Web;
-using System.Text.Json;
-using WTExpCalc.Models;
 using Microsoft.JSInterop;
+using WTExpCalc.Models;
 
 namespace WTExpCalc.Services
 {
@@ -17,17 +16,26 @@ namespace WTExpCalc.Services
             _jsRuntime = jsRuntime;
         }
 
-        public void UpdateUrlWithSelection(List<Node> allNodes, HashSet<int> selectedIds, Dictionary<int, int?> originalRpValues)
+        public void UpdateUrlWithSelection(
+            List<Node> allNodes,
+            HashSet<int> selectedIds,
+            Dictionary<int, int?> originalRpValues,
+            bool includePremiumInShareUrl)
         {
             try
             {
-                var selectedNodes = allNodes.Where(n => selectedIds.Contains(n.Id) && n.RequiredExp.HasValue).ToList();
+                var selectedNodes = allNodes
+                    .Where(n => selectedIds.Contains(n.Id)
+                                && n.Type == "vehicle"
+                                && (n.RequiredExp.HasValue
+                                    || n.TechCategory == "standard"
+                                    || includePremiumInShareUrl))
+                    .ToList();
 
-                if (!selectedNodes.Any())
+                if (selectedNodes.Count == 0)
                 {
                     // Если ничего не выбрано, убираем параметры из URL
-                    var cleanUri = GetBaseUri();
-                    _navigationManager.NavigateTo(cleanUri, replace: true);
+                    _navigationManager.NavigateTo(GetBaseUri(), replace: true);
                     return;
                 }
 
@@ -38,8 +46,13 @@ namespace WTExpCalc.Services
                 {
                     urlData.Add(node.ExternalId);
 
+                    if (!node.RequiredExp.HasValue)
+                    {
+                        continue;
+                    }
+
                     // Проверяем, изменено ли значение RP
-                    var currentRp = node.RequiredExp!.Value;
+                    var currentRp = node.RequiredExp.Value;
                     var originalRp = originalRpValues.TryGetValue(node.Id, out var orig) ? orig : currentRp;
 
                     if (currentRp != originalRp)
@@ -54,14 +67,12 @@ namespace WTExpCalc.Services
                     $"selected={string.Join(",", urlData)}"
                 };
 
-                if (rpData.Any())
+                if (rpData.Count > 0)
                 {
                     queryParams.Add($"rp={string.Join(",", rpData)}");
                 }
 
-                var baseUri = GetBaseUri();
-                var newUrl = $"{baseUri}?{string.Join("&", queryParams)}";
-
+                var newUrl = $"{GetBaseUri()}?{string.Join("&", queryParams)}";
                 _navigationManager.NavigateTo(newUrl, replace: true);
             }
             catch (Exception ex)
@@ -70,7 +81,7 @@ namespace WTExpCalc.Services
             }
         }
 
-        public async Task<UrlSelectionState> RestoreSelectionFromUrlAsync(List<Node> allNodes, string currentUrl)
+        public UrlSelectionState RestoreSelectionFromUrl(List<Node> allNodes, string currentUrl)
         {
             var result = new UrlSelectionState();
 
@@ -111,14 +122,13 @@ namespace WTExpCalc.Services
                         var parts = rpPair.Split(':', StringSplitOptions.RemoveEmptyEntries);
                         if (parts.Length == 2 &&
                             nodesByExternalId.TryGetValue(parts[0].Trim(), out var node) &&
+                            node.RequiredExp.HasValue &&
                             int.TryParse(parts[1].Trim(), out var rpValue))
                         {
                             result.ModifiedRpValues[node.Id] = rpValue;
                         }
                     }
                 }
-
-                Console.WriteLine($"Restored {result.SelectedNodeIds.Count} selected nodes and {result.ModifiedRpValues.Count} RP modifications from URL");
             }
             catch (Exception ex)
             {
@@ -134,7 +144,6 @@ namespace WTExpCalc.Services
             {
                 var currentUrl = _navigationManager.Uri;
                 await _jsRuntime.InvokeVoidAsync("techTreeFunctions.copyTextToClipboard_fallback", currentUrl);
-                Console.WriteLine("Current URL copied to clipboard");
             }
             catch (Exception ex)
             {
@@ -145,7 +154,7 @@ namespace WTExpCalc.Services
         private string GetBaseUri()
         {
             var uri = new Uri(_navigationManager.Uri);
-            return $"{uri.Scheme}://{uri.Host}{(uri.Port != 80 && uri.Port != 443 ? $":{uri.Port}" : "")}{uri.AbsolutePath}";
+            return uri.GetLeftPart(UriPartial.Path);
         }
     }
 }

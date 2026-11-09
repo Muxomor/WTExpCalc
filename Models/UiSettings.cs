@@ -15,5 +15,7 @@ namespace WTExpCalc.Models
         public UiAlignment TreeAlignment { get; init; } = UiAlignment.Center;
         public bool ShowAboutOnStartup { get; init; } = true;
         public bool ShowSummaryOnScreenshot { get; init; } = true;
+        public bool IncludePremiumInShareUrl { get; init; } = true;
+        public bool IncludePremiumInScreenshot { get; init; } = false;
     }
 }

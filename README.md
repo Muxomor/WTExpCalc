@@ -61,7 +61,7 @@ This application relies on several external components to function correctly. Th
 3.  **Configure and Run the Web Application**:
 
       * Clone this repository and navigate into the directory.
-      * **For local development**, you can configure the backend API URL in `WTExpCalc/wwwroot/appsettings.Development.json`. Set the `BackendApi:BaseUrl` property to the address of your running PostgREST instance.
+      * **For local development**, you can configure the backend API URL in `wwwroot/appsettings.Development.json`. Set the `BackendApi:BaseUrl` property to the address of your running PostgREST instance.
         ```json
         {
           "BackendApi": {

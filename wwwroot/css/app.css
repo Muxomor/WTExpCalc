@@ -155,41 +155,10 @@ h3 {
     background-color: #222;
 }
 
-    .tech-tree-container.loading::after,
-    .tech-tree-container.error::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5em;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 10;
-    }
-
-    .tech-tree-container.loading::before {
-        content: 'Loading...';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        color: #fff;
-        z-index: 11;
-    }
-
-    .tech-tree-container.error::before {
-        content: 'Data load failed';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        color: #ffcccc;
-        z-index: 11;
-    }
+.tree-load-error {
+    padding: 1rem;
+    color: #ffcccc;
+}
 
 .tab-content {
     flex-grow: 1;
@@ -714,6 +683,41 @@ h3 {
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 15px auto;
+}
+
+.screenshot-result-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin: 0 auto 15px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+    animation: result-pop 160ms ease-out;
+}
+
+    .screenshot-result-icon.success {
+        background-color: #198754;
+    }
+
+    .screenshot-result-icon.error {
+        background-color: #dc3545;
+    }
+
+@keyframes result-pop {
+    from {
+        transform: scale(0.7);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 @keyframes spin {

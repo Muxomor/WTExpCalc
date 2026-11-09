@@ -4,10 +4,12 @@
 
 <div class="language-toggle">
     <button class="lang-btn @(!Localization.IsEnglish ? "active" : "")"
+            title="Русский" aria-label="Русский"
             @onclick="@(() => SwitchLanguage("ru"))">
         🇷🇺
     </button>
     <button class="lang-btn @(Localization.IsEnglish ? "active" : "")"
+            title="English" aria-label="English"
             @onclick="@(() => SwitchLanguage("en"))">
         🇺🇸
     </button>

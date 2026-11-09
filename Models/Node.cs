@@ -31,9 +31,6 @@ namespace WTExpCalc.Models
         [JsonPropertyName("parent_id")]
         public int? ParentId { get; set; }
 
-        [JsonIgnore]
-        public Node? ParentNode { get; set; }
-
         [JsonPropertyName("rank")]
         public int Rank { get; set; }
 
@@ -49,9 +46,6 @@ namespace WTExpCalc.Models
         [JsonPropertyName("br")]
         public decimal? BattleRating { get; set; }
 
-        [JsonIgnore]
-        public decimal? Br => BattleRating;
-
         [JsonPropertyName("column_index")]
         public int? ColumnIndex { get; set; }
 
@@ -61,6 +55,5 @@ namespace WTExpCalc.Models
         [JsonPropertyName("order_in_folder")]
         public int? OrderInFolder { get; set; }
 
-        public List<Node> Children { get; set; } = new();
     }
 }

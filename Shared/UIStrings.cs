@@ -11,6 +11,8 @@ namespace WTExpCalc.Shared
         public static readonly LocalizedString Error = new("Ошибка", "Error");
         public static readonly LocalizedString Retry = new("Повторить", "Retry");
         public static readonly LocalizedString NoVehicleTypes = new("Нет доступных типов техники для данной нации.", "No vehicle types available for this nation.");
+        public static readonly LocalizedString NoNationsAvailable = new("Нет доступных наций.", "No nations available.");
+        public static readonly LocalizedString NoData = new("Нет данных для отображения.", "No data to display.");
         public static readonly LocalizedString Rank = new("Ранг", "Rank");
         public static readonly LocalizedString Selected = new("Выбрано", "Selected");
         public static readonly LocalizedString RP = new("ОИ", "RP");
@@ -24,14 +26,18 @@ namespace WTExpCalc.Shared
         public static readonly LocalizedString ReturnToHome = new("Вернуться на главную", "Return to Home");
         public static readonly LocalizedString RPLimit = new("Лимит ОИ", "RP Limit");
         public static readonly LocalizedString Unlimited = new("Без лимита", "Unlimited");
-        public static readonly LocalizedString RPLimitExceeded = new("Превышен лимит опыта!", "RP limit exceeded!");
         public static readonly LocalizedString RPLimitExceededMessage = new("Нельзя выбрать больше техники - достигнут лимит опыта", "Cannot select more vehicles - RP limit reached");
         public static readonly LocalizedString PreparingScreenshot = new("Подготовка скриншота...", "Preparing screenshot...");
+        public static readonly LocalizedString CreatingScreenshot = new("Создание скриншота...", "Creating screenshot...");
+        public static readonly LocalizedString ProcessingScreenshot = new("Обработка изображения...", "Processing image...");
+        public static readonly LocalizedString CopyingScreenshot = new("Копирование в буфер обмена...", "Copying to clipboard...");
+        public static readonly LocalizedString ScreenshotCopied = new("Скриншот скопирован в буфер обмена", "Screenshot copied to clipboard");
+        public static readonly LocalizedString PreparingDownload = new("Подготовка загрузки...", "Preparing download...");
+        public static readonly LocalizedString ScreenshotSaved = new("Скриншот сохранен (буфер обмена недоступен)", "Screenshot saved (clipboard unavailable)");
         public static readonly LocalizedString ScreenshotError = new("Ошибка создания скриншота", "Screenshot creation error");
         public static readonly LocalizedString NationNotFound = new("Нация '{0}' не найдена.", "Nation '{0}' not found.");
         public static readonly LocalizedString VehicleTypesLoadFailed = new("Не удалось загрузить типы техники.", "Failed to load vehicle types.");
         public static readonly LocalizedString DataLoadError = new("Произошла ошибка при загрузке данных: {0}", "An error occurred while loading data: {0}");
-        public static readonly LocalizedString NavigationError = new("Ошибка навигации: {0}", "Navigation error: {0}");
         public static readonly LocalizedString AboutTitle = new("О проекте", "About");
         public static readonly LocalizedString AboutDisclaimer = new(
             "Этот сайт не принадлежит продавцу услуг прокачки {0}. Продавец не является владельцем, администратором или оператором этого сайта и не несёт ответственности за размещённую на нём информацию. Всегда перепроверяйте расчёты самостоятельно.",
@@ -63,8 +69,10 @@ namespace WTExpCalc.Shared
         public static readonly LocalizedString AlignRight = new("Справа", "Right");
         public static readonly LocalizedString SettingsBehaviorSection = new("Поведение", "Behavior");
         public static readonly LocalizedString SettingsShowAboutOnStartup = new("Показывать «О проекте» при запуске", "Show About on startup");
+        public static readonly LocalizedString SettingsIncludePremiumInShareUrl = new("Добавлять премиумную технику в ссылку", "Include premium vehicles in share links");
         public static readonly LocalizedString SettingsScreenshotSection = new("Скриншоты", "Screenshots");
         public static readonly LocalizedString SettingsShowSummaryOnScreenshot = new("Показывать итоги на скриншоте", "Show summary on screenshot");
+        public static readonly LocalizedString SettingsIncludePremiumInScreenshot = new("Показывать премиумную технику на скриншоте", "Show premium vehicles in screenshots");
         public static readonly LocalizedString SettingsReset = new("Сбросить настройки", "Reset settings");
         public static readonly LocalizedString SettingsSavedLocally = new("Настройки сохраняются в этом браузере.", "Settings are saved in this browser.");
     }

@@ -2,8 +2,7 @@
 @using WTExpCalc.Models
 @using WTExpCalc.Services
 @using WTExpCalc.Shared
-@using static WTExpCalc.Shared.TechTree
-@inject IExperienceApi Api
+@inject ICatalogService Catalog
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 @inject IUrlStateManager UrlStateManager
@@ -47,8 +46,11 @@ else
                     <TechTree @ref="techTreeRef" 
                               NationId="activeNationId.Value" 
                               TypeId="activeTypeId.Value" 
+                              RpLimit="@GetRpLimit()"
                               OnTotalsUpdated="HandleTotalsUpdate"
-                              OnSelectedRanksChanged="HandleSelectedRanksChanged" />
+                              OnSelectedRanksChanged="HandleSelectedRanksChanged"
+                              ScreenshotProgress="HandleScreenshotProgress"
+                              ScreenshotCompleted="HandleScreenshotComplete" />
         }
         </div>
 
@@ -66,18 +68,14 @@ else
                        class="rp-limit-input"
                        min="1"
                        placeholder="@Localization.Text(UIStrings.Unlimited)"
-                       @bind="maxRpLimitK"
-                       @oninput="OnRpLimitChanged" />
+                       aria-label="@Localization.Text(UIStrings.RPLimit)"
+                       value="@rpLimitText"
+                       @oninput="OnRpLimitInput"
+                       @onblur="CommitRpLimit"
+                       @onkeydown="OnRpLimitKeyDown" />
                 <span class="limit-suffix">K</span>
             </span>
         </div>
-        @if (showLimitExceededWarning)
-        {
-            <div class="rp-limit-warning">
-                <i class="bi bi-exclamation-triangle"></i>
-                <span>@Localization.Text(UIStrings.RPLimitExceeded)</span>
-            </div>
-        }
             <div id="selected-names-container">
                 <div id="selected-names-panel">
                 @if (!string.IsNullOrEmpty(selectedVehicleNames))
@@ -119,7 +117,16 @@ else
 {
         <div class="screenshot-loading-overlay">
             <div class="screenshot-loading-content">
-                <div class="screenshot-loading-spinner"></div>
+                @if (screenshotCompleted)
+                {
+                    <div class="screenshot-result-icon @(screenshotSucceeded ? "success" : "error")" aria-hidden="true">
+                        @(screenshotSucceeded ? "✓" : "!")
+                    </div>
+                }
+                else
+                {
+                    <div class="screenshot-loading-spinner"></div>
+                }
                 <div>@screenshotProgressMessage</div>
             </div>
         </div>
@@ -144,10 +151,14 @@ else
 
     private bool hasSelectedRanks = false;
     private bool isScreenshotInProgress = false;
+    private bool screenshotCompleted;
+    private bool screenshotSucceeded;
     private string screenshotProgressMessage = "";
 
-    private int? maxRpLimitK = null; 
-    private bool showLimitExceededWarning = false;
+    private string rpLimitText = "";
+    private int? appliedRpLimitK;
+    private CancellationTokenSource? rpLimitDebounceCts;
+    private CancellationTokenSource? screenshotHideCts;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -175,44 +186,89 @@ else
                Localization.NationName(currentNation.Name, currentNation.Id) :
                Localization.Text(UIStrings.Loading);
     }
-    private async Task OnRpLimitChanged(ChangeEventArgs e)
+
+    private void OnRpLimitInput(ChangeEventArgs e)
     {
-        if (int.TryParse(e.Value?.ToString(), out int limitK) && limitK >= 1)
+        rpLimitText = e.Value?.ToString() ?? "";
+
+        if (string.IsNullOrWhiteSpace(rpLimitText))
         {
-            maxRpLimitK = limitK;
-            await ApplyRpLimit();
+            ApplyRpLimitK(null);
+            return;
         }
-        else if (string.IsNullOrEmpty(e.Value?.ToString()))
-        {
-            maxRpLimitK = null;
-            StateHasChanged();
-        }
+
+        ScheduleRpLimitApply();
     }
 
-    private async Task ApplyRpLimit()
+    private void ScheduleRpLimitApply()
     {
-        if (techTreeRef != null && maxRpLimitK.HasValue)
-        {
-            long maxRpLimit = maxRpLimitK.Value * 1000L;
-            await techTreeRef.ApplyRpLimit(maxRpLimit);
-            StateHasChanged();
-        }
+        rpLimitDebounceCts?.Cancel();
+        rpLimitDebounceCts?.Dispose();
+        rpLimitDebounceCts = new CancellationTokenSource();
+        _ = ApplyRpLimitAfterDelayAsync(rpLimitDebounceCts.Token);
     }
 
-    private void OnRpLimitWarningShown()
+    private async Task ApplyRpLimitAfterDelayAsync(CancellationToken token)
     {
-        showLimitExceededWarning = true;
+        try
+        {
+            await Task.Delay(700, token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        await InvokeAsync(ApplyRpLimitFromText);
+    }
+
+    private void CommitRpLimit()
+    {
+        rpLimitDebounceCts?.Cancel();
+        ApplyRpLimitFromText();
+    }
+
+    private void ApplyRpLimitFromText()
+    {
+        if (string.IsNullOrWhiteSpace(rpLimitText))
+        {
+            ApplyRpLimitK(null);
+            return;
+        }
+
+        if (!int.TryParse(rpLimitText, out var limitK) || limitK < 1)
+        {
+            // Не применяем мусор, возвращаем последнее корректное значение.
+            rpLimitText = appliedRpLimitK?.ToString() ?? "";
+            StateHasChanged();
+            return;
+        }
+
+        ApplyRpLimitK(limitK);
+    }
+
+    private void ApplyRpLimitK(int? limitK)
+    {
+        if (appliedRpLimitK == limitK)
+        {
+            return;
+        }
+
+        appliedRpLimitK = limitK;
         StateHasChanged();
+    }
 
-        // Скрываем предупреждение через 3 секунды
-        Task.Delay(3000).ContinueWith(_ =>
+    private long? GetRpLimit()
+    {
+        return appliedRpLimitK.HasValue ? appliedRpLimitK.Value * 1000L : null;
+    }
+
+    private void OnRpLimitKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
         {
-            InvokeAsync(() =>
-            {
-                showLimitExceededWarning = false;
-                StateHasChanged();
-            });
-        });
+            CommitRpLimit();
+        }
     }
     private async Task LoadPageData()
     {
@@ -223,7 +279,7 @@ else
             StateHasChanged();
 
             // Загружаем нацию по slug
-            currentNation = await Api.GetNationBySlugAsync(NationSlug);
+            currentNation = await Catalog.GetNationBySlugAsync(NationSlug);
             if (currentNation == null)
             {
                 loadingError = Localization.Text(UIStrings.NationNotFound, NationSlug);
@@ -233,8 +289,15 @@ else
             activeNationId = currentNation.Id;
 
             // Загружаем типы техники
-            vehicleTypes = await Api.GetVehicleTypesAsync();
+            vehicleTypes = await Catalog.GetVehicleTypesAsync();
             if (vehicleTypes == null || !vehicleTypes.Any())
+            {
+                loadingError = Localization.Text(UIStrings.VehicleTypesLoadFailed);
+                return;
+            }
+
+            var firstType = vehicleTypes.FirstOrDefault(vt => GameDataLocalization.IsValidVehicleTypeSlug(vt.Slug));
+            if (firstType == null)
             {
                 loadingError = Localization.Text(UIStrings.VehicleTypesLoadFailed);
                 return;
@@ -243,15 +306,9 @@ else
             // Определяем активный тип техники
             if (!string.IsNullOrEmpty(TypeSlug))
             {
-                // Проверяем валидность slug
-                if (!GameDataLocalization.IsValidVehicleTypeSlug(TypeSlug))
-                {
-                    var firstType = vehicleTypes.First();
-                    Navigation.NavigateTo($"/tree/{NationSlug}/{firstType.Slug}", replace: true);
-                    return;
-                }
+                var requestedType = vehicleTypes.FirstOrDefault(
+                    vt => vt.Slug.Equals(TypeSlug, StringComparison.OrdinalIgnoreCase));
 
-                var requestedType = vehicleTypes.FirstOrDefault(vt => vt.Slug == TypeSlug);
                 if (requestedType != null)
                 {
                     activeTypeSlug = requestedType.Slug;
@@ -259,7 +316,6 @@ else
                 }
                 else
                 {
-                    var firstType = vehicleTypes.First();
                     Navigation.NavigateTo($"/tree/{NationSlug}/{firstType.Slug}", replace: true);
                     return;
                 }
@@ -267,7 +323,6 @@ else
             else
             {
                 // Перенаправляем на первый доступный тип
-                var firstType = vehicleTypes.First();
                 Navigation.NavigateTo($"/tree/{NationSlug}/{firstType.Slug}", replace: true);
                 return;
             }
@@ -297,35 +352,34 @@ else
 
     private async Task CopyUrlToClipboard()
     {
-        try
-        {
-            await UrlStateManager.CopyCurrentUrlToClipboardAsync();
-        }
-        catch (Exception ex)
-        {
-            // Обработка ошибки копирования URL
-        }
+        await UrlStateManager.CopyCurrentUrlToClipboardAsync();
     }
 
     private async Task CopyNamesToClipboard()
     {
         // Используем отформатированный текст вместо обычного списка имен
-        if (!string.IsNullOrEmpty(formattedVehicleText))
+        if (string.IsNullOrEmpty(formattedVehicleText))
         {
-            try
-            {
-                await JSRuntime.InvokeVoidAsync("techTreeFunctions.copyTextToClipboard_fallback", formattedVehicleText);
-            }
-            catch (Exception ex)
-            {
-                // Обработка ошибки копирования, если нужно
-            }
+            return;
+        }
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("techTreeFunctions.copyTextToClipboard_fallback", formattedVehicleText);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error copying names to clipboard: {ex.Message}");
         }
     }
 
     private async Task DownloadScreenshot()
     {
         if (techTreeRef == null || !hasSelectedRanks || isScreenshotInProgress) return;
+
+        screenshotCompleted = false;
+        screenshotSucceeded = false;
+        screenshotHideCts?.Cancel();
 
         try
         {
@@ -338,16 +392,62 @@ else
         catch (Exception ex)
         {
             Console.WriteLine($"Error downloading screenshot: {ex.Message}");
+            screenshotCompleted = true;
+            screenshotSucceeded = false;
             screenshotProgressMessage = Localization.Text(UIStrings.ScreenshotError);
-            await Task.Delay(2000);
+            ScheduleScreenshotOverlayHide(2500);
         }
         finally
         {
-            isScreenshotInProgress = false;
-            StateHasChanged();
+            if (!screenshotCompleted)
+            {
+                isScreenshotInProgress = false;
+                StateHasChanged();
+            }
         }
     }
-    private void HandleTotalsUpdate(WTExpCalc.Shared.TechTree.TotalsUpdateEventArgs args)
+
+    private void HandleScreenshotProgress(string message)
+    {
+        screenshotProgressMessage = message;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleScreenshotComplete(ScreenshotResult result)
+    {
+        screenshotCompleted = true;
+        screenshotSucceeded = result.Success;
+        screenshotProgressMessage = result.Message;
+        StateHasChanged();
+
+        ScheduleScreenshotOverlayHide(result.Success ? 1600 : 2500);
+    }
+
+    private void ScheduleScreenshotOverlayHide(int delayMs)
+    {
+        screenshotHideCts?.Cancel();
+        screenshotHideCts?.Dispose();
+        screenshotHideCts = new CancellationTokenSource();
+        _ = HideScreenshotOverlayAfterDelayAsync(delayMs, screenshotHideCts.Token);
+    }
+
+    private async Task HideScreenshotOverlayAfterDelayAsync(int delayMs, CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(delayMs, token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        isScreenshotInProgress = false;
+        screenshotCompleted = false;
+        StateHasChanged();
+    }
+
+    private void HandleTotalsUpdate(TotalsUpdateEventArgs args)
     {
         currentTotalRp = args.TotalRp;
         currentTotalSl = args.TotalSl;
@@ -362,33 +462,12 @@ else
         StateHasChanged();
     }
 
-    // Методы для обработки callback'ов из JavaScript
-    [JSInvokable]
-    public void OnScreenshotProgress(string message)
-    {
-        screenshotProgressMessage = message;
-        StateHasChanged();
-    }
-
-    [JSInvokable]
-    public void OnScreenshotComplete(bool success, string message)
-    {
-        screenshotProgressMessage = message;
-        StateHasChanged();
-
-        // Скрываем индикатор через 2 секунды
-        Task.Delay(2000).ContinueWith(_ =>
-        {
-            InvokeAsync(() =>
-            {
-                isScreenshotInProgress = false;
-                StateHasChanged();
-            });
-        });
-    }
-
     public void Dispose()
     {
+        rpLimitDebounceCts?.Cancel();
+        rpLimitDebounceCts?.Dispose();
+        screenshotHideCts?.Cancel();
+        screenshotHideCts?.Dispose();
         Localization.LanguageChanged -= OnLanguageChanged;
     }
 }

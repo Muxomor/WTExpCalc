@@ -1,0 +1,10 @@
+.git
+.gitignore
+.gitattributes
+.idea
+.vscode
+.env
+bin
+obj
+**/bin
+**/obj

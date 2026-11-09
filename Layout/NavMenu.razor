@@ -2,13 +2,23 @@
 @using WTExpCalc.Services
 @using WTExpCalc.Shared
 @inject IExperienceApi Api
+@inject ICatalogService Catalog
 @inject NavigationManager Nav
 @inject ILocalizationService Localization
 @implements IDisposable
 
 <nav class="flex-column">
     <div class="nav-scrollable">
-        @if (nations == null)
+        @if (loadError != null)
+        {
+           <div class="nav-item px-1 py-2 text-center">
+               <div class="small text-danger mb-2">@loadError</div>
+               <button type="button" class="btn btn-sm btn-secondary" @onclick="ReloadNations">
+                   @Localization.Text(UIStrings.Retry)
+               </button>
+           </div>
+        }
+        else if (nations == null)
         {
            <div class="nav-item px-1 py-2 text-center">
                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -64,20 +74,39 @@
     [Parameter] public EventCallback OnOpenSettings { get; set; }
 
     private List<Nation>? nations;
-    private List<VehicleType>? vehicleTypes;
     private string currentUrl = "";
     private string currentVersion = "";
+    private string? loadError;
 
     protected override async Task OnInitializedAsync()
     {
-        nations = await Api.GetNationsAsync();
-        vehicleTypes = await Api.GetVehicleTypesAsync();
-        
-        await LoadVersionAsync();
-
         Nav.LocationChanged += OnLocationChanged;
         Localization.LanguageChanged += OnLanguageChanged;
         currentUrl = Nav.Uri;
+
+        await LoadNationsAsync();
+        await LoadVersionAsync();
+    }
+
+    private async Task LoadNationsAsync()
+    {
+        try
+        {
+            nations = await Catalog.GetNationsAsync();
+        }
+        catch (Exception ex)
+        {
+            nations = null;
+            loadError = Localization.Text(UIStrings.DataLoadError, ex.Message);
+        }
+    }
+
+    private async Task ReloadNations()
+    {
+        loadError = null;
+        nations = null;
+        StateHasChanged();
+        await LoadNationsAsync();
     }
 
     private async Task LoadVersionAsync()
@@ -96,8 +125,15 @@
 
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
+        var oldPath = string.IsNullOrEmpty(currentUrl) ? string.Empty : new Uri(currentUrl).AbsolutePath;
+        var newPath = new Uri(e.Location).AbsolutePath;
+
         currentUrl = e.Location;
-        StateHasChanged();
+
+        if (!string.Equals(oldPath, newPath, StringComparison.Ordinal))
+        {
+            StateHasChanged();
+        }
     }
 
     private void OnLanguageChanged()
@@ -128,11 +164,6 @@
 
     private string GetNationUrl(string nationSlug)
     {
-        if (vehicleTypes != null && vehicleTypes.Any())
-        {
-            var firstType = vehicleTypes.First();
-            return $"/tree/{nationSlug}/{firstType.Slug}";
-        }
         return $"/tree/{nationSlug}";
     }
 

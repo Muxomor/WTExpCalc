@@ -1,4 +1,8 @@
 ﻿window.techTreeFunctions = {
+    setDocumentLanguage: function (language) {
+        document.documentElement.lang = language === 'en' ? 'en' : 'ru';
+    },
+
     /* Waits until after the next two animation frames — use after Blazor DOM updates before measuring boxes. */
     waitTwoAnimationFramesAsync: function () {
         return new Promise(function (resolve) {
@@ -138,15 +142,6 @@
         popupElement.style.visibility = 'visible';
     },
 
-    copyTextToClipboard: function (text) {
-        navigator.clipboard.writeText(text).then(function () {
-            console.log('Async: Copying to clipboard was successful!');
-        }, function (err) {
-            console.error('Async: Could not copy text: ', err);
-            alert("Не удалось скопировать текст.");
-        });
-    },
-
     copyTextToClipboard_fallback: function (text) {
         try {
             const textArea = document.createElement("textarea");
@@ -167,7 +162,6 @@
             document.body.removeChild(textArea);
 
             if (successful) {
-                console.log('Copying to clipboard was successful!');
             } else {
                 console.error('document.execCommand("copy") failed.');
                 alert("Не удалось скопировать текст. Браузер не поддерживает или заблокировал команду.");
@@ -177,16 +171,6 @@
             alert("Ошибка при копировании текста (fallback).");
         }
     },
-    _publicApiMethods: Object.freeze([
-        'positionFolderPopup',
-        'updateNodesLimitState',
-        'showRpLimitWarning',
-        'drawConnections',
-        'copyTextToClipboard_fallback',
-        'syncSummaryPosition',
-        'downloadScreenshot',
-        'generateScreenshotFilename'
-    ]),
     _invokeCallback: function (callbackRef, methodName, ...args) {
         if (!callbackRef) return;
         try {
@@ -305,14 +289,14 @@
         this.drawConnections(connectionData);
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     },
-    _resolveScreenshotContext: function (selectedRanks) {
+    _resolveScreenshotContext: function (selectedRanks, includePremium) {
         const treeContainer = document.getElementById('tech-tree-container-id');
         const summaryContainer = document.getElementById('summary-container');
         if (!treeContainer) {
             throw new Error('Tech tree container not found');
         }
 
-        const baseScreenshotArea = this.calculateScreenshotAreaByRanks(selectedRanks);
+        const baseScreenshotArea = this.calculateScreenshotAreaByRanks(selectedRanks, includePremium);
         if (!baseScreenshotArea) {
             throw new Error(`Не удалось найти ранги ${selectedRanks.join(', ')} на странице.`);
         }
@@ -412,7 +396,7 @@
             this._reportProgress(onProgress, options.preparingMessage);
             // Recalculate arrows once right before screenshot to avoid stale positions after zoom.
             await this._refreshConnectionsBeforeScreenshot();
-            const context = this._resolveScreenshotContext(selectedRanks);
+            const context = this._resolveScreenshotContext(selectedRanks, options.includePremium);
             const scene = this._buildScreenshotScene(
                 context.treeContainer,
                 context.summaryContainer,
@@ -456,7 +440,7 @@
         }
     },
     _deliverScreenshotBlob: async function (blob, fallbackFilename, progressCallbackRef, completeCallbackRef, messages) {
-        const copyProgress = messages.copyProgress || 'Копирование в буфер обмена...';
+        const copyProgress = messages.copyProgress || '';
         this._invokeCallback(progressCallbackRef, 'OnScreenshotProgress', copyProgress);
 
         if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
@@ -479,17 +463,19 @@
         this._downloadBlob(blob, fallbackFilename);
         this._invokeCallback(completeCallbackRef, 'OnScreenshotComplete', true, messages.downloadFallback);
     },
-    createScreenshot: async function (selectedRanks, filename, onProgress, includeSummary) {
+    createScreenshot: async function (selectedRanks, filename, onProgress, messages, includeSummary, includePremium) {
         try {
+            messages = messages || {};
             return await this._createScreenshotInternal(selectedRanks, {
-                preparingMessage: 'Подготовка скриншота...',
-                renderMessage: 'Создание скриншота...',
-                processMessage: 'Обработка изображения...',
+                preparingMessage: messages.preparing || '',
+                renderMessage: messages.rendering || '',
+                processMessage: messages.processing || '',
                 scale: 4,
                 // Keep the output within the 4000x4000 limit used by external platforms.
                 maxCanvasSize: 4000,
                 modeName: 'Screenshot',
-                includeSummary: includeSummary !== false
+                includeSummary: includeSummary !== false,
+                includePremium: includePremium === true
             }, onProgress);
         } catch (error) {
             console.error('Error creating screenshot:', error);
@@ -497,11 +483,12 @@
         }
     },
 
-    downloadScreenshot: async function (selectedRanks, filename, includeSummary, progressCallbackRef, completeCallbackRef) {
+    downloadScreenshot: async function (selectedRanks, filename, includeSummary, includePremium, messages, progressCallbackRef, completeCallbackRef) {
         try {
+            messages = messages || {};
             const canvas = await this.createScreenshot(selectedRanks, filename, (message) => {
                 this._invokeCallback(progressCallbackRef, 'OnScreenshotProgress', message);
-            }, includeSummary);
+            }, messages, includeSummary, includePremium);
 
             const blob = await this._canvasToBlob(canvas);
             await this._deliverScreenshotBlob(
@@ -510,14 +497,15 @@
                 progressCallbackRef,
                 completeCallbackRef,
                 {
-                    downloadProgress: 'Подготовка загрузки...',
-                    clipboardSuccess: 'Скриншот скопирован в буфер обмена',
-                    downloadFallback: 'Скриншот сохранен (буфер обмена недоступен на HTTP)'
+                    copyProgress: messages.copying || '',
+                    downloadProgress: messages.downloadProgress || '',
+                    clipboardSuccess: messages.clipboardSuccess || '',
+                    downloadFallback: messages.downloadFallback || ''
                 }
             );
         } catch (error) {
             console.error('Error in downloadScreenshot:', error);
-            this._invokeCallback(completeCallbackRef, 'OnScreenshotComplete', false, 'Ошибка создания скриншота: ' + error.message);
+            this._invokeCallback(completeCallbackRef, 'OnScreenshotComplete', false, (messages.error || '') + ': ' + error.message);
         }
     },
     generateScreenshotFilename: function () {
@@ -587,212 +575,19 @@
         const foundRanks = [];
         const rankElementMap = new Map();
 
-        console.log(`Found ${allRankLabels.length} rank labels total`);
-
         allRankLabels.forEach(label => {
-            const rankText = label.textContent.trim();
-            console.log(`Checking rank label: "${rankText}"`);
+            const rank = Number.parseInt(label.getAttribute('data-rank'), 10);
 
-            const rankPatterns = [
-                /^Ранг\s+(\d+)(?:\s|$)/i,
-                /^Rank\s+(\d+)(?:\s|$)/i,
-                /^Rank\s+(\d)(\d+)/i, 
-                /^Ранг\s+(\d)(\d+)/i, 
-                /(?:Rank|Ранг)\s+(\d+)/i  
-            ];
-
-            let rank = null;
-
-            for (const pattern of rankPatterns) {
-                const match = rankText.match(pattern);
-                if (match) {
-                    let foundNumber = parseInt(match[1]);
-
-                    if (foundNumber > 9) {
-                        const firstDigit = parseInt(foundNumber.toString()[0]);
-                        if (firstDigit >= 1 && firstDigit <= 9) {
-                            rank = firstDigit;
-                            console.log(`Extracted rank ${rank} from compound number ${foundNumber} in: "${rankText}"`);
-                            break;
-                        }
-                    } else if (foundNumber >= 1 && foundNumber <= 9) {
-                        rank = foundNumber;
-                        console.log(`Found direct rank ${rank} in: "${rankText}"`);
-                        break;
-                    }
-                }
-            }
-
-            if (rank && rank >= 1 && rank <= 9) {
-                if (!rankElementMap.has(rank)) {
-                    foundRanks.push(rank);
-                    rankElementMap.set(rank, label);
-                    console.log(`Successfully mapped rank ${rank} to element with text: "${rankText}"`);
-                } else {
-                    console.log(`Rank ${rank} already mapped, skipping duplicate from: "${rankText}"`);
-                }
-            } else {
-                console.log(`No valid rank found in: "${rankText}"`);
+            if (Number.isInteger(rank) && rank >= 1 && rank <= 9 && !rankElementMap.has(rank)) {
+                foundRanks.push(rank);
+                rankElementMap.set(rank, label);
             }
         });
 
         foundRanks.sort((a, b) => a - b);
-
-        console.log(`Final result: Found ranks [${foundRanks.join(', ')}]`);
-        console.log('Rank mappings:');
-        foundRanks.forEach(rank => {
-            const element = rankElementMap.get(rank);
-            console.log(`  Rank ${rank}: "${element.textContent.trim()}"`);
-        });
-
         return { foundRanks, rankElementMap };
     },
-    calculateScreenshotAreaByNodes: function (selectedRanks) {
-        console.log('=== USING ALTERNATIVE METHOD BY NODES ===');
-        const treeGrid = document.querySelector('.tree-grid');
-        if (!treeGrid) {
-            console.error('Tree grid not found');
-            return null;
-        }
-
-        const minRank = Math.min(...selectedRanks);
-        const maxRank = Math.max(...selectedRanks);
-
-        console.log(`Alternative method: looking for selected nodes in ranks ${minRank} to ${maxRank}`);
-
-        const selectedNodesInGrid = document.querySelectorAll('.tree-grid-item .node-selected');
-        const selectedNodesInPopups = document.querySelectorAll('.folder-popup .node-selected');
-        const allSelectedNodes = [...selectedNodesInGrid, ...selectedNodesInPopups];
-
-        console.log(`Found ${selectedNodesInGrid.length} selected nodes in grid`);
-        console.log(`Found ${selectedNodesInPopups.length} selected nodes in folder popups`);
-        console.log(`Total selected nodes: ${allSelectedNodes.length}`);
-
-        if (allSelectedNodes.length > 0) {
-            const nodeRects = [];
-
-            selectedNodesInGrid.forEach(node => {
-                const rect = node.getBoundingClientRect();
-                const container = node.closest('.tree-grid-item');
-                const isPremium = container && (container.classList.contains('tech-cat-premium') || container.classList.contains('tech-cat-event'));
-
-                if (rect.width > 0 && rect.height > 0) {
-                    nodeRects.push({
-                        rect: rect,
-                        isPremium: isPremium,
-                        left: rect.left,
-                        right: rect.right,
-                        top: rect.top,
-                        bottom: rect.bottom
-                    });
-                }
-            });
-
-            selectedNodesInPopups.forEach(node => {
-                const folderPopup = node.closest('.folder-popup');
-                if (folderPopup) {
-                    const folderId = folderPopup.id.replace('folder-popup-', '');
-                    const correspondingFolder = document.querySelector(`#node-container-${folderId}`);
-                    if (correspondingFolder) {
-                        const folderRect = correspondingFolder.getBoundingClientRect();
-                        const isPremium = correspondingFolder.classList.contains('tech-cat-premium') ||
-                            correspondingFolder.classList.contains('tech-cat-event');
-
-                        if (folderRect.width > 0 && folderRect.height > 0) {
-                            nodeRects.push({
-                                rect: folderRect, 
-                                isPremium: isPremium,
-                                left: folderRect.left,
-                                right: folderRect.right,
-                                top: folderRect.top,
-                                bottom: folderRect.bottom
-                            });
-                            console.log(`Added folder ${folderId} to screenshot area (premium: ${isPremium})`);
-                        }
-                    }
-                }
-            });
-
-            if (nodeRects.length > 0) {
-                const treeRect = treeGrid.getBoundingClientRect();
-
-                const minTop = Math.min(...nodeRects.map(r => r.top));
-                const maxBottom = Math.max(...nodeRects.map(r => r.bottom));
-
-                let minLeft = Math.min(...nodeRects.map(r => r.left));
-                let maxRight = Math.max(...nodeRects.map(r => r.right));
-
-                const hasPremiumSelected = nodeRects.some(r => r.isPremium);
-
-                if (!hasPremiumSelected) {
-                    console.log('No premium vehicles selected, limiting to standard area');
-
-                    const premiumDivider = document.querySelector('.premium-divider-v');
-                    if (premiumDivider) {
-                        const dividerRect = premiumDivider.getBoundingClientRect();
-                        maxRight = Math.min(maxRight, dividerRect.left);
-                        console.log('Limited screenshot width to exclude premium area');
-                    }
-                }
-
-                const area = {
-                    x: Math.max(0, minLeft - treeRect.left - 20), 
-                    y: Math.max(0, minTop - treeRect.top - 50), 
-                    width: Math.max(200, (maxRight - minLeft) + 40), 
-                    height: Math.max(200, (maxBottom - minTop) + 100) 
-                };
-
-                console.log('Alternative screenshot area by selected nodes:', area);
-                console.log('Premium vehicles included:', hasPremiumSelected);
-                return area;
-            }
-        }
-
-        console.log('Fallback: using all visible nodes');
-        const allNodes = document.querySelectorAll('.tree-grid-item');
-        const rankedNodes = [];
-
-        allNodes.forEach(node => {
-            const nodeRect = node.getBoundingClientRect();
-            if (nodeRect.width > 0 && nodeRect.height > 0) {
-                const isPremium = node.classList.contains('tech-cat-premium') || node.classList.contains('tech-cat-event');
-                rankedNodes.push({
-                    element: node,
-                    rect: nodeRect,
-                    top: nodeRect.top,
-                    isPremium: isPremium
-                });
-            }
-        });
-
-        if (rankedNodes.length === 0) {
-            console.log('No nodes found, returning null');
-            return null;
-        }
-
-        const standardNodes = rankedNodes.filter(node => !node.isPremium);
-        const nodesToUse = standardNodes.length > 0 ? standardNodes : rankedNodes;
-
-        nodesToUse.sort((a, b) => a.top - b.top);
-
-        console.log(`Found ${nodesToUse.length} nodes for fallback (${standardNodes.length} standard, ${rankedNodes.length - standardNodes.length} premium)`);
-
-        const treeRect = treeGrid.getBoundingClientRect();
-        const firstNode = nodesToUse[Math.floor(nodesToUse.length * 0.3)]; 
-        const lastNode = nodesToUse[Math.floor(nodesToUse.length * 0.9)];  
-
-        const allLefts = nodesToUse.map(n => n.rect.left);
-        const allRights = nodesToUse.map(n => n.rect.right);
-
-        const area = {
-            x: Math.max(0, Math.min(...allLefts) - treeRect.left - 20),
-            y: Math.max(0, firstNode.rect.top - treeRect.top - 50),
-            width: Math.max(200, (Math.max(...allRights) - Math.min(...allLefts)) + 40),
-            height: Math.max(200, (lastNode.rect.bottom - firstNode.rect.top) + 100)
-        };
-
-        return area;
-    }, calculateScreenshotAreaByRanks: function (selectedRanks) {
+    calculateScreenshotAreaByRanks: function (selectedRanks, includePremium) {
         const treeGrid = document.querySelector('.tree-grid');
         if (!treeGrid) {
             console.error('Tree grid not found');
@@ -809,25 +604,20 @@
 
         const { foundRanks, rankElementMap } = this.findRankElements();
 
-        console.log(`Available ranks: [${foundRanks.join(', ')}]`);
-        console.log(`Looking for ranks: ${minRank} to ${maxRank}`);
 
         let topElement = null;
         let bottomElement = null;
 
         if (rankElementMap.has(minRank)) {
             topElement = rankElementMap.get(minRank);
-            console.log(`Found top element for rank ${minRank}`);
         }
 
         if (rankElementMap.has(maxRank)) {
             bottomElement = rankElementMap.get(maxRank);
-            console.log(`Found bottom element for rank ${maxRank}`);
         }
 
         if (minRank === maxRank && topElement) {
             bottomElement = topElement;
-            console.log(`Single rank ${minRank} - using same element for both boundaries`);
         }
 
         if (!topElement && bottomElement && foundRanks.length > 0) {
@@ -835,7 +625,6 @@
             if (availableLowerRanks.length > 0) {
                 const nearestLowerRank = availableLowerRanks[0];
                 topElement = rankElementMap.get(nearestLowerRank);
-                console.log(`Using nearest lower rank ${nearestLowerRank} as top element`);
             }
         }
 
@@ -844,7 +633,6 @@
             if (availableHigherRanks.length > 0) {
                 const nearestHigherRank = availableHigherRanks[0];
                 bottomElement = rankElementMap.get(nearestHigherRank);
-                console.log(`Using nearest higher rank ${nearestHigherRank} as bottom element`);
             }
         }
 
@@ -852,13 +640,11 @@
             console.error(`CRITICAL: Could not find required rank elements!`);
             const availableInRange = foundRanks.filter(r => r >= minRank && r <= maxRank);
             if (availableInRange.length > 0) {
-                console.log(`Found ${availableInRange.length} ranks in requested range: [${availableInRange.join(', ')}]`);
                 const singleRank = availableInRange[0];
                 const singleElement = rankElementMap.get(singleRank);
                 if (singleElement) {
                     topElement = singleElement;
                     bottomElement = singleElement;
-                    console.log(`Using single available rank ${singleRank} for screenshot`);
                 }
             }
 
@@ -871,30 +657,28 @@
         const topRect = topElement.getBoundingClientRect();
         const bottomRect = bottomElement.getBoundingClientRect();
 
-        console.log('Tree rect:', treeRect);
-        console.log('Top element rect:', topRect);
-        console.log('Bottom element rect:', bottomRect);
 
         let width = treeRect.width;
-        const premiumDivider = document.querySelector('.premium-divider-v');
 
-        if (premiumDivider) {
-            const dividerRect = premiumDivider.getBoundingClientRect();
-            const dividerPosition = dividerRect.left - treeRect.left;
-            width = Math.max(200, dividerPosition - 10);
-            console.log('Limited screenshot width to exclude premium area:', width, 'divider at:', dividerPosition);
-        } else {
-            const standardNodes = document.querySelectorAll('.tree-grid-item.tech-cat-standard');
-            const premiumNodes = document.querySelectorAll('.tree-grid-item.tech-cat-premium, .tree-grid-item.tech-cat-event');
+        if (!includePremium) {
+            const premiumDivider = document.querySelector('.premium-divider-v');
 
-            if (standardNodes.length > 0 && premiumNodes.length > 0) {
-                const standardRights = Array.from(standardNodes).map(node => {
-                    const rect = node.getBoundingClientRect();
-                    return rect.right - treeRect.left;
-                });
-                const maxStandardRight = Math.max(...standardRights);
-                width = maxStandardRight + 20;
-                console.log('No divider found, calculated width by nodes:', width);
+            if (premiumDivider) {
+                const dividerRect = premiumDivider.getBoundingClientRect();
+                const dividerPosition = dividerRect.left - treeRect.left;
+                width = Math.max(200, dividerPosition - 10);
+            } else {
+                const standardNodes = document.querySelectorAll('.tree-grid-item.tech-cat-standard');
+                const premiumNodes = document.querySelectorAll('.tree-grid-item.tech-cat-premium, .tree-grid-item.tech-cat-event');
+
+                if (standardNodes.length > 0 && premiumNodes.length > 0) {
+                    const standardRights = Array.from(standardNodes).map(node => {
+                        const rect = node.getBoundingClientRect();
+                        return rect.right - treeRect.left;
+                    });
+                    const maxStandardRight = Math.max(...standardRights);
+                    width = maxStandardRight + 20;
+                }
             }
         }
 
@@ -905,11 +689,7 @@
             height: Math.max(50, (bottomRect.bottom - topRect.top) + 20)
         };
 
-        console.log(`SUCCESS: Calculated screenshot area for ranks ${minRank}-${maxRank}:`, area);
         return area;
-    },
-    calculateScreenshotArea: function (selectedRanks) {
-        return this.calculateScreenshotAreaByRanks(selectedRanks);
     },
     showRpLimitWarning: function (message) {
         const existingWarnings = document.querySelectorAll('.rp-limit-toast');
@@ -930,7 +710,6 @@
             }
         }, 3000);
 
-        console.log('RP limit warning shown:', message);
     },
 
     updateNodesLimitState: function (maxRpLimit, currentRp) {

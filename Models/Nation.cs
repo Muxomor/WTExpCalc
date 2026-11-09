@@ -10,9 +10,6 @@ namespace WTExpCalc.Models
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
 
-        [JsonPropertyName("name_eng")]
-        public string? NameEnglish { get; set; }
-
         [JsonPropertyName("image_url")]
         public string? ImageUrl { get; set; }
 

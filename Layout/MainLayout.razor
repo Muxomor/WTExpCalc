@@ -27,6 +27,7 @@
     private bool _aboutVisible;
     private bool _settingsVisible;
     private bool _isTreePage;
+    private bool _syncSummaryAfterRender;
 
     private string TreeAlignmentCss => UiSettings.Current.TreeAlignment.ToString().ToLowerInvariant();
 
@@ -40,6 +41,7 @@
 
     private void OnSettingsChanged()
     {
+        _syncSummaryAfterRender = _isTreePage;
         InvokeAsync(StateHasChanged);
     }
 
@@ -78,10 +80,12 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!_isTreePage)
+        if (!_syncSummaryAfterRender)
         {
             return;
         }
+
+        _syncSummaryAfterRender = false;
 
         try
         {
@@ -89,7 +93,7 @@
         }
         catch
         {
-            /* Tree page may still be loading */
+            /* Summary bar may not be rendered yet */
         }
     }
 

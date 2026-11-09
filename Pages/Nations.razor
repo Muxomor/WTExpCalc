@@ -2,23 +2,26 @@
 @using WTExpCalc.Models
 @using WTExpCalc.Services
 @using WTExpCalc.Shared
-@inject IExperienceApi Api
-@inject NavigationManager Nav
+@inject ICatalogService Catalog
 @inject ILocalizationService Localization
 @implements IDisposable
 
 <h3>@Localization.Text(UIStrings.SelectNation)</h3>
 
-@if (nations == null)
-{
-        <p><em>@Localization.Text(UIStrings.Loading)</em></p>
-}
-else if (loadError != null)
+@if (loadError != null)
 {
         <div class="alert alert-danger" style="background-color: #5a1e1e; border-color: #721c24; color: #f8d7d7;">
             <p>@Localization.Text(UIStrings.Error): @loadError</p>
             <button class="btn btn-primary" @onclick="ReloadData">@Localization.Text(UIStrings.Retry)</button>
         </div>
+}
+else if (nations == null)
+{
+        <p><em>@Localization.Text(UIStrings.Loading)</em></p>
+}
+else if (nations.Count == 0)
+{
+        <p><em>@Localization.Text(UIStrings.NoNationsAvailable)</em></p>
 }
 else
 {
@@ -26,9 +29,9 @@ else
         @foreach (var n in nations)
         {
                     <div class="col-6 col-md-4 col-lg-3 mb-4">
-                        <div class="card h-100 nation-card"
-                             style="cursor:pointer;"
-                             @onclick="@(() => NavigateToNation(n.Slug))">
+                        <a class="card h-100 nation-card text-decoration-none"
+                           href="@($"/tree/{n.Slug}")"
+                           style="cursor:pointer; color:inherit;">
                             <img src="@n.ImageUrl"
                                  class="card-img-top p-3"
                                  alt="@GetNationDisplayName(n)" 
@@ -36,7 +39,7 @@ else
                             <div class="card-footer text-center">
                                 <strong>@GetNationDisplayName(n)</strong>
                             </div>
-                        </div>
+                        </a>
                     </div>
         }
         </div>
@@ -44,7 +47,6 @@ else
 
 @code {
     private List<Nation>? nations;
-    private List<VehicleType>? vehicleTypes;
     private string? loadError;
 
     protected override async Task OnInitializedAsync()
@@ -65,50 +67,24 @@ else
 
     private async Task LoadData()
     {
+        loadError = null;
+
         try
         {
-            loadError = null;
-            nations = await Api.GetNationsAsync();
-            vehicleTypes = await Api.GetVehicleTypesAsync();
+            nations = await Catalog.GetNationsAsync();
         }
         catch (Exception ex)
         {
-            loadError = ex.Message;
+            nations = null;
+            loadError = Localization.Text(UIStrings.DataLoadError, ex.Message);
         }
     }
 
     private async Task ReloadData()
     {
         nations = null;
-        vehicleTypes = null;
         StateHasChanged();
         await LoadData();
-    }
-
-    private async Task NavigateToNation(string nationSlug)
-    {
-        try
-        {
-            if (vehicleTypes == null || !vehicleTypes.Any())
-            {
-                vehicleTypes = await Api.GetVehicleTypesAsync();
-            }
-
-            if (vehicleTypes != null && vehicleTypes.Any())
-            {
-                var firstType = vehicleTypes.First();
-                string targetUrl = $"/tree/{nationSlug}/{firstType.Slug}";
-                Nav.NavigateTo(targetUrl);
-            }
-            else
-            {
-                loadError = Localization.Text(UIStrings.VehicleTypesLoadFailed);
-            }
-        }
-        catch (Exception ex)
-        {
-            loadError = Localization.Text(UIStrings.NavigationError, ex.Message);
-        }
     }
 
     public void Dispose()

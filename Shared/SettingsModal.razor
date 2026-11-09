@@ -48,6 +48,12 @@
                                @onchange="OnShowAboutOnStartupChanged" />
                         <span>@Localization.Text(UIStrings.SettingsShowAboutOnStartup)</span>
                     </label>
+                    <label class="settings-checkbox-row">
+                        <input type="checkbox" class="settings-checkbox"
+                               checked="@Settings.Current.IncludePremiumInShareUrl"
+                               @onchange="OnIncludePremiumInShareUrlChanged" />
+                        <span>@Localization.Text(UIStrings.SettingsIncludePremiumInShareUrl)</span>
+                    </label>
                 </section>
 
                 <section class="settings-section">
@@ -57,6 +63,12 @@
                                checked="@Settings.Current.ShowSummaryOnScreenshot"
                                @onchange="OnShowSummaryChanged" />
                         <span>@Localization.Text(UIStrings.SettingsShowSummaryOnScreenshot)</span>
+                    </label>
+                    <label class="settings-checkbox-row">
+                        <input type="checkbox" class="settings-checkbox"
+                               checked="@Settings.Current.IncludePremiumInScreenshot"
+                               @onchange="OnIncludePremiumInScreenshotChanged" />
+                        <span>@Localization.Text(UIStrings.SettingsIncludePremiumInScreenshot)</span>
                     </label>
                 </section>
 
@@ -107,10 +119,22 @@
         await Settings.UpdateAsync(Settings.Current with { ShowAboutOnStartup = value });
     }
 
+    private async Task OnIncludePremiumInShareUrlChanged(ChangeEventArgs e)
+    {
+        var value = e.Value is bool enabled && enabled;
+        await Settings.UpdateAsync(Settings.Current with { IncludePremiumInShareUrl = value });
+    }
+
     private async Task OnShowSummaryChanged(ChangeEventArgs e)
     {
         var value = e.Value is bool enabled && enabled;
         await Settings.UpdateAsync(Settings.Current with { ShowSummaryOnScreenshot = value });
+    }
+
+    private async Task OnIncludePremiumInScreenshotChanged(ChangeEventArgs e)
+    {
+        var value = e.Value is bool enabled && enabled;
+        await Settings.UpdateAsync(Settings.Current with { IncludePremiumInScreenshot = value });
     }
 
     private Task ResetSettings() => Settings.ResetAsync();

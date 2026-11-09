@@ -6,7 +6,6 @@ namespace WTExpCalc.Services
 {
     public interface ILocalizationService
     {
-        string CurrentLanguage { get; }
         bool IsEnglish { get; }
         string Text(LocalizedString text);
         string Text(LocalizedString text, params object[] args);
@@ -23,7 +22,6 @@ namespace WTExpCalc.Services
         private readonly IJSRuntime _jsRuntime;
         private string _currentLanguage = "ru";
 
-        public string CurrentLanguage => _currentLanguage;
         public bool IsEnglish => _currentLanguage == "en";
         public event Action? LanguageChanged;
 
@@ -51,6 +49,15 @@ namespace WTExpCalc.Services
                 language = "ru";
 
             ApplyCulture(language);
+
+            try
+            {
+                await _jsRuntime.InvokeVoidAsync("techTreeFunctions.setDocumentLanguage", language);
+            }
+            catch
+            {
+                /* JS may not be initialized yet */
+            }
 
             if (_currentLanguage == language)
                 return;
